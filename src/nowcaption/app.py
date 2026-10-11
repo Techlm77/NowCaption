@@ -57,9 +57,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.layer = bool(LayerShell and LayerShell.is_supported())
         display = Gdk.Display.get_default()
         monitors = display.get_monitors()
-        width = 1100
+        width = 1000
         if monitors.get_n_items():
-            width = min(1100, int(monitors.get_item(0).get_geometry().width * 0.7))
+            width = min(1000, int(monitors.get_item(0).get_geometry().width * 0.7))
         self.set_default_size(width, -1)
         self.set_size_request(width, -1)
         if self.layer:  # a real overlay on KDE Plasma, Hyprland, Sway and other wlroots desktops
@@ -118,6 +118,16 @@ class CaptionWindow(Gtk.ApplicationWindow):
         elif len(parts) > 1 and len(parts[-2]) + len(text) <= limit:
             text = parts[-2] + '\n' + text
         self.label.set_text(text or ' ')
+        return False
+
+    def save_png(self, path):
+        """Render the window exactly as drawn, for store screenshots."""
+        w, h = self.get_width(), self.get_height()
+        snap = Gtk.Snapshot()
+        Gtk.WidgetPaintable.new(self).snapshot(snap, w, h)
+        node = snap.to_node()
+        if node:
+            self.get_renderer().render_texture(node, None).save_to_png(path)
         return False
 
     def on_drag_begin(self, gesture, x, y):
@@ -223,6 +233,10 @@ class NowCaption(Adw.Application):
         self.window = CaptionWindow(self)
         self.window.present()
         GLib.idle_add(self.load_models)
+        shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
+        if shot:
+            path, _, after = shot.partition(':')
+            GLib.timeout_add_seconds(int(after or 20), self.window.save_png, path)
 
     def load_models(self):
         try:

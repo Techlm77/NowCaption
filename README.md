@@ -113,6 +113,10 @@ On the first run it downloads the models into `models/` and creates `.venv`.
 `NOWCAPTION_SOURCE=<source name>` makes the app caption any PulseAudio or PipeWire
 source. Run `pactl list short sources` to see the names.
 
+`NOWCAPTION_SCREENSHOT=<file.png>:<seconds>` saves GTK's own render of the
+caption window after that many seconds. The store screenshot was made this way,
+from LibriSpeech clips played into a virtual sink.
+
 ### Tests
 
 ```sh

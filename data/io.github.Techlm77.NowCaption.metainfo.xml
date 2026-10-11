@@ -4,7 +4,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <name>NowCaption</name>
-  <summary>Live captions for anything your computer plays</summary>
+  <summary>Live captions for any audio</summary>
   <developer id="io.github.techlm77">
     <name>Techlm77</name>
   </developer>
@@ -16,14 +16,14 @@
     </p>
     <p>
       Speech is recognised on your own computer. Audio never leaves it, no account is needed,
-      and it works offline.
+      and it works offline. NowCaption currently understands English only.
     </p>
     <ul>
-      <li>Accurate English recognition with punctuation and capital letters</li>
-      <li>Words appear about half a second after they are spoken</li>
-      <li>Light on the processor and uses nothing while it is quiet</li>
-      <li>Stays above other windows on KDE Plasma, Hyprland and Sway</li>
-      <li>Adjustable text size and background, and transcript copy and save</li>
+      <li>Punctuation and capital letters, written as people speak</li>
+      <li>Words usually appear within half a second of being spoken</li>
+      <li>Light on the processor, and idle while everything is quiet</li>
+      <li>Floats above other windows on KDE Plasma, Hyprland and Sway</li>
+      <li>Adjustable text size and background, and a transcript you can copy or save</li>
     </ul>
     <p>Right-click the captions for settings. Drag them to move them.</p>
   </description>
@@ -34,7 +34,7 @@
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/Techlm77/NowCaption/main/data/screenshots/captions.png</image>
-      <caption>Live captions over a video</caption>
+      <caption>Two lines of live captions</caption>
     </screenshot>
   </screenshots>
   <keywords>
@@ -53,13 +53,16 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <branding>
-    <color type="primary" scheme_preference="light">#8fbcf5</color>
-    <color type="primary" scheme_preference="dark">#1c4f9c</color>
+    <color type="primary" scheme_preference="light">#f7c873</color>
+    <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
     <release version="1.0.0" date="2026-10-11">
       <description>
-        <p>First release.</p>
+        <p>
+          First release. Captions desktop audio or the microphone in English, with
+          punctuation, adjustable text and a transcript you can copy or save.
+        </p>
       </description>
     </release>
   </releases>
