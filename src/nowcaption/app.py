@@ -22,10 +22,15 @@ from . import __version__, audio, engine  # noqa: E402
 APP_ID = 'io.github.Techlm77.NowCaption'
 LOG = logging.getLogger('nowcaption')
 SIZES = [18, 22, 26, 30, 36, 42, 50, 60]
-ROWS = 2              # caption rows shown, like broadcast subtitles
+ROWS = 2              # default caption rows, like broadcast subtitles; drag an edge for more
 PAD_X, PAD_Y = 22, 12
 BOTTOM_GAP = 80       # default distance from the bottom of the screen
-DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': ''}
+EDGE = 10             # width of the band along the box's edges that resizes instead of moving
+MIN_WIDTH = 240
+CURSORS = {'n': 'n-resize', 's': 's-resize', 'e': 'e-resize', 'w': 'w-resize',
+           'ne': 'ne-resize', 'nw': 'nw-resize', 'se': 'se-resize', 'sw': 'sw-resize'}
+DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
+            'width': -1, 'rows': ROWS}
 
 
 class Settings:
@@ -66,7 +71,9 @@ def last_rows(layout, text, rows):
 
 
 class CaptionWindow(Gtk.ApplicationWindow):
-    """Fixed-size caption box: always ROWS rows of text, newest words at the end of the last row.
+    """Caption box of a chosen width and number of rows, newest words at the end of the last row.
+    Dragging inside the box moves it; dragging its edges or corners resizes it, snapping the
+    height to whole rows.
 
     On compositors with layer-shell (KDE Plasma, Hyprland, Sway, ...) the window is a transparent
     overlay covering one monitor. Only the caption box takes pointer input (everything else clicks
@@ -80,7 +87,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.set_decorated(False)
         self.set_resizable(False)
         self.layer = bool(LayerShell and LayerShell.is_supported())
-        self.dragging = None
+        self.dragging = self.resizing = None
+        self.rows = self.settings.get('rows')
         self.text, self.status, self.status_timer = '', '', None
         self.status_sticky = False
         self.monitor = self.pick_monitor(self.settings.get('monitor'))
@@ -123,6 +131,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
         drag.connect('drag-update', self.on_drag_update)
         drag.connect('drag-end', self.on_drag_end)
         self.add_controller(drag)
+        motion = Gtk.EventControllerMotion()  # show a resize cursor over the edges
+        motion.connect('motion', self.on_motion)
+        self.add_controller(motion)
         click = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
         click.connect('pressed', self.on_menu)
         self.add_controller(click)
@@ -202,7 +213,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         return self.caption_height() + (self.status_height if self.text and self.status else 0)
 
     def caption_height(self):
-        return ROWS * self.row_height + 2 * PAD_Y
+        return self.rows * self.row_height + 2 * PAD_Y
 
     def clamp(self, x, y):
         """x, y on the monitor (None: centred near the bottom), keeping the whole box on screen."""
@@ -244,6 +255,20 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.settings.set('y', -1)
         self.place()
 
+    def reset_size(self):
+        self.settings.set('width', -1)
+        self.settings.set('rows', ROWS)
+        self.rows = ROWS
+        self.box_width = self.width_for(self.monitor)
+        self.restyle()
+
+    def max_rows(self):
+        """As many rows as fit on the screen."""
+        geo = self.monitor.get_geometry() if self.monitor else None
+        if not geo:
+            return 20
+        return max(1, (geo.height - 2 * PAD_Y - self.status_height) // max(1, self.row_height))
+
     def restyle(self):
         px, alpha = self.settings.get('size'), self.settings.get('opacity')
         self.css.load_from_string(f"""
@@ -257,14 +282,24 @@ class CaptionWindow(Gtk.ApplicationWindow):
         probe = self.label.create_pango_layout('Ag')
         self.row_height = probe.get_pixel_size()[1]
         self.status_height = self.status_label.create_pango_layout('Ag').get_pixel_size()[1] + PAD_Y
+        # a size the user dragged to, kept within the current screen
+        geo = self.monitor.get_geometry() if self.monitor else None
+        width = self.settings.get('width')
+        if width > 0:
+            self.box_width = min(width, geo.width) if geo else width
+        self.rows = max(1, min(self.rows, self.max_rows()))
+        self.relayout()
+        x, y = self.settings.get('x'), self.settings.get('y')
+        self.place(x if x >= 0 else None, y if y >= 0 else None)
+        self.render()
+
+    def relayout(self):
+        """Wrap the text to the box width and fix the caption at exactly self.rows rows."""
         self.layout = self.label.create_pango_layout('')
         self.layout.set_width((self.box_width - 2 * PAD_X) * Pango.SCALE)
         self.layout.set_wrap(Pango.WrapMode.WORD_CHAR)
         self.label.set_size_request(self.box_width, self.caption_height())
         self.status_label.set_size_request(self.box_width, -1)
-        x, y = self.settings.get('x'), self.settings.get('y')
-        self.place(x if x >= 0 else None, y if y >= 0 else None)
-        self.render()
 
     # --- text -----------------------------------------------------------------------------
 
@@ -294,9 +329,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
         return False
 
     def render(self):
-        # the text flows on; only the last ROWS rows show, so the newest words are always visible
+        # the text flows on; only the last rows show, so the newest words are always visible
         text = self.text or self.status
-        self.label.set_text(last_rows(self.layout, text, ROWS) if text else ' ')
+        self.label.set_text(last_rows(self.layout, text, self.rows) if text else ' ')
         self.status_label.set_text(self.status)
         self.status_label.set_tooltip_text(self.status or None)
         self.status_label.set_visible(bool(self.text and self.status))
@@ -313,9 +348,30 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.get_renderer().render_texture(node, None).save_to_png(path)
         return False
 
-    # --- moving -----------------------------------------------------------------------------
+    # --- moving and resizing ------------------------------------------------------------------
+
+    def edges_at(self, x, y):
+        """Which edges of the box the pointer is on, as 'n', 'se', ...; '' inside it.
+        A normal window cannot move itself, so there only the right and bottom edges resize."""
+        bx, by = (self.x, self.y) if self.layer else (0, 0)
+        x, y = x - bx, y - by
+        w, h = self.box_width, self.box_height()
+        if not (0 <= x < w and 0 <= y < h):
+            return ''
+        ns = 'n' if y < EDGE and self.layer else 's' if y >= h - EDGE else ''
+        ew = 'w' if x < EDGE and self.layer else 'e' if x >= w - EDGE else ''
+        return ns + ew
+
+    def on_motion(self, controller, x, y):
+        if not (self.dragging or self.resizing):
+            self.set_cursor(Gdk.Cursor.new_from_name(CURSORS.get(self.edges_at(x, y), 'grab'), None))
 
     def on_drag_begin(self, gesture, x, y):
+        edges = self.edges_at(x, y)
+        if edges:  # remember which edges, and where the box's edges were
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            self.resizing = (edges, self.x, self.y, self.x + self.box_width, self.y + self.caption_height())
+            return
         self.set_cursor(Gdk.Cursor.new_from_name('grabbing', None))
         if self.layer:  # x, y are overlay (monitor) coordinates; remember where the box was grabbed
             self.dragging = (x - self.x, y - self.y)
@@ -327,14 +383,45 @@ class CaptionWindow(Gtk.ApplicationWindow):
                                gesture.get_current_event_time())
 
     def on_drag_update(self, gesture, dx, dy):
+        if self.resizing:
+            return self.resize_by(dx, dy)
         if not self.dragging:
             return
         ok, px, py = gesture.get_point(None)
         if ok:
             self.place(px - self.dragging[0], py - self.dragging[1])
 
+    def resize_by(self, dx, dy):
+        """Move the dragged edges by dx, dy from where they started; the other edges stay put."""
+        edges, left, top, right, bottom = self.resizing
+        geo = self.monitor.get_geometry() if self.monitor else None
+        limit = (geo.width if self.layer else left + geo.width) if geo else left + 10000
+        if 'w' in edges:
+            left = max(0, min(left + dx, right - MIN_WIDTH))
+        if 'e' in edges:
+            right = max(left + MIN_WIDTH, min(right + dx, limit))
+        rows = self.rows
+        if 'n' in edges or 's' in edges:
+            height = bottom - top + (dy if 's' in edges else -dy)
+            rows = max(1, min(round((height - 2 * PAD_Y) / max(1, self.row_height)), self.max_rows()))
+        width = int(right - left)
+        if (width, rows) != (self.box_width, self.rows):
+            self.box_width, self.rows = width, rows
+            self.relayout()
+        if self.layer:  # render() places the box, clamped to the screen
+            self.x = int(left)
+            self.y = int(bottom - self.caption_height() if 'n' in edges else top)
+        self.render()
+
     def on_drag_end(self, gesture, dx, dy):
         self.set_cursor(Gdk.Cursor.new_from_name('grab', None))
+        if self.resizing:
+            self.resizing = None
+            self.settings.set('width', self.box_width)
+            self.settings.set('rows', self.rows)
+            self.settings.set('x', self.x)
+            self.settings.set('y', self.y)
+            return
         if not self.dragging:
             return
         self.dragging = None
@@ -400,7 +487,7 @@ class NowCaption(Adw.Application):
         menu.append_item(section(('More see-through', 'app.lighter', 'value-decrease-symbolic'),
                                  ('More solid', 'app.darker', 'value-increase-symbolic'),
                                  label='Background', hint='inline-buttons'))
-        place = [('Reset position', 'app.reset-position', None)]
+        place = [('Reset position', 'app.reset-position', None), ('Reset size', 'app.reset-size', None)]
         if several_screens:
             place.append(('Move to next screen', 'app.next-screen', None))
         menu.append_item(section(*place))
@@ -428,6 +515,7 @@ class NowCaption(Adw.Application):
         act('lighter', lambda: self.opacity(-0.15))
         act('darker', lambda: self.opacity(+0.15))
         act('reset-position', lambda: self.window.reset_position())
+        act('reset-size', lambda: self.window.reset_size())
         act('next-screen', lambda: self.window.next_monitor())
         act('copy', self.copy_transcript)
         act('save', self.save_transcript, ['<Control>s'])

@@ -57,6 +57,15 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.0.5" date="2026-10-12">
+      <description>
+        <p>
+          The caption box can be resized: drag an edge or corner to make it wider, narrower or
+          taller. The height snaps to whole rows, so a taller box shows more lines of captions.
+          The size is remembered, and Reset size in the menu restores the default.
+        </p>
+      </description>
+    </release>
     <release version="1.0.4" date="2026-10-11">
       <description>
         <p>

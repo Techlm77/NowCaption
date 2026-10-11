@@ -63,6 +63,21 @@ class WindowTests(unittest.TestCase):
         self.assertLessEqual(self.window.box_width, self.window.monitor.get_geometry().width)
         self.assertEqual(self.window.box_width, self.window.width_for(self.window.monitor))
 
+    def test_dragging_the_bottom_right_corner_adds_rows_and_width(self):
+        w = self.window
+        w.show_text('hello ' * 100)
+        rows, width = w.rows, w.box_width
+        w.resizing = ('se', w.x, w.y, w.x + w.box_width, w.y + w.caption_height())
+        w.resize_by(-100, 2 * w.row_height)
+        self.assertEqual(w.rows, min(rows + 2, w.max_rows()))
+        self.assertEqual(w.box_width, max(nc.MIN_WIDTH, width - 100))
+        self.assertLessEqual(len(w.label.get_text().splitlines()), w.rows)
+        w.on_drag_end(None, 0, 0)
+        self.assertEqual(self.app.settings.get('rows'), w.rows)
+        w.reset_size()
+        self.assertEqual(w.rows, nc.ROWS)
+        self.assertEqual(self.app.settings.get('width'), -1)
+
     def test_notification_uses_a_separate_row_without_replacing_captions(self):
         self.window.show_text('Words that must remain visible')
         self.window.show_status('Transcript copied.', seconds=3)

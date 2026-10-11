@@ -238,7 +238,7 @@ class NotificationTests(unittest.TestCase):
         window.text, window.status, window.status_timer = '', '', None
         window.status_sticky = False
         window.x = window.y = 0
-        window.row_height, window.status_height = 30, 24
+        window.row_height, window.status_height, window.rows = 30, 24, 2
         window.layout = None
         window.label = NS(set_text=lambda text: setattr(window, 'visible', text))
         window.status_label = NS(

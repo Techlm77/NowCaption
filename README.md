@@ -72,10 +72,12 @@ folder too to remove them.
 Captions start straight away, from whatever your computer is playing.
 
 - **Drag** the captions anywhere on the screen.
+- **Drag an edge or corner** to make the box wider, narrower or taller. The
+  height snaps to whole rows, so a taller box shows more lines of captions.
 - **Right-click** them for a small menu:
   - Listen to desktop audio or the microphone
   - Text size − / +, and background − / +
-  - Reset position, or move to another screen if you have more than one
+  - Reset position or size, or move to another screen if you have more than one
   - Copy, save or clear the transcript
   - Quit
 
