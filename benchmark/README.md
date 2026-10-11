@@ -25,10 +25,11 @@ blocks, as live captioning does, with 1.5 s of silence after each clip.
 The table runs each clip from a fresh stream, which handicaps every engine
 equally. On continuous audio (30 clips joined by 0.4 s gaps, `endpoint_test.py`),
 NowCaption's model reaches **4.0%** WER. Resetting the stream at every pause
-raises it to about 6%, which is why the app never resets at pauses.
+raises it to 8.4%, which is why the app never resets at pauses.
 
-On real desktop audio, run side by side for 60 s, NowCaption used 0.17 of a core
-and 352 MB. Live Captions used 0.42 of a core and 621 MB.
+On real desktop audio, an early prototype with the same engine (and the NGC model)
+ran side by side with Live Captions for 60 s. The prototype used 0.17 of a core and
+352 MB; Live Captions used 0.42 of a core and 621 MB.
 
 Screened and rejected:
 - Parakeet unified 0.6B, 240 ms: slower than real time on 2 threads.

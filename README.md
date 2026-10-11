@@ -1,120 +1,185 @@
 # NowCaption
 
 Live captions for Linux. NowCaption shows what is being said in videos, calls,
-streams and games, or into your microphone, in a small window that floats above
-your other windows. It is made for people who are deaf or hard of hearing.
+streams and games, or into your microphone, in a small caption window. It is made
+for people who are deaf or hard of hearing.
 
-![Live captions](data/screenshots/captions.png)
+![NowCaption showing two lines of live captions](data/screenshots/captions.png)
 
-- **On your computer only.** Speech is recognised locally. Audio never leaves your
-  computer, it needs no account, and it works offline.
-- **Accurate.** English with punctuation and capital letters. It makes about half
-  as many word errors as the April model used by Live Captions (see [benchmark](benchmark/)).
-- **Fast.** Words appear about a third of a second after they are spoken.
-- **Light.** It uses about a sixth of one CPU core while people talk, and nothing
-  while it is quiet.
+- **Private.** Speech is recognised on your computer. Audio never leaves it, it
+  needs no account, and it works offline.
+- **Accurate.** It writes punctuation and capital letters, and makes about half as
+  many word errors as Live Captions' April model ([benchmark](benchmark/)).
+- **Fast.** Words usually appear 0.35–0.45 seconds after they are spoken.
+- **Light.** It uses about a sixth of one CPU core while people talk, and almost
+  nothing in silence.
+
+**English only for now.**
 
 ## Install
 
-Once it is on Flathub:
+### From Flathub
+
+NowCaption is not on Flathub yet. Once it is accepted:
 
 ```sh
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak install flathub io.github.Techlm77.NowCaption
 ```
 
 Then open **NowCaption** from your app menu.
 
-To build and install it from this repository:
+### Build the Flatpak yourself
 
 ```sh
+git clone https://github.com/Techlm77/NowCaption.git
+cd NowCaption
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak install --user flathub org.flatpak.Builder org.gnome.Sdk//51 org.gnome.Platform//51
 ./tools/build-flatpak.sh
 ```
 
+The first build downloads the GNOME SDK, which is large.
+
+### Uninstall
+
+```sh
+flatpak uninstall io.github.Techlm77.NowCaption
+```
+
+Settings are kept in `~/.var/app/io.github.Techlm77.NowCaption`. Delete that
+folder too to remove them.
+
 ## Using it
 
-- Captions start right away, from whatever your computer is playing.
-- **Right-click** the captions to choose desktop audio or the microphone, change
-  the text size or background, put them at the top or bottom of the screen, or
-  copy, save or clear the transcript.
-- **Drag** the captions to move them.
-- Ctrl + plus / minus changes the text size, and Ctrl + Q quits. These work when
-  the window has keyboard focus.
+Captions start straight away, from whatever your computer is playing.
 
-On KDE Plasma, Hyprland, Sway and other wlroots desktops, the captions stay above
-all windows, including full-screen video. On GNOME, press Alt + Space on the
-captions and choose **Always on Top**.
+- **Right-click** the captions for the menu:
+  - Listen to desktop audio or the microphone
+  - Make the text larger or smaller
+  - Make the background more see-through or more solid
+  - Copy, save or clear the transcript
+  - Quit
+- **Drag** the captions to move them.
+
+Settings are remembered between sessions.
+
+### Staying above other windows
+
+How the caption window behaves depends on your desktop:
+
+| Desktop | Behaviour |
+|---|---|
+| KDE Plasma, Hyprland, Sway and other wlroots compositors (Wayland) | Captions float above all windows. Dragging moves them up and down, and the menu can place them at the top or bottom of the screen. The overlay never takes keyboard focus, so use the menu rather than keyboard shortcuts. |
+| GNOME (Wayland) | A normal window. To keep it on top, press Alt + Space while it is focused and choose **Always on Top**. Drag it anywhere. |
+| X11 sessions | A normal window. Use your window manager's "keep above" option. |
+
+In a normal window, Ctrl + plus and Ctrl + minus change the text size, Ctrl + S
+saves the transcript, and Ctrl + Q quits.
+
+### If no captions appear
+
+- Make sure the audio is playing through your **default** output device.
+- After you switch output devices, for example to headphones, choose **Desktop
+  audio** again from the menu. Capture then follows the new device.
+- For the microphone, choose **Microphone** from the menu. It uses your default
+  input device.
 
 ## Run from source
 
-Install your distribution's PyGObject, GTK 4, libadwaita and GStreamer
-(gst-plugins-good) packages. Optionally install gtk4-layer-shell. Then:
+Install the system packages.
 
 ```sh
-./tools/run-dev.sh       # downloads the models and creates .venv on first run
+# Arch
+sudo pacman -S python-gobject gtk4 libadwaita gst-plugins-base gst-plugins-good gtk4-layer-shell
+# Debian / Ubuntu
+sudo apt install python3-gi python3-venv gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gstreamer-1.0 \
+    gir1.2-gst-plugins-base-1.0 gstreamer1.0-plugins-good gstreamer1.0-pulseaudio
+# Fedora
+sudo dnf install python3-gobject gtk4 libadwaita gstreamer1-plugins-base gstreamer1-plugins-good
 ```
 
-Tests:
+gtk4-layer-shell is optional. It provides the floating overlay on KDE, Hyprland
+and Sway. Only the Arch command has been tested.
+
+Then run:
 
 ```sh
-PYTHONPATH=src .venv/bin/python tests/test_live.py   # GStreamer capture + engine, from source
-./tests/test_flatpak.sh                              # the same, inside the installed Flatpak
+./tools/run-dev.sh
 ```
 
-Both tests play two LibriSpeech clips into a private virtual sink, so nothing is
-heard. Setting `NOWCAPTION_SOURCE=<pulse source name>` makes the app caption any
-source.
+On the first run it downloads the models into `models/` and creates `.venv`.
+
+`NOWCAPTION_SOURCE=<source name>` makes the app caption any PulseAudio or PipeWire
+source. Run `pactl list short sources` to see the names.
+
+### Tests
+
+```sh
+PYTHONPATH=src .venv/bin/python tests/test_live.py   # from source (run tools/run-dev.sh once first)
+./tests/test_flatpak.sh                              # inside the installed Flatpak
+```
+
+Both tests play two LibriSpeech clips into a private virtual sink, so nothing
+plays out loud. They need `pactl` and `paplay` (pipewire-pulse or pulseaudio-utils).
 
 ## How it works
 
 `src/nowcaption/audio.py` captures 16 kHz mono audio with GStreamer's PulseAudio
-source. That source works on PipeWire and inside Flatpak. `engine.py` streams the
-audio into a sherpa-onnx transducer and restores punctuation and casing on each
-line. Two decisions came from measurements:
+source, which also works on PipeWire and inside Flatpak. `engine.py` streams that
+audio into a sherpa-onnx transducer, then restores punctuation and casing on each
+line. Two choices came from measurements:
 
-- **The model's stream is never reset at pauses.** A reset drops the first words
-  of the next phrase, and doing it at every pause made 50% more errors (4.0% to
-  about 6%). Pauses only start a new caption line.
-- **Digital silence is not processed.** The model's last words are flushed once,
-  then it waits.
+- **The model's stream is never reset at pauses.** A reset loses the first words
+  of the next phrase. Resetting at every pause more than doubled the word error
+  rate on continuous speech, from 4.0% to 8.4%. Pauses only start a new caption
+  line.
+- **Digital silence is not processed.** When the audio goes completely silent,
+  the last words are flushed once and the model waits.
 
 ## Models
 
-| | |
-|---|---|
-| Speech | NVIDIA `stt_en_fastconformer_hybrid_large_streaming_multi`, CC-BY-4.0, exported to ONNX int8 at 80 ms lookahead by `tools/export-model.py` |
-| Punctuation and casing | Edge-Punct-Casing CNN-BiLSTM, Apache-2.0, packaged by k2-fsa |
+| Part | Model | License |
+|---|---|---|
+| Speech recognition | NVIDIA [`stt_en_fastconformer_hybrid_large_streaming_multi`](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi), exported to ONNX int8 with 80 ms lookahead | CC-BY-4.0 |
+| Punctuation and casing | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) CNN-BiLSTM, packaged by k2-fsa | Apache-2.0 |
 
-See [MODEL-LICENSES.md](MODEL-LICENSES.md).
+[MODEL-LICENSES.md](MODEL-LICENSES.md) lists everything bundled in the Flatpak.
 
-The exported speech model, `nowcaption-fastconformer-en-80ms-cc-by-v1.tar.bz2`,
-is attached to the GitHub release `models-v1`, and the Flatpak manifest downloads
-it from there. To rebuild it, run `tools/export-model.py --lookahead 1`. That
-needs `nemo_toolkit[asr]`, `onnx` and `onnxruntime`. Then package the four files
-and README as in that release.
+The exported speech model is attached to the
+[`models-v1` release](https://github.com/Techlm77/NowCaption/releases/tag/models-v1),
+and the Flatpak build downloads it from there. To recreate it:
 
-## Publishing to Flathub
+```sh
+python3.12 -m venv .venv-export     # NeMo supports Python 3.10–3.12
+.venv-export/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu
+.venv-export/bin/pip install "nemo_toolkit[asr]" onnx onnxruntime
+mkdir -p export && cd export
+../.venv-export/bin/python ../tools/export-model.py --lookahead 1
+```
 
-1. Push this repository to `github.com/Techlm77/NowCaption`.
-2. Create the release `models-v1` and attach
-   `dist/nowcaption-fastconformer-en-80ms-cc-by-v1.tar.bz2`. Check that its
-   SHA-256 matches the manifest:
-   `857639f81da8a52110d659f2d1a91bc5c25f0122f46fd3358091096b74a6ce80`.
-3. Tag the app release (`git tag v1.0.0 && git push --tags`), then run
-   `tools/make-flathub-manifest.sh v1.0.0`.
-4. Check it with Flathub's linter:
+This writes `encoder.int8.onnx`, `decoder.int8.onnx`, `joiner.int8.onnx` and
+`tokens.txt`. The release archive holds those four files and a README in a folder
+named `nowcaption-fastconformer-en-80ms-cc-by-v1`.
+
+## Releasing a new version (maintainers)
+
+1. Add a `<release>` entry to `data/io.github.Techlm77.NowCaption.metainfo.xml`
+   and set `__version__` in `src/nowcaption/__init__.py`.
+2. Tag and push: `git tag v1.0.0 && git push --tags`.
+3. Run `tools/make-flathub-manifest.sh v1.0.0`. It writes
+   `flathub/io.github.Techlm77.NowCaption.yml` with the source pinned to that tag.
+4. Check it:
    `flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest flathub/io.github.Techlm77.NowCaption.yml`
-5. Follow https://docs.flathub.org/docs/for-app-authors/submission: fork
-   `flathub/flathub`, branch from `new-pr`, add the generated manifest and open a
-   pull request.
+5. For the first release, follow the
+   [Flathub submission guide](https://docs.flathub.org/docs/for-app-authors/submission).
+   Later releases go to the app's own repository on Flathub.
 
-The `appid-url-not-reachable` and screenshot errors from the linter go away once
-steps 1 and 2 are done. The Python dependencies are pinned upstream wheels for
-x86_64 and aarch64. Building sherpa-onnx and ONNX Runtime from source inside
-flatpak-builder would take much more work. If a Flathub reviewer asks for source
-builds, that is the part to change.
+The Python dependencies are pinned upstream wheels for x86_64 and aarch64, because
+building sherpa-onnx and ONNX Runtime from source in flatpak-builder takes much
+more work. If Flathub reviewers ask for source builds, that is the part to change.
 
 ## License
 
-MIT for NowCaption's code. The bundled models and libraries keep their own
+NowCaption's code is MIT licensed. The bundled models and libraries keep their own
 licenses, listed in [MODEL-LICENSES.md](MODEL-LICENSES.md).
