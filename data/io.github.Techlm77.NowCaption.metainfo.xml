@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.Techlm77.NowCaption</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>NowCaption</name>
+  <summary>Live captions for anything your computer plays</summary>
+  <developer id="io.github.techlm77">
+    <name>Techlm77</name>
+  </developer>
+  <description>
+    <p>
+      NowCaption shows live captions for videos, calls, streams and games, or for your
+      microphone. It is made for people who are deaf or hard of hearing, and for anyone who
+      wants to read what is being said.
+    </p>
+    <p>
+      Speech is recognised on your own computer. Audio never leaves it, no account is needed,
+      and it works offline.
+    </p>
+    <ul>
+      <li>Accurate English recognition with punctuation and capital letters</li>
+      <li>Words appear about half a second after they are spoken</li>
+      <li>Light on the processor and uses nothing while it is quiet</li>
+      <li>Stays above other windows on KDE Plasma, Hyprland and Sway</li>
+      <li>Adjustable text size and background, and transcript copy and save</li>
+    </ul>
+    <p>Right-click the captions for settings. Drag them to move them.</p>
+  </description>
+  <launchable type="desktop-id">io.github.Techlm77.NowCaption.desktop</launchable>
+  <url type="homepage">https://github.com/Techlm77/NowCaption</url>
+  <url type="bugtracker">https://github.com/Techlm77/NowCaption/issues</url>
+  <url type="vcs-browser">https://github.com/Techlm77/NowCaption</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/Techlm77/NowCaption/main/data/screenshots/captions.png</image>
+      <caption>Live captions over a video</caption>
+    </screenshot>
+  </screenshots>
+  <keywords>
+    <keyword>captions</keyword>
+    <keyword>subtitles</keyword>
+    <keyword>deaf</keyword>
+    <keyword>hard of hearing</keyword>
+    <keyword>speech to text</keyword>
+    <keyword>transcription</keyword>
+  </keywords>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#8fbcf5</color>
+    <color type="primary" scheme_preference="dark">#1c4f9c</color>
+  </branding>
+  <releases>
+    <release version="1.0.0" date="2026-10-11">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

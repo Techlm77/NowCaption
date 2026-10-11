@@ -1,0 +1,457 @@
+{
+ "name": "fastconformer-80ms",
+ "cond": "clean",
+ "threads": 1,
+ "wer": 0.0626,
+ "words": 1150,
+ "errors": 72,
+ "cpu_rtf": 0.1621,
+ "step_ms_p50": 25.013,
+ "step_ms_p99": 31.18,
+ "first_shown_lag_s_p50": 0.408,
+ "first_shown_lag_s_p90": 0.605,
+ "stable_lag_s_p50": 0.408,
+ "stable_lag_s_p90": 0.605,
+ "timed_words": 1071,
+ "peak_rss_mb": 276,
+ "items": [
+  {
+   "audio": "1272-128104-0000.wav",
+   "ref": "MISTER QUILTER IS THE APOSTLE OF THE MIDDLE CLASSES AND WE ARE GLAD TO WELCOME HIS GOSPEL",
+   "hyp": "mister quilter is the apostle of the middle classes and we are glad to welcome his gospel",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0001.wav",
+   "ref": "NOR IS MISTER QUILTER'S MANNER LESS INTERESTING THAN HIS MATTER",
+   "hyp": "nor is mister quilter's manner less interesting than his matter",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0002.wav",
+   "ref": "HE TELLS US THAT AT THIS FESTIVE SEASON OF THE YEAR WITH CHRISTMAS AND ROAST BEEF LOOMING BEFORE US SIMILES DRAWN FROM EATING AND ITS RESULTS OCCUR MOST READILY TO THE MIND",
+   "hyp": "he tells us that at this festive season of the year with christmas and roast beef looming before us similes drawn from eating and its results occur most readily to the mind",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0003.wav",
+   "ref": "HE HAS GRAVE DOUBTS WHETHER SIR FREDERICK LEIGHTON'S WORK IS REALLY GREEK AFTER ALL AND CAN DISCOVER IN IT BUT LITTLE OF ROCKY ITHACA",
+   "hyp": "he has grave doubts whether sir frederick leighton's work is really greek after all and can discover in it but little of rocky ithaca",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0004.wav",
+   "ref": "LINNELL'S PICTURES ARE A SORT OF UP GUARDS AND AT EM PAINTINGS AND MASON'S EXQUISITE IDYLLS ARE AS NATIONAL AS A JINGO POEM MISTER BIRKET FOSTER'S LANDSCAPES SMILE AT ONE MUCH IN THE SAME WAY THAT MISTER CARKER USED TO FLASH HIS TEETH AND MISTER JOHN COLLIER GIVES HIS SITTER A CHEERFUL SLAP ON THE BACK BEFORE HE SAYS LIKE A SHAMPOOER IN A TURKISH BATH NEXT MAN",
+   "hyp": "linnell's pictures are a sort of up guards in atom paintings and mason's exquisite idylls are as national as a jingo poem mister birk at foster's landscapes smile at one much in the same way that mister carker used to flashes teeth and mister john collier gives his sitter a cheerful slap on the back before he says like a shampooer in a turkish bath next man",
+   "errors": 7
+  },
+  {
+   "audio": "1272-128104-0005.wav",
+   "ref": "IT IS OBVIOUSLY UNNECESSARY FOR US TO POINT OUT HOW LUMINOUS THESE CRITICISMS ARE HOW DELICATE IN EXPRESSION",
+   "hyp": "it is obviously unnecessary for us to point out how luminous these criticisms are how delicate in expression",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0006.wav",
+   "ref": "ON THE GENERAL PRINCIPLES OF ART MISTER QUILTER WRITES WITH EQUAL LUCIDITY",
+   "hyp": "under general principles of art mister krilter writes with equal lucidity",
+   "errors": 3
+  },
+  {
+   "audio": "1272-128104-0007.wav",
+   "ref": "PAINTING HE TELLS US IS OF A DIFFERENT QUALITY TO MATHEMATICS AND FINISH IN ART IS ADDING MORE FACT",
+   "hyp": "painting he tells us is of a different quality to mathematics and finish in art is adding more fact",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0008.wav",
+   "ref": "AS FOR ETCHINGS THEY ARE OF TWO KINDS BRITISH AND FOREIGN",
+   "hyp": "as for etchings they are of two kinds british and foreign",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0009.wav",
+   "ref": "HE LAMENTS MOST BITTERLY THE DIVORCE THAT HAS BEEN MADE BETWEEN DECORATIVE ART AND WHAT WE USUALLY CALL PICTURES MAKES THE CUSTOMARY APPEAL TO THE LAST JUDGMENT AND REMINDS US THAT IN THE GREAT DAYS OF ART MICHAEL ANGELO WAS THE FURNISHING UPHOLSTERER",
+   "hyp": "he laments most bitterly the divorce that has been made between decorative art and what we usually call pictures makes a customary appeal to the last judgment and reminds us that in the great days of art michael angelo was the furnishing upholsterer",
+   "errors": 1
+  },
+  {
+   "audio": "1272-128104-0010.wav",
+   "ref": "NEAR THE FIRE AND THE ORNAMENTS FRED BROUGHT HOME FROM INDIA ON THE MANTEL BOARD",
+   "hyp": "near the fire and the ornaments fred brought home from india on the mantel board",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0011.wav",
+   "ref": "IN FACT HE IS QUITE SEVERE ON MISTER RUSKIN FOR NOT RECOGNISING THAT A PICTURE SHOULD DENOTE THE FRAILTY OF MAN AND REMARKS WITH PLEASING COURTESY AND FELICITOUS GRACE THAT MANY PHASES OF FEELING",
+   "hyp": "in fact he is quite severe on mister ruskin for not recognizing that a picture should denote the frailty of man and remarks with pleasing courtesy and felicitous grace that many phases of feeling",
+   "errors": 1
+  },
+  {
+   "audio": "1272-128104-0012.wav",
+   "ref": "ONLY UNFORTUNATELY HIS OWN WORK NEVER DOES GET GOOD",
+   "hyp": "only unfortunately his own work never does get good",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0013.wav",
+   "ref": "MISTER QUILTER HAS MISSED HIS CHANCE FOR HE HAS FAILED EVEN TO MAKE HIMSELF THE TUPPER OF PAINTING",
+   "hyp": "mister quilter has missed his chance for he has failed even to make himself the tupper of painting",
+   "errors": 0
+  },
+  {
+   "audio": "1272-128104-0014.wav",
+   "ref": "BY HARRY QUILTER M A",
+   "hyp": "by harry quilter m a",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0000.wav",
+   "ref": "BECAUSE YOU WERE SLEEPING INSTEAD OF CONQUERING THE LOVELY ROSE PRINCESS HAS BECOME A FIDDLE WITHOUT A BOW WHILE POOR SHAGGY SITS THERE A COOING DOVE",
+   "hyp": "because you are asleep instead of conquering the lovely rose princess has become a fiddle without a beau oh poor shaggy sits there a cooing dove",
+   "errors": 4
+  },
+  {
+   "audio": "1272-135031-0001.wav",
+   "ref": "HE HAS GONE AND GONE FOR GOOD ANSWERED POLYCHROME WHO HAD MANAGED TO SQUEEZE INTO THE ROOM BESIDE THE DRAGON AND HAD WITNESSED THE OCCURRENCES WITH MUCH INTEREST",
+   "hyp": "he has gone and gone for good answered polychrome who had managed to squeeze into the room beside the dragon and had witnessed the occurrences with much interest",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0002.wav",
+   "ref": "I HAVE REMAINED A PRISONER ONLY BECAUSE I WISHED TO BE ONE AND WITH THIS HE STEPPED FORWARD AND BURST THE STOUT CHAINS AS EASILY AS IF THEY HAD BEEN THREADS",
+   "hyp": "i have remained a prisoner only because i wished to be one and with this he stepped forward and burst the stout chains as easily as if they had been threads",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0003.wav",
+   "ref": "THE LITTLE GIRL HAD BEEN ASLEEP BUT SHE HEARD THE RAPS AND OPENED THE DOOR",
+   "hyp": "the little girl had been asleep but she heard the raps and opened the door",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0004.wav",
+   "ref": "THE KING HAS FLED IN DISGRACE AND YOUR FRIENDS ARE ASKING FOR YOU",
+   "hyp": "the king has flooded disgrace in your friends are asking for you",
+   "errors": 3
+  },
+  {
+   "audio": "1272-135031-0005.wav",
+   "ref": "I BEGGED RUGGEDO LONG AGO TO SEND HIM AWAY BUT HE WOULD NOT DO SO",
+   "hyp": "i begged ruggedo long ago to send him away but he would not do so",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0006.wav",
+   "ref": "I ALSO OFFERED TO HELP YOUR BROTHER TO ESCAPE BUT HE WOULD NOT GO",
+   "hyp": "i also offered to help your brother to escape but he would not go",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0007.wav",
+   "ref": "HE EATS AND SLEEPS VERY STEADILY REPLIED THE NEW KING",
+   "hyp": "he eats and sleeps very steadily replied the new king",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0008.wav",
+   "ref": "I HOPE HE DOESN'T WORK TOO HARD SAID SHAGGY",
+   "hyp": "i hope he doesn't work too hard said shaggy",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0009.wav",
+   "ref": "HE DOESN'T WORK AT ALL",
+   "hyp": "he doesn't work at all",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0010.wav",
+   "ref": "IN FACT THERE IS NOTHING HE CAN DO IN THESE DOMINIONS AS WELL AS OUR NOMES WHOSE NUMBERS ARE SO GREAT THAT IT WORRIES US TO KEEP THEM ALL BUSY",
+   "hyp": "in fact there is nothing he can do in these dominions as well as our nomes whose numbers are so great that it worries us to keep them all busy",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0011.wav",
+   "ref": "NOT EXACTLY RETURNED KALIKO",
+   "hyp": "not exactly returned calico",
+   "errors": 1
+  },
+  {
+   "audio": "1272-135031-0012.wav",
+   "ref": "WHERE IS MY BROTHER NOW",
+   "hyp": "where is my brother now",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0013.wav",
+   "ref": "INQUIRED SHAGGY IN THE METAL FOREST",
+   "hyp": "inquired shaggy in the metal forest",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0014.wav",
+   "ref": "WHERE IS THAT",
+   "hyp": "where is that",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0015.wav",
+   "ref": "THE METAL FOREST IS IN THE GREAT DOMED CAVERN THE LARGEST IN ALL OUR DOMINIONS REPLIED KALIKO",
+   "hyp": "the middle forest is in the great domed cavern the largest in all our dominions replied calico",
+   "errors": 2
+  },
+  {
+   "audio": "1272-135031-0016.wav",
+   "ref": "KALIKO HESITATED",
+   "hyp": "calligo hesitated",
+   "errors": 1
+  },
+  {
+   "audio": "1272-135031-0017.wav",
+   "ref": "HOWEVER IF WE LOOK SHARP WE MAY BE ABLE TO DISCOVER ONE OF THESE SECRET WAYS",
+   "hyp": "however if we look sharp we may be able to discover one of these secret ways",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0018.wav",
+   "ref": "OH NO I'M QUITE SURE HE DIDN'T",
+   "hyp": "oh no i'm quite sure he didn't",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0019.wav",
+   "ref": "THAT'S FUNNY REMARKED BETSY THOUGHTFULLY",
+   "hyp": "that's funny remarked betsey thoughtfully",
+   "errors": 1
+  },
+  {
+   "audio": "1272-135031-0020.wav",
+   "ref": "I DON'T BELIEVE ANN KNEW ANY MAGIC OR SHE'D HAVE WORKED IT BEFORE",
+   "hyp": "i don't believe anne knew any magic or she diverted before",
+   "errors": 5
+  },
+  {
+   "audio": "1272-135031-0021.wav",
+   "ref": "I DO NOT KNOW CONFESSED SHAGGY",
+   "hyp": "i do not know confessed shaggy",
+   "errors": 0
+  },
+  {
+   "audio": "1272-135031-0022.wav",
+   "ref": "TRUE AGREED KALIKO",
+   "hyp": "true agreed calico",
+   "errors": 1
+  },
+  {
+   "audio": "1272-135031-0023.wav",
+   "ref": "KALIKO WENT TO THE BIG GONG AND POUNDED ON IT JUST AS RUGGEDO USED TO DO BUT NO ONE ANSWERED THE SUMMONS",
+   "hyp": "calico went to the big gong and pounded on it just as virgu used to do but no one answered the summons",
+   "errors": 2
+  },
+  {
+   "audio": "1272-135031-0024.wav",
+   "ref": "HAVING RETURNED TO THE ROYAL CAVERN KALIKO FIRST POUNDED THE GONG AND THEN SAT IN THE THRONE WEARING RUGGEDO'S DISCARDED RUBY CROWN AND HOLDING IN HIS HAND THE SCEPTRE WHICH RUGGEDO HAD SO OFTEN THROWN AT HIS HEAD",
+   "hyp": "having returned to the royal cavern calico first pounded the gong and then sat in the throne wearing rigged discarded ruby crown and holding in his hand the sceptre which ruggedo had so often thrown at his head",
+   "errors": 2
+  },
+  {
+   "audio": "1272-141231-0000.wav",
+   "ref": "A MAN SAID TO THE UNIVERSE SIR I EXIST",
+   "hyp": "a man said to the universe sir i exist",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0001.wav",
+   "ref": "SWEAT COVERED BRION'S BODY TRICKLING INTO THE TIGHT LOINCLOTH THAT WAS THE ONLY GARMENT HE WORE",
+   "hyp": "sweat covered brian's body trickling into the tight loin cloth that was the only garment he wore",
+   "errors": 3
+  },
+  {
+   "audio": "1272-141231-0002.wav",
+   "ref": "THE CUT ON HIS CHEST STILL DRIPPING BLOOD THE ACHE OF HIS OVERSTRAINED EYES EVEN THE SOARING ARENA AROUND HIM WITH THE THOUSANDS OF SPECTATORS WERE TRIVIALITIES NOT WORTH THINKING ABOUT",
+   "hyp": "to cut on his chest still dripping blood the ache of his overstrained eyes even the soaring arena around him with thousands of spectators were trivialities not worth thinking about",
+   "errors": 2
+  },
+  {
+   "audio": "1272-141231-0003.wav",
+   "ref": "HIS INSTANT OF PANIC WAS FOLLOWED BY A SMALL SHARP BLOW HIGH ON HIS CHEST",
+   "hyp": "his instinct of panic was followed by a small sharp blow high on his chest",
+   "errors": 1
+  },
+  {
+   "audio": "1272-141231-0004.wav",
+   "ref": "ONE MINUTE A VOICE SAID AND THE TIME BUZZER SOUNDED",
+   "hyp": "one minute a voice said and the time buzzer sounded",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0005.wav",
+   "ref": "A MINUTE IS NOT A VERY LARGE MEASURE OF TIME AND HIS BODY NEEDED EVERY FRACTION OF IT",
+   "hyp": "a minute is not a very large measure of time and his body needed every fraction of it",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0006.wav",
+   "ref": "THE BUZZER'S WHIRR TRIGGERED HIS MUSCLES INTO COMPLETE RELAXATION",
+   "hyp": "the buzzer were triggered his muscles into complete relaxation",
+   "errors": 2
+  },
+  {
+   "audio": "1272-141231-0007.wav",
+   "ref": "ONLY HIS HEART AND LUNGS WORKED ON AT A STRONG MEASURED RATE",
+   "hyp": "only his heart and lungs worked on at a strong measured rate",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0008.wav",
+   "ref": "HE WAS IN REVERIE SLIDING ALONG THE BORDERS OF CONSCIOUSNESS",
+   "hyp": "he was in the reverie sliding along the borders of consciousness",
+   "errors": 1
+  },
+  {
+   "audio": "1272-141231-0009.wav",
+   "ref": "THE CONTESTANTS IN THE TWENTIES NEEDED UNDISTURBED REST THEREFORE NIGHTS IN THE DORMITORIES WERE AS QUIET AS DEATH",
+   "hyp": "the contestants in the twenties needed undisturbed rest therefore knights and dormitories were as quiet as death",
+   "errors": 3
+  },
+  {
+   "audio": "1272-141231-0010.wav",
+   "ref": "PARTICULARLY SO ON THIS LAST NIGHT WHEN ONLY TWO OF THE LITTLE CUBICLES WERE OCCUPIED THE THOUSANDS OF OTHERS STANDING WITH DARK EMPTY DOORS",
+   "hyp": "particularly so on this last night when only two of the little cubicles were occupied the thousands of others standing with dark empty doors",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0011.wav",
+   "ref": "THE OTHER VOICE SNAPPED WITH A HARSH URGENCY CLEARLY USED TO COMMAND",
+   "hyp": "the other voice snapped with a harsh urgency clearly used to command",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0012.wav",
+   "ref": "I'M HERE BECAUSE THE MATTER IS OF UTMOST IMPORTANCE AND BRANDD IS THE ONE I MUST SEE NOW STAND ASIDE",
+   "hyp": "i am here because the matter is of utmost importance and brand is the one i must see now stand aside",
+   "errors": 3
+  },
+  {
+   "audio": "1272-141231-0013.wav",
+   "ref": "THE TWENTIES",
+   "hyp": "the twenties",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0014.wav",
+   "ref": "HE MUST HAVE DRAWN HIS GUN BECAUSE THE INTRUDER SAID QUICKLY PUT THAT AWAY YOU'RE BEING A FOOL OUT",
+   "hyp": "he must have drawn his gun because the intruders had quickly put that away your being a fool out",
+   "errors": 3
+  },
+  {
+   "audio": "1272-141231-0015.wav",
+   "ref": "THERE WAS SILENCE THEN AND STILL WONDERING BRION WAS ONCE MORE ASLEEP",
+   "hyp": "to his silence then and still wondering brion was once more asleep",
+   "errors": 2
+  },
+  {
+   "audio": "1272-141231-0016.wav",
+   "ref": "TEN SECONDS",
+   "hyp": "ten seconds",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0017.wav",
+   "ref": "HE ASKED THE HANDLER WHO WAS KNEADING HIS ACHING MUSCLES",
+   "hyp": "he asked the handler who was needing his aching muscles",
+   "errors": 1
+  },
+  {
+   "audio": "1272-141231-0018.wav",
+   "ref": "A RED HAIRED MOUNTAIN OF A MAN WITH AN APPARENTLY INEXHAUSTIBLE STORE OF ENERGY",
+   "hyp": "a red haired mountain of a man with an apparently inexhaustible store of energy",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0019.wav",
+   "ref": "THERE COULD BE LITTLE ART IN THIS LAST AND FINAL ROUND OF FENCING",
+   "hyp": "there could be little art in this last and final round of fencing",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0020.wav",
+   "ref": "JUST THRUST AND PARRY AND VICTORY TO THE STRONGER",
+   "hyp": "just thrust and parry and victory to the stronger",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0021.wav",
+   "ref": "EVERY MAN WHO ENTERED THE TWENTIES HAD HIS OWN TRAINING TRICKS",
+   "hyp": "every man who entered the twenties had his own training tricks",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0022.wav",
+   "ref": "THERE APPEARED TO BE AN IMMEDIATE ASSOCIATION WITH THE DEATH TRAUMA AS IF THE TWO WERE INEXTRICABLY LINKED INTO ONE",
+   "hyp": "there appeared to be an immediate association with the death drama as if the two were inextricably linked into one",
+   "errors": 1
+  },
+  {
+   "audio": "1272-141231-0023.wav",
+   "ref": "THE STRENGTH THAT ENABLES SOMEONE IN A TRANCE TO HOLD HIS BODY STIFF AND UNSUPPORTED EXCEPT AT TWO POINTS THE HEAD AND HEELS",
+   "hyp": "to strengthen enable some one in a trance to hold his body stiff and unsupported except at two points the head and heels",
+   "errors": 5
+  },
+  {
+   "audio": "1272-141231-0024.wav",
+   "ref": "THIS IS PHYSICALLY IMPOSSIBLE WHEN CONSCIOUS",
+   "hyp": "this is physically impossible when conscious",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0025.wav",
+   "ref": "OTHERS HAD DIED BEFORE DURING THE TWENTIES AND DEATH DURING THE LAST ROUND WAS IN SOME WAYS EASIER THAN DEFEAT",
+   "hyp": "others had died before during the twenties and death during the last round was in some ways easier than defeat",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0026.wav",
+   "ref": "BREATHING DEEPLY BRION SOFTLY SPOKE THE AUTO HYPNOTIC PHRASES THAT TRIGGERED THE PROCESS",
+   "hyp": "breathing deeply brion softly spoke the auto hypnotic phrases that triggered the process",
+   "errors": 0
+  },
+  {
+   "audio": "1272-141231-0027.wav",
+   "ref": "WHEN THE BUZZER SOUNDED HE PULLED HIS FOIL FROM HIS SECOND'S STARTLED GRASP AND RAN FORWARD",
+   "hyp": "when the buzzer sounded he pulled his foil from his second startled grasp and ran forward",
+   "errors": 1
+  },
+  {
+   "audio": "1272-141231-0028.wav",
+   "ref": "IROLG LOOKED AMAZED AT THE SUDDEN FURY OF THE ATTACK THEN SMILED",
+   "hyp": "i rolled looked amazed at the sudden fury of the attack then smiled",
+   "errors": 2
+  },
+  {
+   "audio": "1272-141231-0029.wav",
+   "ref": "HE THOUGHT IT WAS A LAST BURST OF ENERGY HE KNEW HOW CLOSE THEY BOTH WERE TO EXHAUSTION",
+   "hyp": "he said it was the last burst of energy he knew how closely both were to exhaustion",
+   "errors": 4
+  },
+  {
+   "audio": "1272-141231-0030.wav",
+   "ref": "BRION SAW SOMETHING CLOSE TO PANIC ON HIS OPPONENT'S FACE WHEN THE MAN FINALLY RECOGNIZED HIS ERROR",
+   "hyp": "brian saw something close to panic on his opponent's face when the man finally recognised his error",
+   "errors": 2
+  },
+  {
+   "audio": "1272-141231-0031.wav",
+   "ref": "A WAVE OF DESPAIR ROLLED OUT FROM IROLG BRION SENSED IT AND KNEW THE FIFTH POINT WAS HIS",
+   "hyp": "a wave of despair rolled out from irog brian sensed it and knew the fifth point was his",
+   "errors": 2
+  },
+  {
+   "audio": "1272-141231-0032.wav",
+   "ref": "THEN THE POWERFUL TWIST THAT THRUST IT ASIDE IN AND UNDER THE GUARD",
+   "hyp": "then the powerful twist that thrust it aside in and under the guard",
+   "errors": 0
+  }
+ ]
+}

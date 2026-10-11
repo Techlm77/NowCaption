@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nowcaption"
+version = "1.0.0"
+description = "On-device live captions for Linux desktop audio or the microphone"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = ["sherpa-onnx==1.13.8", "numpy>=2"]
+# Also needs the system packages PyGObject, GTK 4, libadwaita and GStreamer (gst-plugins-good).
+
+[project.gui-scripts]
+nowcaption = "nowcaption.launch:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

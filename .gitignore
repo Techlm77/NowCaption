@@ -1,0 +1,13 @@
+.venv/
+.cache/
+models/
+build-dir/
+repo/
+.flatpak-builder/
+*.flatpak
+__pycache__/
+benchmark/data/
+benchmark/models/
+dist/
+.local-manifest.yml
+flathub/

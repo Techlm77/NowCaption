@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=NowCaption
+GenericName=Live Captions
+Comment=Live captions for anything your computer plays, or your microphone
+Exec=nowcaption
+Icon=io.github.Techlm77.NowCaption
+Terminal=false
+Categories=Utility;Accessibility;
+Keywords=captions;subtitles;transcription;speech;deaf;hard of hearing;accessibility;speech-to-text;
+StartupNotify=true
