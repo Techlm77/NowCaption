@@ -57,6 +57,16 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.0.1" date="2026-10-11">
+      <description>
+        <p>
+          Captions can now be dragged anywhere on the screen, and on KDE Plasma, Hyprland and Sway
+          clicks outside them reach the windows underneath. Captions always show two lines, with
+          punctuation that carries across pauses. The right-click menu is smaller and opens where
+          you click, with one-row text size and background controls.
+        </p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-10-11">
       <description>
         <p>

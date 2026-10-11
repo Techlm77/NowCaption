@@ -20,11 +20,11 @@ for people who are deaf or hard of hearing.
 
 ### Download (x86_64)
 
-Download `NowCaption-1.0.0-x86_64.flatpak` from the
+Download `NowCaption-1.0.1-x86_64.flatpak` from the
 [latest release](https://github.com/Techlm77/NowCaption/releases/latest), then run:
 
 ```sh
-flatpak install --user NowCaption-1.0.0-x86_64.flatpak
+flatpak install --user NowCaption-1.0.1-x86_64.flatpak
 ```
 
 Flatpak downloads the GNOME runtime from Flathub automatically. This file doesn't
@@ -185,8 +185,8 @@ named `nowcaption-fastconformer-en-80ms-cc-by-v1`.
 
 1. Add a `<release>` entry to `data/io.github.Techlm77.NowCaption.metainfo.xml`
    and set `__version__` in `src/nowcaption/__init__.py`.
-2. Tag and push: `git tag v1.0.0 && git push --tags`.
-3. Run `tools/make-flathub-manifest.sh v1.0.0`. It writes
+2. Tag and push, for example: `git tag v1.0.1 && git push --tags`.
+3. Run `tools/make-flathub-manifest.sh v1.0.1`. It writes
    `flathub/io.github.Techlm77.NowCaption.yml` with the source pinned to that tag.
 4. Check it:
    `flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest flathub/io.github.Techlm77.NowCaption.yml`
