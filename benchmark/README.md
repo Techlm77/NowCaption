@@ -4,10 +4,10 @@ There are two kinds of measurement here:
 
 - **Engine-only** (`bench.py`) compares speech engines by feeding WAV audio straight
   into each one. This is how NowCaption's model was chosen.
-- **End-to-end** (`e2e.py`) measures the actual app pipeline: playback into a
+- **Capture to worker event** (`e2e.py`) measures playback into a
   private PipeWire sink, then GStreamer capture, the recognition worker,
-  punctuation and the caption event. Only drawing the text is left out, which adds
-  at most one frame.
+  punctuation and the caption event. It does not measure GTK event delivery or
+  the time when text actually becomes visible on the screen.
 
 All numbers come from one machine (Ryzen 7 7800X3D, ONNX Runtime on the CPU, one
 thread). LibriSpeech is read-aloud audiobook speech, so calls, games, music,
@@ -37,25 +37,51 @@ the word correctly.
 **CPU** is CPU seconds per second of audio, including 1.5 s of silence after each
 clip.
 
-## The whole app (end-to-end)
+## Historical capture-to-worker-event results (scorer version 1)
 
-These runs used `e2e.py`, with one clip from each speaker of the test sets above,
-played in real time.
+These archived runs used the older `e2e.py`, with one clip from each speaker,
+played in real time. That scorer could count a repeated word from the next clip
+for the previous clip, and did not publish missed-word coverage. Treat the latency
+figures below as historical results awaiting a rerun, rather than verified
+performance of 1.0.4. The previous speech CPU denominator also included gaps
+and settling time.
 
 | | test-clean (40 speakers) | test-other (33 speakers) |
 |---|---|---|
 | Median lag | 0.31 s | 0.34 s |
 | p90 lag | 0.55 s | 0.59 s |
 | p99 lag | 1.09 s | 1.09 s |
-| CPU while speech plays | 0.19 core | 0.19 core |
+| CPU over playback, gaps and settling | 0.19 core | 0.19 core |
 | CPU during digital silence | 0.004 core | 0.004 core |
 | Peak memory | 303 MB | 304 MB |
 
-Here **lag** is when a word first appears correctly in a caption, minus when it
-ends in the audio. The clock starts just before `paplay` starts, so the figures
-slightly overstate the delay. **CPU** covers the app's capture, recognition and
-punctuation threads. On a desktop, silence that isn't digitally silent (such as
-background noise) is processed like speech.
+The current scorer (version 3) uses the worker's optional complete session trace
+after normal caption formatting, rather than the moving caption excerpt. Words
+remain available to the scorer after they scroll away, and repeated words keep
+separate positions. No extra punctuation inference runs for the trace. Raw
+recognition words are scored; GTK delivery and display remain outside the metric.
+The trace adds text copying and recording to the measured process; CPU results
+therefore include benchmark instrumentation.
+
+The scorer never uses an event at or after the next clip's start for the preceding
+clip. It aligns the complete final text before scoring word occurrences, uses
+at least three seconds of settling silence between clips,
+and reports timed-reference words, matched-word coverage and misses alongside
+percentiles. Percentiles describe the words recognised correctly, not all words.
+
+The clock starts just before `paplay` launches, so subprocess and playback
+startup delay are included; this is not a hardware-synchronised audio clock.
+CPU is measured separately over playback subprocess intervals, settling gaps
+and final digital silence. Capture failures, recognition errors and overload
+abort a run. Silence that is not digitally silent, such as background noise,
+is processed like speech. Corrected runs write `e2e-v3-*.json` and leave the
+historical result files intact. No corrected native run was performed in this
+repair environment.
+
+Version 2 fixed clip-boundary attribution but scored moving caption excerpts;
+long utterances could lose already displayed words and shift latency positions.
+Those results also require a rerun with version 3. Dumped caption records now
+contain complete recognition history, not screenshots or the two visible rows.
 
 ## How the model was chosen
 
@@ -100,4 +126,6 @@ PYTHONPATH=../src python e2e.py --data data/test-clean     # needs pactl and pap
 ```
 
 Results are written to `results/`. Files named `*-dummy-*` are from the
-single-speaker set.
+single-speaker set. A corrected capture benchmark result contains
+`score_version: 3` and `metric_scope: capture_to_worker_event`; it must be rerun
+on Linux with the real models before quoting new latency or CPU figures.

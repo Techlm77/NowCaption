@@ -18,11 +18,13 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: python -m pip install 'numpy>=2'
       - run: PYTHONPATH=src python tests/test_reliability.py
+      - run: PYTHONPATH=src python tests/test_regressions.py
+      - run: PYTHONPATH=src python tests/test_fixes_104.py
       - run: python -m compileall -q src tests benchmark tools
       - run: for script in tools/*.sh tests/*.sh flatpak/*.sh; do sh -n "$script"; done
 
   app:
-    # Application logic with real GTK 4 / libadwaita (no display needed), from Ubuntu's packages.
+    # Application logic plus real GTK window construction under Xvfb.
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -30,5 +32,7 @@ jobs:
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends python3-gi python3-gi-cairo python3-numpy \
-            gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0
-      - run: PYTHONPATH=src /usr/bin/python3 tests/test_app.py
+            gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 \
+            xvfb xauth
+      - run: NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_app.py
+      - run: xvfb-run -a env NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_window.py

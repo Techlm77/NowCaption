@@ -82,6 +82,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.layer = bool(LayerShell and LayerShell.is_supported())
         self.dragging = None
         self.text, self.status, self.status_timer = '', '', None
+        self.status_sticky = False
         self.monitor = self.pick_monitor(self.settings.get('monitor'))
         self.box_width = self.width_for(self.monitor)
 
@@ -89,12 +90,17 @@ class CaptionWindow(Gtk.ApplicationWindow):
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css,
                                                   Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.add_css_class('nowcaption')
-        self.label = Gtk.Label(xalign=0, yalign=0, wrap=False, single_line_mode=False)
+        self.label = Gtk.Label(xalign=0, yalign=0, wrap=False, single_line_mode=False,
+                               accessible_role=Gtk.AccessibleRole.STATUS)
         self.label.add_css_class('caption-text')
-        self.label.set_accessible_role(Gtk.AccessibleRole.STATUS)
-        self.box = Gtk.Box()
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.box.add_css_class('caption-box')
         self.box.append(self.label)
+        self.status_label = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END,
+                                      single_line_mode=True, accessible_role=Gtk.AccessibleRole.STATUS)
+        self.status_label.add_css_class('caption-status')
+        self.status_label.set_visible(False)
+        self.box.append(self.status_label)
         self.fixed = Gtk.Fixed()  # lets the box move inside the window while it is dragged
         self.fixed.put(self.box, 0, 0)
         self.set_child(self.fixed)
@@ -123,7 +129,11 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.set_cursor(Gdk.Cursor.new_from_name('grab', None))
 
         self.popover = Gtk.PopoverMenu.new_from_model(app.build_menu(self.layer and self.monitor_count() > 1))
-        Gdk.Display.get_default().get_monitors().connect('items-changed', self.on_monitors_changed)
+        self._monitor_handlers = []
+        self._monitors = Gdk.Display.get_default().get_monitors()
+        self._monitors_handler = self._monitors.connect('items-changed', self.on_monitors_changed)
+        self.watch_monitor()
+        self.connect('unrealize', self.disconnect_monitors)
         self.popover.set_parent(self.box)
         self.popover.set_has_arrow(False)
         self.popover.set_position(Gtk.PositionType.BOTTOM)
@@ -154,6 +164,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         """Move to monitor, resizing the box and its text wrapping to fit it."""
         self.monitor = monitor
         self.box_width = self.width_for(monitor)
+        self.watch_monitor()
         if self.layer and monitor:
             LayerShell.set_monitor(self, monitor)
         self.restyle()
@@ -165,7 +176,32 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.use_monitor(self.pick_monitor(self.settings.get('monitor')))
         self.popover.set_menu_model(self.app.build_menu(self.layer and len(items) > 1))
 
+    def watch_monitor(self):
+        for monitor, handler in self._monitor_handlers:
+            monitor.disconnect(handler)
+        self._monitor_handlers = []
+        if self.monitor:
+            for prop in ('geometry', 'scale-factor'):
+                handler = self.monitor.connect(f'notify::{prop}', self.on_monitor_geometry)
+                self._monitor_handlers.append((self.monitor, handler))
+
+    def on_monitor_geometry(self, monitor, pspec):
+        if monitor == self.monitor:
+            self.box_width = self.width_for(monitor)
+            self.restyle()
+
+    def disconnect_monitors(self, *args):
+        for monitor, handler in self._monitor_handlers:
+            monitor.disconnect(handler)
+        self._monitor_handlers = []
+        if self._monitors_handler is not None:
+            self._monitors.disconnect(self._monitors_handler)
+            self._monitors_handler = None
+
     def box_height(self):
+        return self.caption_height() + (self.status_height if self.text and self.status else 0)
+
+    def caption_height(self):
         return ROWS * self.row_height + 2 * PAD_Y
 
     def clamp(self, x, y):
@@ -214,14 +250,18 @@ class CaptionWindow(Gtk.ApplicationWindow):
             window.nowcaption {{ background: transparent; }}
             window.nowcaption .caption-box {{ background: rgba(0, 0, 0, {alpha}); border-radius: 14px; }}
             window.nowcaption .caption-text {{ color: #ffffff; font-size: {px}px; font-weight: 500;
-                                              padding: {PAD_Y}px {PAD_X}px; }}""")
+                                              padding: {PAD_Y}px {PAD_X}px; }}
+            window.nowcaption .caption-status {{ color: #cccccc; font-size: {max(14, round(px * 0.55))}px;
+                                                padding: 0 {PAD_X}px {PAD_Y}px; }}""")
         # measure one row in the caption font, then fix the box at exactly ROWS rows
         probe = self.label.create_pango_layout('Ag')
         self.row_height = probe.get_pixel_size()[1]
+        self.status_height = self.status_label.create_pango_layout('Ag').get_pixel_size()[1] + PAD_Y
         self.layout = self.label.create_pango_layout('')
         self.layout.set_width((self.box_width - 2 * PAD_X) * Pango.SCALE)
         self.layout.set_wrap(Pango.WrapMode.WORD_CHAR)
-        self.label.set_size_request(self.box_width, self.box_height())
+        self.label.set_size_request(self.box_width, self.caption_height())
+        self.status_label.set_size_request(self.box_width, -1)
         x, y = self.settings.get('x'), self.settings.get('y')
         self.place(x if x >= 0 else None, y if y >= 0 else None)
         self.render()
@@ -231,30 +271,37 @@ class CaptionWindow(Gtk.ApplicationWindow):
     def show_text(self, text):
         """New caption passage. It replaces a persistent status message such as 'Listening…'."""
         self.text = text
-        if text and self.status and not self.status_timer:
+        if text and self.status and not self.status_timer and not self.status_sticky:
             self.status = ''
         self.render()
         return False
 
-    def show_status(self, message, seconds=None):
-        """Show a status message in the caption box, for some seconds or until the next caption."""
+    def show_status(self, message, seconds=None, sticky=False):
+        """Show status below existing captions, or in the empty caption box."""
         if self.status_timer:
             GLib.source_remove(self.status_timer)
             self.status_timer = None
         self.status = message
+        self.status_sticky = sticky
         if seconds:
             self.status_timer = GLib.timeout_add_seconds(seconds, self.end_status)
         self.render()
 
     def end_status(self):
         self.status_timer, self.status = None, ''
+        self.status_sticky = False
         self.render()
         return False
 
     def render(self):
         # the text flows on; only the last ROWS rows show, so the newest words are always visible
-        text = self.status or self.text
+        text = self.text or self.status
         self.label.set_text(last_rows(self.layout, text, ROWS) if text else ' ')
+        self.status_label.set_text(self.status)
+        self.status_label.set_tooltip_text(self.status or None)
+        self.status_label.set_visible(bool(self.text and self.status))
+        # The optional status row participates in overlay clamping and pointer input.
+        self.place(self.x, self.y)
 
     def save_png(self, path):
         """Render the window exactly as drawn, for store screenshots."""
@@ -318,6 +365,10 @@ class NowCaption(Adw.Application):
         self.source_gen = self.ui_gen = 0
         self.capture_failures = self.recognition_failures = 0
         self.retry_id = None
+        self.recognition_retry_id = None
+        self.recognition_retry_token = 0
+        self.pending_saves = 0
+        self.quit_requested = False
         self.capture = audio.Capture(
             on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
             on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
@@ -382,12 +433,19 @@ class NowCaption(Adw.Application):
         act('save', self.save_transcript, ['<Control>s'])
         act('clear', self.clear_transcript)
         act('about', self.about)
-        act('quit', self.quit, ['<Control>q'])
+        act('quit', self.request_quit, ['<Control>q'])
 
     def on_source(self, action, value):
+        if self.closing or self.quit_requested:
+            return
+        self.cancel_recognition_retry(reset=True)
         action.set_state(value)
         self.settings.set('source', value.get_string())
-        self.start_capture()
+        if self.ready:
+            self.start_capture()
+        elif self.worker and not self.closing:
+            self.window.show_status('Retrying the speech model…')
+            self.worker.restart()
 
     def resize(self, step):
         size = self.settings.get('size')
@@ -403,6 +461,7 @@ class NowCaption(Adw.Application):
         if self.window:
             return self.window.present()
         self.window = CaptionWindow(self)
+        self.window.connect('close-request', self.on_window_close)
         if not self.window.layer:  # an overlay never has keyboard focus, so shortcuts would never fire
             for action, keys in self.accels.items():
                 self.set_accels_for_action(action, keys)
@@ -418,10 +477,43 @@ class NowCaption(Adw.Application):
 
     def on_shutdown(self, app):
         self.closing = True
+        self.cancel_recognition_retry()
+        if self.retry_id:
+            GLib.source_remove(self.retry_id)
+            self.retry_id = None
         self.capture.stop()
         if self.worker:
             self.worker.stop()
-            self.worker.join(timeout=2)
+
+    def request_quit(self):
+        """Keep accepted saves alive until their snapshot and async write finish."""
+        if self.pending_saves:
+            self.quit_requested = True
+            if self.window:
+                self.window.show_status('Finishing transcript save before quitting…', sticky=True)
+            return
+        self.quit()
+
+    def on_window_close(self, window):
+        self.request_quit()
+        return True
+
+    def cancel_recognition_retry(self, reset=False):
+        self.recognition_retry_token += 1
+        if self.recognition_retry_id:
+            GLib.source_remove(self.recognition_retry_id)
+            self.recognition_retry_id = None
+        if reset:
+            self.recognition_failures = 0
+
+    def retry_recognition(self, token, source_gen):
+        if token != self.recognition_retry_token:
+            return False
+        self.recognition_retry_id = None
+        self.recognition_retry_token += 1
+        if self.worker and not self.closing and source_gen == self.source_gen:
+            self.worker.restart(recover_only=True, source_gen=source_gen)
+        return False
 
     # --- recognition worker events ----------------------------------------------------------
 
@@ -434,8 +526,10 @@ class NowCaption(Adw.Application):
         elif kind == 'caption':
             gen, text = value
             if gen == self.ui_gen:  # ignore captions from before the last Clear
-                self.recognition_failures = 0
                 self.window.show_text(text)
+        elif kind == 'recognition-ok':
+            if value == self.source_gen:
+                self.cancel_recognition_retry(reset=True)
         elif kind == 'snapshot':
             fn, text = value
             fn(text)
@@ -447,11 +541,15 @@ class NowCaption(Adw.Application):
             self.ready = False
             self.window.show_status(f'{value} Right-click and choose a sound source to try again.')
         elif kind == 'error':
+            if not getattr(self.worker, 'broken', True):
+                return False  # a source change already recovered this queued error
+            self.cancel_recognition_retry()
             self.recognition_failures += 1
             if self.recognition_failures <= 3:
                 delay = 2 ** self.recognition_failures
                 self.window.show_status(f'{value}. Restarting in {delay} s…')
-                GLib.timeout_add_seconds(delay, lambda: self.worker.restart() and False)
+                self.recognition_retry_id = GLib.timeout_add_seconds(
+                    delay, self.retry_recognition, self.recognition_retry_token, self.source_gen)
             else:
                 self.window.show_status(f'{value}. Right-click and choose a sound source to try again.')
         return False
@@ -461,6 +559,7 @@ class NowCaption(Adw.Application):
     def start_capture(self):
         if not self.ready or self.closing:
             return
+        self.cancel_recognition_retry()
         if self.retry_id:
             GLib.source_remove(self.retry_id)
             self.retry_id = None
@@ -508,13 +607,17 @@ class NowCaption(Adw.Application):
             self.worker.snapshot(copy)
 
     def clear_transcript(self):
-        if self.worker:
+        if self.worker and not self.closing and not self.quit_requested:
+            self.cancel_recognition_retry(reset=True)
             self.ui_gen += 1  # captions already on their way from before the clear are dropped
             self.worker.clear(self.ui_gen)
             self.window.show_text('')
+            # Discard pre-Clear audio buffered in GStreamer as well as in recognition.
+            if self.ready:
+                self.start_capture()
 
     def save_transcript(self):
-        if not self.worker:
+        if not self.worker or self.closing or self.quit_requested:
             return
         dialog = Gtk.FileDialog(title='Save transcript', initial_name=GLib.DateTime.new_now_local().format(
             'Captions %Y-%m-%d %H.%M.txt'))
@@ -523,25 +626,58 @@ class NowCaption(Adw.Application):
             try:
                 f = d.save_finish(result)
             except GLib.Error as e:
-                if not e.matches(Gtk.dialog_error_quark(), Gtk.DialogError.DISMISSED):
+                if not e.matches(Gtk.DialogError.quark(), Gtk.DialogError.DISMISSED):
                     self.window.show_status(f'Could not save the transcript: {e.message}', seconds=8)
                 return
-            self.worker.snapshot(lambda text: self.write_transcript(f, text))
+            if self.closing or self.quit_requested:
+                return
+            self.begin_save()
+            try:
+                self.worker.snapshot(lambda text: self.write_transcript(f, text, tracked=True))
+            except Exception as e:
+                self.window.show_status(f'Could not save the transcript: {e}', seconds=8)
+                self.finish_save(False)
 
         dialog.save(None, None, chosen)  # its own window: the caption overlay is too small to host it
 
-    def write_transcript(self, f, text):
+    def begin_save(self):
+        self.pending_saves += 1
+        self.hold()
+
+    def finish_save(self, success):
+        self.pending_saves -= 1
+        if not success:
+            # A failed save needs a visible error and an opportunity to retry.
+            self.quit_requested = False
+        should_quit = self.quit_requested and not self.pending_saves
+        self.release()
+        if should_quit:
+            self.quit()
+
+    def write_transcript(self, f, text, tracked=False):
         """Write asynchronously (a slow or network destination never stalls the window) and say
         whether it worked."""
+        if not tracked:
+            self.begin_save()
+
+        def failed(error):
+            LOG.warning('Saving the transcript failed: %s', error)
+            self.window.show_status(f'Could not save the transcript: {error}', seconds=8)
+            self.finish_save(False)
+
         def written(f, result):
             try:
                 f.replace_contents_finish(result)
-                self.window.show_status(f'Transcript saved to {f.get_basename()}.', seconds=4)
             except GLib.Error as e:
-                LOG.warning('Saving the transcript failed: %s', e.message)
-                self.window.show_status(f'Could not save the transcript: {e.message}', seconds=8)
-        f.replace_contents_bytes_async(GLib.Bytes.new((text + '\n').encode()), None, False,
-                                       Gio.FileCreateFlags.REPLACE_DESTINATION, None, written)
+                failed(e.message)
+                return
+            self.window.show_status(f'Transcript saved to {f.get_basename()}.', seconds=4)
+            self.finish_save(True)
+        try:
+            f.replace_contents_bytes_async(GLib.Bytes.new((text + '\n').encode()), None, False,
+                                           Gio.FileCreateFlags.REPLACE_DESTINATION, None, written)
+        except Exception as e:
+            failed(e)
 
     def about(self):
         about = Adw.AboutDialog(

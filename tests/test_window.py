@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""Actual GTK window construction/rendering smoke tests (use xvfb-run in CI).
+
+Unlike the application-logic tests, these construct CaptionWindow and its menu.
+No models or audio pipeline are started. Missing GTK/display is a hard failure
+when NOWCAPTION_REQUIRE_GUI_TESTS=1, otherwise these tests skip locally.
+"""
+import os
+import tempfile
+import unittest
+
+CONFIG = tempfile.TemporaryDirectory()
+os.environ['XDG_CONFIG_HOME'] = CONFIG.name
+try:
+    from nowcaption import app as nc
+    if not nc.Gtk.init_check() or nc.Gdk.Display.get_default() is None:
+        raise RuntimeError('No GTK display available; run with xvfb-run')
+except (ImportError, ValueError, RuntimeError) as e:
+    if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
+        raise
+    nc, SKIP = None, str(e)
+
+
+@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+class WindowTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = nc.NowCaption()
+        cls.app.register(None)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.app.quit()
+
+    def setUp(self):
+        self.app.settings.set('size', 30)
+        self.window = nc.CaptionWindow(self.app)
+        self.app.window = self.window
+
+    def tearDown(self):
+        self.window.disconnect_monitors()
+        self.window.destroy()
+        self.app.window = None
+
+    def test_window_and_menu_construct_with_a_status_role_on_the_caption_only(self):
+        self.assertEqual(self.window.label.get_accessible_role(), nc.Gtk.AccessibleRole.STATUS)
+        other = nc.Gtk.Label(label='Ordinary label')
+        self.assertEqual(other.get_accessible_role(), nc.Gtk.AccessibleRole.LABEL)
+        self.assertIsNotNone(self.window.popover)
+
+    def test_two_row_caption_renders_and_font_size_can_change(self):
+        self.window.show_text('hello ' * 100)
+        self.assertLessEqual(len(self.window.label.get_text().splitlines()), nc.ROWS)
+        self.app.settings.set('size', 50)
+        self.window.restyle()
+        self.assertGreater(self.window.box_height(), 0)
+        self.assertTrue(self.window.label.get_text())
+
+    def test_geometry_refresh_keeps_caption_width_within_the_current_screen(self):
+        if not self.window.monitor:
+            self.skipTest('No monitor advertised by the display')
+        self.window.on_monitor_geometry(self.window.monitor, None)
+        self.assertLessEqual(self.window.box_width, self.window.monitor.get_geometry().width)
+        self.assertEqual(self.window.box_width, self.window.width_for(self.window.monitor))
+
+    def test_notification_uses_a_separate_row_without_replacing_captions(self):
+        self.window.show_text('Words that must remain visible')
+        self.window.show_status('Transcript copied.', seconds=3)
+        self.assertEqual(self.window.label.get_text(), 'Words that must remain visible')
+        self.assertEqual(self.window.status_label.get_text(), 'Transcript copied.')
+        self.assertTrue(self.window.status_label.get_visible())
+        self.assertEqual(self.window.box_height(), self.window.caption_height() + self.window.status_height)
+        self.window.show_text('New speech continues')
+        self.assertEqual(self.window.label.get_text(), 'New speech continues')
+        if self.window.status_timer:
+            nc.GLib.source_remove(self.window.status_timer)
+        self.window.end_status()
+        self.assertFalse(self.window.status_label.get_visible())
+
+
+if __name__ == '__main__':
+    try:
+        unittest.main(verbosity=2)
+    finally:
+        CONFIG.cleanup()

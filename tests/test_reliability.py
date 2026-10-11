@@ -29,7 +29,8 @@ SILENCE = np.zeros(1600, dtype=np.int16).tobytes()
 
 class FakeStream:
     def __init__(self, rec):
-        self.rec = rec
+        self.rec, self.text = rec, ''
+        self.ready = False
 
     def accept_waveform(self, rate, samples):
         rec = self.rec
@@ -43,7 +44,8 @@ class FakeStream:
             if rec.slow:
                 time.sleep(rec.slow)
             if np.any(samples) and rec.script:
-                rec.text += rec.script.pop(0)
+                self.text += rec.script.pop(0)
+            self.ready = True
         finally:
             with rec.lock:
                 rec.active -= 1
@@ -61,16 +63,17 @@ class FakeRecognizer:
         return FakeStream(self)
 
     def is_ready(self, stream):
-        return False
+        return stream.ready
 
     def decode_stream(self, stream):
-        pass
+        stream.ready = False
 
     def get_result(self, stream):
-        return self.text
+        return stream.text
 
     def reset(self, stream):
-        self.text = ''
+        stream.text = ''
+        stream.ready = False
 
 
 class FakePunct:
@@ -355,10 +358,11 @@ class CaptureTests(unittest.TestCase):
         self.assertEqual(started, [])  # no audio from the substitute device was ever delivered
         self.assertEqual(gst.pipelines[0].state, 'null')
 
-    def test_refused_start_raises_and_leaves_nothing_running(self):
+    def test_refused_start_is_reported_and_leaves_nothing_running(self):
         cap, gst, ended, _ = self.capture('refuse')
-        with self.assertRaises(RuntimeError):
-            cap.start('dev', 1)
+        cap.start('dev', 1)
+        self.assertIn('could not start capturing', ended.get(timeout=2)[1])
+        self.assertTrue(cap.wait_stopped())
         self.assertEqual(gst.pipelines[0].state, 'null')
         self.assertIsNone(cap.current)
 
@@ -367,12 +371,16 @@ class CaptureTests(unittest.TestCase):
         stop is not reported as a failure."""
         cap, gst, ended, _ = self.capture('ok')
         cap.start('desktop', 1)
+        end = time.monotonic() + 2
+        while not gst.pipelines and time.monotonic() < end:
+            time.sleep(0.002)
+        self.assertTrue(gst.pipelines)
         t0 = time.monotonic()
         cap.start('mic', 2)
         self.assertLess(time.monotonic() - t0, 0.1)
-        self.assertEqual(gst.pipelines[0].state, 'null')
         cap.stop()
-        time.sleep(0.3)
+        self.assertTrue(cap.wait_stopped())
+        self.assertEqual(gst.pipelines[0].state, 'null')
         self.assertTrue(ended.empty())
 
 
@@ -449,6 +457,7 @@ class ScriptTests(unittest.TestCase):
             (self.dir / sub).mkdir()
         shutil.copy(self.ROOT / 'tools/run-dev.sh', self.dir / 'tools')
         shutil.copy(self.ROOT / 'tests/test_flatpak.sh', self.dir / 'tests')
+        shutil.copy(self.ROOT / 'tests/transcript_check.py', self.dir / 'tests')
         shutil.copy(self.ROOT / 'requirements.txt', self.dir)
 
     def tearDown(self):
@@ -491,6 +500,24 @@ class ScriptTests(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn('exited before it was ready', r.stdout)
         self.assertIn('unload-module 99', (self.dir / 'bin/pactl.log').read_text())
+
+    def test_flatpak_script_uses_the_ordered_transcript_checker(self):
+        import json
+        refs = [{'text': 'hello hello mister speaker'}]
+        fixtures = self.dir / 'tests/fixtures'
+        fixtures.mkdir()
+        (fixtures / 'refs.json').write_text(json.dumps(refs))
+        (fixtures / 'clip.wav').write_bytes(b'fixture')
+        self.script(self.dir / 'bin/pactl', 'echo "$@" >> "$(dirname "$0")/pactl.log"; echo 99\n')
+        self.script(self.dir / 'bin/paplay', 'exit 0\n')
+        self.script(self.dir / 'bin/flatpak', 'cat "$(dirname "$0")/../record.txt"; sleep 1\n')
+        for text, expected in (('Hello hello Mr. speaker.', 0), ('speaker mister hello', 1)):
+            with self.subTest(text=text):
+                (self.dir / 'record.txt').write_text('READY\n' + json.dumps(
+                    {'kind': 'transcript', 'text': '[12:34:56] ' + text}) + '\n')
+                r = self.run_sh('tests/test_flatpak.sh', timeout=10)
+                self.assertEqual(r.returncode, expected, r.stdout + r.stderr)
+                self.assertIn('Word error rate:', r.stdout)
 
 
 if __name__ == '__main__':

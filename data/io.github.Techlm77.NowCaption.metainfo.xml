@@ -20,7 +20,7 @@
     </p>
     <ul>
       <li>Punctuation and capital letters, written as people speak</li>
-      <li>Words usually appear within half a second of being spoken</li>
+      <li>Streaming captions that update as people speak</li>
       <li>Light on the processor, and idle while everything is quiet</li>
       <li>Floats above other windows on KDE Plasma, Hyprland and Sway</li>
       <li>Adjustable text size and background, and a transcript you can copy or save</li>
@@ -57,6 +57,27 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.0.4" date="2026-10-11">
+      <description>
+        <p>
+          Recognition retries now back off correctly and cannot interrupt a recovered sound
+          source. Notifications appear below live captions. Quit and window close wait for
+          accepted transcript saves to finish, and failed saves keep the app open. Benchmark
+          tracing now retains words after they scroll out of the caption window.
+        </p>
+      </description>
+    </release>
+    <release version="1.0.3" date="2026-10-11">
+      <description>
+        <p>
+          Model-loading failures can now be retried from the source menu. Recognition recovery
+          preserves unfinished transcript text, and Clear discards buffered speech. Audio setup
+          and shutdown run in the background, queued audio is bounded when recognition stalls,
+          and captions resize when display resolution or scaling changes. Additional regression
+          tests and corrected transcript and latency checks improve release verification.
+        </p>
+      </description>
+    </release>
     <release version="1.0.2" date="2026-10-11">
       <description>
         <p>

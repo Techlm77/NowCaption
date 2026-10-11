@@ -20,6 +20,8 @@ try:
     import logging
     logging.getLogger('nowcaption').setLevel(logging.CRITICAL)
 except (ImportError, ValueError) as e:
+    if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
+        raise
     nc = None
     SKIP = f'PyGObject with GTK 4 and libadwaita is not available: {e}'
 
@@ -31,7 +33,7 @@ class FakeWindow:
     def show_text(self, text):
         self.text = text
 
-    def show_status(self, message, seconds=None):
+    def show_status(self, message, seconds=None, sticky=False):
         self.statuses.append(message)
 
 

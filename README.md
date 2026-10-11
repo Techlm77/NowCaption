@@ -12,10 +12,10 @@ for people who are deaf or hard of hearing.
   read English, it made about a third of the word errors of Live Captions' April
   model on clear speech (2.4% against 7.8%), and fewer than half on harder
   recordings (7.0% against 16.0%) ([benchmark](benchmark/)).
-- **Fast.** Through the whole app, half of all words appeared within 0.31–0.34
-  seconds of being spoken, and 9 in 10 within 0.6 seconds.
-- **Light.** It used about a fifth of one CPU core while people talked, and almost
-  nothing in silence, on a Ryzen 7 7800X3D.
+- **Streaming.** Captions update as speech arrives. The model uses 80 ms lookahead;
+  the delay you see also depends on audio capture, processor load and your desktop.
+- **Runs on the CPU.** No dedicated GPU is needed. After digital silence has flushed
+  the final words, recognition waits for more audio.
 
 **English only for now.**
 
@@ -84,6 +84,21 @@ last chose **Clear**, including the words still being spoken. It's only kept in
 memory and is lost when you quit, unless you save it. Nothing is written to disk
 unless you choose **Save transcript**.
 
+After choosing a destination, Quit and closing the window wait for that save
+to finish. If the write fails, NowCaption stays open and shows the error so you
+can choose another destination. Force-closing the process cannot preserve a
+pending save.
+
+Clear starts a fresh capture and recognition stream, so buffered speech from
+before Clear is discarded. If recognition fails and restarts, the last unfinished
+words already shown are kept in the transcript. If loading the model fails,
+choose either sound source again to retry after correcting the reported problem.
+
+Recognition errors are retried after 2, 4 and 8 seconds. If all three retries
+fail, choose a sound source again to try manually. An actual successful decode
+resets this count; replaying existing captions does not. Changing source, Clear
+and shutdown cancel obsolete recognition timers.
+
 If something goes wrong (for example the audio device disappears, or the sound
 server restarts), the captions say what happened and NowCaption reconnects by
 itself, retrying after 1, 2, 4, 8 and 16 seconds and then every 30 seconds for as
@@ -92,7 +107,10 @@ rather than letting the captions fall more than about two seconds behind, and
 says so.
 
 The captions always show two lines. New words appear at the end of the second
-line, and older text scrolls up out of view. Settings and position are remembered
+line, and older text scrolls up out of view. Status messages use a separate,
+small row while captions are visible, so copying, saving and warnings do not
+cover speech. Long status messages have a tooltip with the full text.
+Settings and position are remembered
 between sessions.
 
 ### Staying above other windows
@@ -163,7 +181,9 @@ from LibriSpeech clips played into a virtual sink.
 
 ```sh
 PYTHONPATH=src .venv/bin/python tests/test_reliability.py   # worker, capture, transcript, setup scripts
+PYTHONPATH=src .venv/bin/python tests/test_regressions.py   # the ten 1.0.3 fixes
 PYTHONPATH=src .venv/bin/python tests/test_app.py           # application logic with real GTK, no display
+xvfb-run -a env PYTHONPATH=src .venv/bin/python tests/test_window.py  # real GTK window and menu
 PYTHONPATH=src .venv/bin/python tests/test_live.py          # from source (run tools/run-dev.sh once first)
 ./tests/test_flatpak.sh                                     # inside the installed Flatpak
 ```
@@ -173,8 +193,13 @@ runs in about two seconds. It covers source switching, recognition, punctuation
 and capture failures, end of stream, incomplete model files, Clear, Copy/Save
 content, long sessions, and the setup and Flatpak-test scripts. `test_app.py`
 covers quitting during loading, captions queued before a Clear, reconnect
-backoff, monitor width and save errors. GitHub Actions runs both on every push
-(`.github/workflows/tests.yml`). The other two play two
+backoff, monitor width and save errors. `test_regressions.py` covers model retry,
+unfinished transcript recovery, buffered speech after Clear, bounded queues,
+slow native capture setup/shutdown, resolution and scaling notifications, and
+transcript/latency scoring. `test_window.py` constructs the real window and menu
+under a display; Xvfb lets CI do this without a physical monitor. GitHub Actions
+runs these on every push (`.github/workflows/tests.yml`) and fails if the required
+GUI dependencies are missing. The live and Flatpak tests play two
 LibriSpeech clips into a private virtual sink, so nothing plays out loud. They
 need `pactl` and `paplay` (pipewire-pulse or pulseaudio-utils).
 
@@ -188,17 +213,21 @@ One background thread, the recognition worker, owns the speech models. Audio,
 source changes, Clear and transcript requests reach it through a single ordered
 queue, so the models are never used from two threads at once. Each capture is
 numbered, and audio from a capture that is still shutting down is ignored. The
-window thread never waits for audio or recognition. Failures in either are
-reported in the caption box and retried.
+queue contains at most twenty pending 100 ms audio blocks; older audio is dropped
+at enqueue time if recognition stalls, while user commands are preserved. A
+separate capture owner performs native pipeline setup and shutdown, so window
+actions do not wait for GStreamer. Requested source changes coalesce until the
+old pipeline has stopped. Errors are reported in the caption box and retried.
 
 Two choices came from measurements:
 
-- **The model's stream is never reset at pauses.** A reset loses the first words
+- **Ordinary pauses keep the model's stream.** A reset loses the first words
   of the next phrase. Resetting at every pause more than doubled the word error
   rate on continuous speech, from 4.0% to 8.4%. Pauses only start a new caption
-  line.
-- **Digital silence is not processed.** When the audio goes completely silent,
-  the last words are flushed once and the model waits.
+  line. Clear, source changes, recovery and dropped-audio discontinuities create
+  a fresh stream deliberately.
+- **Long digital silence becomes idle.** Silence is fed briefly to flush pending
+  words, then the model waits for non-silent audio.
 
 ## Models
 
@@ -229,8 +258,8 @@ named `nowcaption-fastconformer-en-80ms-cc-by-v1`.
 
 1. Add a `<release>` entry to `data/io.github.Techlm77.NowCaption.metainfo.xml`
    and set `__version__` in `src/nowcaption/__init__.py`.
-2. Tag and push, for example: `git tag v1.0.2 && git push --tags`.
-3. Run `tools/make-flathub-manifest.sh v1.0.2`. It writes
+2. Tag and push, for example: `git tag v1.0.4 && git push --tags`.
+3. Run `tools/make-flathub-manifest.sh v1.0.4`. It writes
    `flathub/io.github.Techlm77.NowCaption.yml` with the source pinned to that tag.
 4. Check it:
    `flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest flathub/io.github.Techlm77.NowCaption.yml`

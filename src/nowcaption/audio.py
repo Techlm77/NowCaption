@@ -1,10 +1,10 @@
-"""Audio capture through GStreamer's PulseAudio source (works with PipeWire and in Flatpak)."""
+"""Audio capture through GStreamer's PulseAudio source (also works with PipeWire)."""
 import logging
 import threading
 
 LOG = logging.getLogger(__name__)
 
-DESKTOP = '@DEFAULT_MONITOR@'   # whatever the speakers/headphones are playing
+DESKTOP = '@DEFAULT_MONITOR@'
 MICROPHONE = '@DEFAULT_SOURCE@'
 PIPELINE = ('pulsesrc name=src client-name=NowCaption buffer-time=100000 latency-time=20000 '
             '! audioconvert ! audioresample '
@@ -14,90 +14,129 @@ BLOCK = 3200  # 100 ms of 16 kHz PCM16
 
 
 class Capture:
-    """Runs one capture at a time. Each start() gets a generation number; its thread calls
-      on_audio(gen, pcm_bytes)  for every 100 ms block,
-      on_started(gen)           when the first audio arrives,
-      on_ended(gen, reason)     if it stops without being asked to (device error, end of stream,
-                                or an exception), after cleaning up.
-    stop()/start() never wait for the old thread: it is told to stop, its pipeline is shut
-    down, and anything it still delivers carries the old generation, which callers ignore.
+    """One background owner creates, runs and shuts down every native pipeline.
+
+    start(device, gen) and stop() only change the desired state; neither waits for
+    GStreamer. Rapid changes coalesce to the newest request. A replacement cannot
+    start until the old pipeline has shut down. Callbacks carry the capture generation:
+    on_audio(gen, pcm), on_started(gen), on_ended(gen, reason). Requested stops are quiet.
     """
 
     def __init__(self, on_audio, on_started=None, on_ended=None, gst=None):
         self.on_audio, self.on_started, self.on_ended = on_audio, on_started, on_ended
-        if gst is None:  # imported here so tests can run with a fake GStreamer and no PyGObject
+        if gst is None:
             import gi
             gi.require_version('Gst', '1.0')
             gi.require_version('GstApp', '1.0')
-            from gi.repository import Gst, GstApp  # noqa: F401  (GstApp adds try_pull_sample)
+            from gi.repository import Gst, GstApp  # noqa: F401
             gst = Gst
         self.gst = gst
         self.gst.init(None)
-        self.current = None  # (gen, pipeline, stop_event, thread)
+        self.current = None  # (gen, pipeline, stop_event, owner_thread), for diagnostics
+        self._lock = threading.Lock()
+        self._desired = self._stop = self._thread = None
+        self._stranded = None  # retain a pipeline whose shutdown failed; retry before replacing it
 
     def start(self, device, gen):
-        self.stop()
-        pipeline = self.gst.parse_launch(PIPELINE)
-        src = pipeline.get_by_name('src')
-        src.set_property('device', device)
-        src.set_property('stream-properties', self.gst.Structure.new_from_string(
-            'props,media.role=accessibility,application.icon_name=io.github.Techlm77.NowCaption'))
-        stop = threading.Event()
-        thread = threading.Thread(target=self._pump, args=(gen, pipeline, stop, device),
-                                  name=f'nowcaption-capture-{gen}', daemon=True)
-        if pipeline.set_state(self.gst.State.PLAYING) == self.gst.StateChangeReturn.FAILURE:
-            pipeline.set_state(self.gst.State.NULL)
-            raise RuntimeError('GStreamer could not start capturing from this sound source')
-        self.current = (gen, pipeline, stop, thread)
-        thread.start()
+        with self._lock:
+            if self._stop:
+                self._stop.set()
+            self._desired = (device, gen)
+            if self._thread is None:
+                self._thread = threading.Thread(target=self._run, name='nowcaption-capture', daemon=True)
+                self._thread.start()
 
     def stop(self):
-        if self.current:
-            gen, pipeline, stop, thread = self.current
-            self.current = None
-            stop.set()
-            pipeline.set_state(self.gst.State.NULL)  # also wakes a blocked try_pull_sample
+        with self._lock:
+            self._desired = None
+            if self._stop:
+                self._stop.set()
+
+    def wait_stopped(self, timeout=2):
+        """For CLI tests only; window actions never wait for native capture shutdown."""
+        with self._lock:
+            thread = self._thread
+        if thread and thread is not threading.current_thread():
+            thread.join(timeout)
+        return thread is None or not thread.is_alive()
+
+    def _run(self):
+        while True:
+            with self._lock:
+                if self._desired is None:
+                    self._thread = None
+                    return
+                device, gen = self._desired
+                self._desired = None
+                stop = self._stop = threading.Event()
+            pipeline, reason = None, None
+            try:
+                if self._stranded is not None:
+                    self._shutdown(self._stranded)
+                    self._stranded = None
+                pipeline = self.gst.parse_launch(PIPELINE)
+                src = pipeline.get_by_name('src')
+                src.set_property('device', device)
+                src.set_property('stream-properties', self.gst.Structure.new_from_string(
+                    'props,media.role=accessibility,application.icon_name=io.github.Techlm77.NowCaption'))
+                with self._lock:
+                    self.current = (gen, pipeline, stop, self._thread)
+                if not stop.is_set():
+                    if pipeline.set_state(self.gst.State.PLAYING) == self.gst.StateChangeReturn.FAILURE:
+                        raise RuntimeError('GStreamer could not start capturing from this sound source')
+                    reason = self._pump(gen, pipeline, stop, device)
+            except Exception as e:
+                LOG.exception('Audio capture failed')
+                reason = f'{type(e).__name__}: {e}'
+            finally:
+                if pipeline is not None:
+                    try:
+                        self._shutdown(pipeline)
+                    except Exception as e:
+                        LOG.exception('Audio shutdown failed')
+                        reason = f'Audio shutdown failed: {e}'
+                        self._stranded = pipeline
+                with self._lock:
+                    self.current, self._stop = None, None
+            if reason and not stop.is_set() and self.on_ended:
+                try:
+                    self.on_ended(gen, reason)
+                except Exception:
+                    LOG.exception('Audio error callback failed')
+
+    def _shutdown(self, pipeline):
+        if pipeline.set_state(self.gst.State.NULL) == self.gst.StateChangeReturn.FAILURE:
+            raise RuntimeError('GStreamer could not shut down the previous capture')
 
     def _pump(self, gen, pipeline, stop, device):
-        reason, started, pending = None, False, b''
-        try:
-            sink, bus = pipeline.get_by_name('sink'), pipeline.get_bus()
-            src = pipeline.get_by_name('src')
-            while not stop.is_set():
-                msg = bus.pop_filtered(self.gst.MessageType.ERROR | self.gst.MessageType.EOS)
-                if msg:
-                    if msg.type == self.gst.MessageType.EOS:
-                        reason = 'the audio stream ended'
-                    else:
-                        err, debug = msg.parse_error()
-                        reason = err.message
-                        LOG.warning('GStreamer error: %s (%s)', err.message, debug)
-                    break
-                sample = sink.try_pull_sample(200 * self.gst.MSECOND)
-                if sample is None:  # a timeout, unless the sink has ended or was stopped
-                    if sink.is_eos() and not stop.is_set():
-                        reason = 'the audio stream ended'
-                        break
-                    continue
-                if not started:
-                    # PulseAudio silently falls back to the default device when a named one
-                    # doesn't exist; never caption a source the user didn't choose.
-                    actual = src.get_property('current-device')
-                    if not device.startswith('@') and actual and actual != device:
-                        reason = f'the sound source {device} was not found'
-                        break
-                    started = True
-                    if self.on_started:
-                        self.on_started(gen)
-                buf = sample.get_buffer()
-                pending += buf.extract_dup(0, buf.get_size())
-                while len(pending) >= BLOCK:
-                    self.on_audio(gen, pending[:BLOCK])
-                    pending = pending[BLOCK:]
-        except Exception as e:  # never let the capture thread die without saying so
-            LOG.exception('Audio capture failed')
-            reason = f'{type(e).__name__}: {e}'
-        finally:
-            pipeline.set_state(self.gst.State.NULL)
-            if reason and not stop.is_set() and self.on_ended:
-                self.on_ended(gen, reason)
+        started, pending = False, b''
+        sink, bus = pipeline.get_by_name('sink'), pipeline.get_bus()
+        src = pipeline.get_by_name('src')
+        while not stop.is_set():
+            msg = bus.pop_filtered(self.gst.MessageType.ERROR | self.gst.MessageType.EOS)
+            if msg:
+                if msg.type == self.gst.MessageType.EOS:
+                    return 'the audio stream ended'
+                err, debug = msg.parse_error()
+                LOG.warning('GStreamer error: %s (%s)', err.message, debug)
+                return err.message
+            sample = sink.try_pull_sample(200 * self.gst.MSECOND)
+            if sample is None:
+                if sink.is_eos() and not stop.is_set():
+                    return 'the audio stream ended'
+                continue
+            if stop.is_set():
+                break
+            if not started:
+                actual = src.get_property('current-device')
+                if not device.startswith('@') and actual and actual != device:
+                    return f'the sound source {device} was not found'
+                started = True
+                if self.on_started:
+                    self.on_started(gen)
+            buf = sample.get_buffer()
+            pending += buf.extract_dup(0, buf.get_size())
+            while len(pending) >= BLOCK and not stop.is_set():
+                self.on_audio(gen, pending[:BLOCK])
+                pending = pending[BLOCK:]
+        return None
