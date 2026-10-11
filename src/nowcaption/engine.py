@@ -4,37 +4,50 @@ The recognizer stream is never reset at pauses. Resetting drops the first words
 of the next phrase (it doubled the word error rate in testing), so pauses only
 split caption lines. Digital silence is not fed to the model at all.
 """
+import logging
 import os
+import queue
 import re
 import threading
 import time
-from collections import deque
 from pathlib import Path
 
 import numpy as np
-import sherpa_onnx as so
+
+LOG = logging.getLogger(__name__)
 
 RATE = 16000
 SILENCE_FLUSH_S = 1.0   # digital silence before the last words are flushed
 PAUSE_S = 0.8           # no new words for this long starts a new caption line
 MAX_LINE = 160          # characters before a running line is split anyway
 ASR_DIR = 'nowcaption-fastconformer-en-80ms-cc-by-v1'
+ASR_FILES = ('tokens.txt', 'encoder.int8.onnx', 'decoder.int8.onnx', 'joiner.int8.onnx')
 PUNCT_DIR = 'sherpa-onnx-online-punct-en-2024-08-06'
+PUNCT_FILES = ('model.int8.onnx', 'bpe.vocab')
+
+
+def complete(folder, names):
+    """All named files exist in folder and are not empty (a cut-off download leaves empty or missing files)."""
+    return all((folder / n).is_file() and (folder / n).stat().st_size > 0 for n in names)
 
 
 def models_dir():
     """$NOWCAPTION_MODELS, the Flatpak/system install, or ./models in a checkout."""
-    candidates = [os.environ.get('NOWCAPTION_MODELS'),
-                  Path(__file__).resolve().parents[2] / 'models',
-                  '/app/share/nowcaption/models', '/usr/local/share/nowcaption/models',
-                  '/usr/share/nowcaption/models']
-    for c in candidates:
-        if c and (Path(c) / ASR_DIR / 'tokens.txt').exists():
-            return Path(c)
-    raise FileNotFoundError('Speech model not found. Run tools/fetch-models.sh or set NOWCAPTION_MODELS.')
+    explicit = os.environ.get('NOWCAPTION_MODELS')
+    if explicit:
+        if not complete(Path(explicit) / ASR_DIR, ASR_FILES):
+            raise FileNotFoundError(f'NOWCAPTION_MODELS={explicit} does not contain a complete {ASR_DIR}')
+        return Path(explicit)
+    for c in (Path(__file__).resolve().parents[2] / 'models', Path('/app/share/nowcaption/models'),
+              Path('/usr/local/share/nowcaption/models'), Path('/usr/share/nowcaption/models')):
+        if complete(c / ASR_DIR, ASR_FILES):
+            return c
+    raise FileNotFoundError('Speech model not found or incomplete. Run tools/fetch-models.sh '
+                            'or set NOWCAPTION_MODELS.')
 
 
 def load_recognizer(threads=1):
+    import sherpa_onnx as so  # imported here so that tests and tools can import this module without it
     p = models_dir() / ASR_DIR
     return so.OnlineRecognizer.from_transducer(
         tokens=str(p / 'tokens.txt'), encoder=str(p / 'encoder.int8.onnx'),
@@ -44,11 +57,26 @@ def load_recognizer(threads=1):
 
 def load_punctuation():
     """Small CNN-BiLSTM that restores punctuation and casing (about 4 ms per line)."""
+    import sherpa_onnx as so
     p = models_dir() / PUNCT_DIR
-    if not (p / 'model.int8.onnx').exists():
-        return None
+    if not complete(p, PUNCT_FILES):
+        raise FileNotFoundError(f'{PUNCT_DIR} is missing or incomplete')
     return so.OnlinePunctuation(so.OnlinePunctuationConfig(model_config=so.OnlinePunctuationModelConfig(
         cnn_bilstm=str(p / 'model.int8.onnx'), bpe_vocab=str(p / 'bpe.vocab'), num_threads=1)))
+
+
+def load_models(on_warning=None):
+    """The recognizer (required) and the punctuation model (optional: without it, captions are
+    sentence-cased but not punctuated, and on_warning says why)."""
+    rec = load_recognizer()
+    try:
+        punct = load_punctuation()
+    except Exception as e:
+        LOG.exception('Punctuation model unavailable')
+        punct = None
+        if on_warning:
+            on_warning(f'Punctuation is off: {e}')
+    return rec, punct
 
 
 def tidy(text):
@@ -61,23 +89,30 @@ def tidy(text):
 
 
 class Captioner:
-    """Feed 16 kHz mono int16 audio with feed(); on_update(lines, partial) gets the captions.
+    """Turns 16 kHz mono int16 audio into caption text. Not thread-safe: one thread owns it
+    (RecognitionWorker). on_update(text) receives the caption passage after each change."""
 
-    on_update is called from the feeding thread.
-    """
+    DISPLAY_LINES = 4  # finished lines kept for the on-screen passage
 
-    def __init__(self, recognizer, punctuation=None, on_update=None, history=500):
-        self.rec, self.punct, self.on_update = recognizer, punctuation, on_update
-        self.lines = deque(maxlen=history)
-        self.lock = threading.Lock()
+    def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None):
+        self.rec, self.punct = recognizer, punctuation
+        self.on_update, self.on_warning = on_update, on_warning
+        self.lines = []  # (time, formatted, raw) for the whole session, until cleared
         self.stream = recognizer.create_stream()
         self.done, self.partial, self.quiet = 0, '', 0.0
+        self.partial_since = None  # when the words still being spoken started
         self.silent_for, self.flushed = 0.0, True
 
     def format(self, text):
         text = text.strip()
         if self.punct and text and (text.islower() or text.isupper()):
-            return self.punct.add_punctuation_with_case(text.lower()).rstrip(',;')
+            try:
+                return self.punct.add_punctuation_with_case(text.lower()).rstrip(',;')
+            except Exception as e:  # keep captioning without punctuation rather than stop
+                LOG.exception('Punctuation failed')
+                self.punct = None
+                if self.on_warning:
+                    self.on_warning(f'Punctuation turned off after an error: {e}')
         return tidy(text)
 
     def feed(self, pcm16):
@@ -86,9 +121,7 @@ class Captioner:
             self.silent_for += len(x) / RATE
             if self.silent_for < SILENCE_FLUSH_S:
                 return self._decode(np.zeros(len(x), np.float32))
-            if not self.flushed:  # push the model's lookahead through once, then stay idle
-                self.flushed = True
-                self._decode(np.zeros(int(0.8 * RATE), np.float32), force=True)
+            self.flush()  # push the model's lookahead through once, then stay idle
             return
         self.silent_for, self.flushed = 0.0, False
         self._decode(x.astype(np.float32) / 32768)
@@ -97,6 +130,15 @@ class Captioner:
         if not self.flushed:
             self.flushed = True
             self._decode(np.zeros(int(0.8 * RATE), np.float32), force=True)
+
+    def clear(self):
+        """Forget everything said so far, including words not yet finished. The acoustic
+        stream is kept (resetting it costs accuracy); its current text is marked as consumed."""
+        self.lines = []
+        self.done = len(self.rec.get_result(self.stream))
+        self.partial, self.quiet, self.partial_since = '', 0.0, None
+        if self.on_update:
+            self.on_update('')
 
     def _decode(self, samples, force=False):
         rec, s = self.rec, self.stream
@@ -111,31 +153,165 @@ class Captioner:
             if not force and len(new) > MAX_LINE:
                 cut = new.rfind(' ', 0, MAX_LINE) + 1 or len(new)
             raw = new[:cut].strip()
-            if raw:
-                with self.lock:
-                    self.lines.append((time.time(), self.format(raw), raw))
+            if raw:  # timestamped when the line started, not when it ended
+                self.lines.append((self.partial_since or time.time(), self.format(raw), raw))
             self.done += cut
             new, committed = new[cut:], True
-            if len(text) > 20000 and not new.strip():  # bound memory at a natural break
+            if len(text) > 20000 and not new.strip():  # bound the stream's text at a natural break
                 rec.reset(s)
                 self.done = 0
         if committed or new != self.partial:
+            if not new.strip():
+                self.partial_since = None
+            elif committed or not self.partial.strip():
+                self.partial_since = time.time()
             self.partial = new
             if self.on_update:
                 self.on_update(self.caption_text())
 
-    def recent(self, n):
-        with self.lock:
-            return [t for _, t, _ in list(self.lines)[-n:]]
-
-    def caption_text(self, n=4):
+    def caption_text(self):
         """The last few lines and the words still coming, punctuated together as one passage,
         so that phrases split at pauses still read as sentences."""
-        with self.lock:
-            raw = [r for _, _, r in list(self.lines)[-n:]]
+        raw = [r for _, _, r in self.lines[-self.DISPLAY_LINES:]]
         partial = self.partial.strip()
         return self.format(' '.join(raw + ([partial] if partial else [])))
 
     def transcript(self):
+        """Every finished line since start or the last clear, plus the words still being spoken."""
+        out = [time.strftime('[%H:%M:%S] ', time.localtime(ts)) + t for ts, t, _ in self.lines]
+        if self.partial.strip():
+            out.append(time.strftime('[%H:%M:%S] ', time.localtime(self.partial_since or time.time()))
+                       + self.format(self.partial))
+        return '\n'.join(out)
+
+
+class RecognitionWorker(threading.Thread):
+    """The only thread that touches the speech models.
+
+    Other threads talk to it with the methods below; it reports back through
+    on_event(kind, value), called on this thread:
+      ('ready', None)            models loaded
+      ('caption', (gen, text))   new caption passage; gen is the clear() generation it belongs to
+      ('snapshot', (fn, text))   reply to snapshot(fn)
+      ('warning', message)       something degraded but captioning continues
+      ('error', message)         recognition stopped; restart() or a new source tries again
+      ('load-error', message)    the models could not be loaded; a new source or restart() retries
+      ('overload', seconds)      audio arrived faster than it could be recognised and was dropped
+    Audio is tagged with a source generation; blocks from an older source are ignored, so a
+    capture thread that is still shutting down can never feed the new source's captions.
+    """
+
+    MAX_BACKLOG = 20  # 100 ms blocks (2 s) waiting before the oldest audio is skipped
+
+    def __init__(self, on_event, load=None):
+        super().__init__(name='nowcaption-recognition', daemon=True)
+        self.on_event = on_event
+        self.load = load or (lambda: load_models(lambda m: self.on_event('warning', m)))
+        self.inbox = queue.Queue()  # audio and commands, handled strictly in order
+        self.lock = threading.Lock()
+        self.backlog = self.dropped = 0
+        self.source_gen, self.ui_gen = 0, 0
+        self.captioner, self.broken = None, False
+
+    # --- called from any thread -------------------------------------------------------------
+
+    def feed(self, gen, pcm):
+        if gen != self.source_gen:  # a capture that is still shutting down
+            return
         with self.lock:
-            return '\n'.join(time.strftime('[%H:%M:%S] ', time.localtime(ts)) + t for ts, t, _ in self.lines)
+            self.backlog += 1
+        self.inbox.put(('audio', (gen, pcm)))
+
+    def set_source(self, gen):
+        """A new capture with this generation is starting; finish the old words first."""
+        self.source_gen = gen
+        self.inbox.put(('source', gen))
+
+    def clear(self, ui_gen):
+        self.inbox.put(('clear', ui_gen))
+
+    def snapshot(self, fn):
+        self.inbox.put(('snapshot', fn))
+
+    def restart(self):
+        self.inbox.put(('restart', None))
+
+    def stop(self):
+        self.inbox.put(('stop', None))
+
+    # --- the worker thread ------------------------------------------------------------------
+
+    def run(self):
+        loaded = self._load()
+        while True:
+            kind, value = self.inbox.get()
+            if kind == 'stop':
+                return
+            if kind == 'audio':
+                with self.lock:
+                    self.backlog -= 1
+                    behind = self.backlog >= self.MAX_BACKLOG
+                if behind:  # skip the oldest audio until recognition is back near real time
+                    self.dropped += 1
+                    continue
+                gen, pcm = value
+                if loaded and gen == self.source_gen and not self.broken:
+                    self._safely(self.captioner.feed, pcm)
+                if self.dropped and self.backlog < self.MAX_BACKLOG // 2:
+                    self.on_event('overload', self.dropped / 10)
+                    self.dropped = 0
+            elif loaded:
+                self._handle(kind, value)
+            elif kind in ('restart', 'source'):  # loading failed earlier: try again
+                loaded = self._load()
+            elif kind == 'snapshot':
+                self.on_event('snapshot', (value, ''))
+
+    def _load(self):
+        try:
+            rec, punct = self.load()
+        except Exception as e:
+            LOG.exception('Could not load the speech model')
+            self.on_event('load-error', f'Could not load the speech model: {e}.')
+            return False
+        self.models = (rec, punct)
+        self._new_captioner()
+        self.on_event('ready', None)
+        return True
+
+    def _new_captioner(self):
+        rec, punct = self.models
+        old = self.captioner
+        self.captioner = Captioner(rec, punct, on_update=self._caption,
+                                   on_warning=lambda m: self.on_event('warning', m))
+        if old:  # keep the session transcript when recovering from an error
+            self.captioner.lines = old.lines
+            self.captioner.punct = old.punct
+        self.broken = False
+
+    def _handle(self, kind, value):
+        if kind == 'source':
+            if self.broken:
+                self._safely(self._new_captioner)
+            else:
+                self._safely(self.captioner.flush)
+        elif kind == 'clear':
+            self.ui_gen = value
+            if self.captioner:
+                self._safely(self.captioner.clear)
+        elif kind == 'snapshot':
+            text = self.captioner.transcript() if self.captioner else ''
+            self.on_event('snapshot', (value, text))
+        elif kind == 'restart':
+            self._safely(self._new_captioner)
+
+    def _safely(self, fn, *args):
+        try:
+            fn(*args)
+        except Exception as e:
+            LOG.exception('Speech recognition failed')
+            self.broken = True
+            self.on_event('error', f'Speech recognition stopped: {e}')
+
+    def _caption(self, text):
+        self.on_event('caption', (self.ui_gen, text))

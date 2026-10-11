@@ -1,0 +1,11 @@
+{
+ "data": "test-clean",
+ "clips": 40,
+ "timed_words": 680,
+ "lag_s_p50": 0.305,
+ "lag_s_p90": 0.552,
+ "lag_s_p99": 1.092,
+ "cpu_cores_speech": 0.193,
+ "cpu_cores_silence": 0.004,
+ "peak_rss_mb": 303
+}

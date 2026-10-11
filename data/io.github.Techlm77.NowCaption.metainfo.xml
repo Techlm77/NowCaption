@@ -57,6 +57,17 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.0.2" date="2026-10-11">
+      <description>
+        <p>
+          More dependable captions. If the audio device disappears or the sound server restarts,
+          NowCaption says so and reconnects by itself, and an error in speech recognition is
+          reported and recovered from instead of silently stopping the captions. Copy and Save now
+          include the words still being spoken and the whole session, Clear no longer lets old words
+          come back, and saving reports whether it worked. Switching screens resizes the captions to fit.
+        </p>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-10-11">
       <description>
         <p>

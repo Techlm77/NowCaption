@@ -8,11 +8,14 @@ for people who are deaf or hard of hearing.
 
 - **Private.** Speech is recognised on your computer. Audio never leaves it, it
   needs no account, and it works offline.
-- **Accurate.** It writes punctuation and capital letters, and makes about half as
-  many word errors as Live Captions' April model ([benchmark](benchmark/)).
-- **Fast.** Words usually appear 0.35–0.45 seconds after they are spoken.
-- **Light.** It uses about a sixth of one CPU core while people talk, and almost
-  nothing in silence.
+- **Accurate.** It writes punctuation and capital letters. Across 73 speakers of
+  read English, it made about a third of the word errors of Live Captions' April
+  model on clear speech (2.4% against 7.8%), and fewer than half on harder
+  recordings (7.0% against 16.0%) ([benchmark](benchmark/)).
+- **Fast.** Through the whole app, half of all words appeared within 0.31–0.34
+  seconds of being spoken, and 9 in 10 within 0.6 seconds.
+- **Light.** It used about a fifth of one CPU core while people talked, and almost
+  nothing in silence, on a Ryzen 7 7800X3D.
 
 **English only for now.**
 
@@ -20,15 +23,17 @@ for people who are deaf or hard of hearing.
 
 ### Download (x86_64)
 
-Download `NowCaption-1.0.1-x86_64.flatpak` from the
-[latest release](https://github.com/Techlm77/NowCaption/releases/latest), then run:
+Download the `.flatpak` file from the
+[latest release](https://github.com/Techlm77/NowCaption/releases/latest), then
+install it from the folder you saved it in:
 
 ```sh
-flatpak install --user NowCaption-1.0.1-x86_64.flatpak
+flatpak install --user NowCaption-*-x86_64.flatpak
 ```
 
 Flatpak downloads the GNOME runtime from Flathub automatically. This file doesn't
-update itself, so get new versions from the releases page.
+update itself, so get new versions from the releases page. Installing a newer one
+replaces the old version and keeps your settings.
 
 ### From Flathub
 
@@ -74,6 +79,18 @@ Captions start straight away, from whatever your computer is playing.
   - Copy, save or clear the transcript
   - Quit
 
+The transcript keeps everything said since NowCaption started, or since you
+last chose **Clear**, including the words still being spoken. It's only kept in
+memory and is lost when you quit, unless you save it. Nothing is written to disk
+unless you choose **Save transcript**.
+
+If something goes wrong (for example the audio device disappears, or the sound
+server restarts), the captions say what happened and NowCaption reconnects by
+itself, retrying after 1, 2, 4, 8 and 16 seconds and then every 30 seconds for as
+long as it takes. If the computer is too busy to keep up, NowCaption skips audio
+rather than letting the captions fall more than about two seconds behind, and
+says so.
+
 The captions always show two lines. New words appear at the end of the second
 line, and older text scrolls up out of view. Settings and position are remembered
 between sessions.
@@ -102,16 +119,21 @@ overlay desktops above.
 
 ## Run from source
 
+You need **GTK 4.12 or newer** and **libadwaita 1.5 or newer**. Debian 13,
+Ubuntu 24.04, Fedora 40, Arch and newer have them; Debian 12 and Ubuntu 22.04 are
+too old, so use the Flatpak there. NowCaption checks these versions when it starts
+and explains if they are too old.
+
 Install the system packages.
 
 ```sh
 # Arch
-sudo pacman -S python-gobject gtk4 libadwaita gst-plugins-base gst-plugins-good gtk4-layer-shell
-# Debian / Ubuntu
-sudo apt install python3-gi python3-venv gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gstreamer-1.0 \
-    gir1.2-gst-plugins-base-1.0 gstreamer1.0-plugins-good gstreamer1.0-pulseaudio
+sudo pacman -S python-gobject python-cairo gtk4 libadwaita gst-plugins-base gst-plugins-good gtk4-layer-shell
+# Debian 13 / Ubuntu 24.04
+sudo apt install python3-gi python3-gi-cairo python3-venv gir1.2-gtk-4.0 gir1.2-adw-1 \
+    gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 gstreamer1.0-plugins-good gstreamer1.0-pulseaudio
 # Fedora
-sudo dnf install python3-gobject gtk4 libadwaita gstreamer1-plugins-base gstreamer1-plugins-good
+sudo dnf install python3-gobject python3-cairo gtk4 libadwaita gstreamer1-plugins-base gstreamer1-plugins-good
 ```
 
 gtk4-layer-shell is optional. It provides the floating overlay on KDE, Hyprland
@@ -124,6 +146,11 @@ Then run:
 ```
 
 On the first run it downloads the models into `models/` and creates `.venv`.
+Every start checks both and repairs them if an earlier setup was interrupted or
+`requirements.txt` changed.
+
+Problems are logged with details to standard error (the terminal, or the system
+journal when started from the menu). `NOWCAPTION_LOG=info` logs more.
 
 `NOWCAPTION_SOURCE=<source name>` makes the app caption any PulseAudio or PipeWire
 source. Run `pactl list short sources` to see the names.
@@ -135,19 +162,36 @@ from LibriSpeech clips played into a virtual sink.
 ### Tests
 
 ```sh
-PYTHONPATH=src .venv/bin/python tests/test_live.py   # from source (run tools/run-dev.sh once first)
-./tests/test_flatpak.sh                              # inside the installed Flatpak
+PYTHONPATH=src .venv/bin/python tests/test_reliability.py   # worker, capture, transcript, setup scripts
+PYTHONPATH=src .venv/bin/python tests/test_app.py           # application logic with real GTK, no display
+PYTHONPATH=src .venv/bin/python tests/test_live.py          # from source (run tools/run-dev.sh once first)
+./tests/test_flatpak.sh                                     # inside the installed Flatpak
 ```
 
-Both tests play two LibriSpeech clips into a private virtual sink, so nothing
-plays out loud. They need `pactl` and `paplay` (pipewire-pulse or pulseaudio-utils).
+`test_reliability.py` uses fake models and a fake GStreamer, needs only NumPy and
+runs in about two seconds. It covers source switching, recognition, punctuation
+and capture failures, end of stream, incomplete model files, Clear, Copy/Save
+content, long sessions, and the setup and Flatpak-test scripts. `test_app.py`
+covers quitting during loading, captions queued before a Clear, reconnect
+backoff, monitor width and save errors. GitHub Actions runs both on every push
+(`.github/workflows/tests.yml`). The other two play two
+LibriSpeech clips into a private virtual sink, so nothing plays out loud. They
+need `pactl` and `paplay` (pipewire-pulse or pulseaudio-utils).
 
 ## How it works
 
 `src/nowcaption/audio.py` captures 16 kHz mono audio with GStreamer's PulseAudio
 source, which also works on PipeWire and inside Flatpak. `engine.py` streams that
-audio into a sherpa-onnx transducer, then restores punctuation and casing on each
-line. Two choices came from measurements:
+audio into a sherpa-onnx transducer, then restores punctuation and casing.
+
+One background thread, the recognition worker, owns the speech models. Audio,
+source changes, Clear and transcript requests reach it through a single ordered
+queue, so the models are never used from two threads at once. Each capture is
+numbered, and audio from a capture that is still shutting down is ignored. The
+window thread never waits for audio or recognition. Failures in either are
+reported in the caption box and retried.
+
+Two choices came from measurements:
 
 - **The model's stream is never reset at pauses.** A reset loses the first words
   of the next phrase. Resetting at every pause more than doubled the word error
@@ -185,8 +229,8 @@ named `nowcaption-fastconformer-en-80ms-cc-by-v1`.
 
 1. Add a `<release>` entry to `data/io.github.Techlm77.NowCaption.metainfo.xml`
    and set `__version__` in `src/nowcaption/__init__.py`.
-2. Tag and push, for example: `git tag v1.0.1 && git push --tags`.
-3. Run `tools/make-flathub-manifest.sh v1.0.1`. It writes
+2. Tag and push, for example: `git tag v1.0.2 && git push --tags`.
+3. Run `tools/make-flathub-manifest.sh v1.0.2`. It writes
    `flathub/io.github.Techlm77.NowCaption.yml` with the source pinned to that tag.
 4. Check it:
    `flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest flathub/io.github.Techlm77.NowCaption.yml`

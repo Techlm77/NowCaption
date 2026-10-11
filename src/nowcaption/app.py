@@ -1,4 +1,5 @@
 """NowCaption: on-device live captions for anything your computer plays, or your microphone."""
+import logging
 import os
 import sys
 from pathlib import Path
@@ -19,6 +20,7 @@ except (ValueError, ImportError):
 from . import __version__, audio, engine  # noqa: E402
 
 APP_ID = 'io.github.Techlm77.NowCaption'
+LOG = logging.getLogger('nowcaption')
 SIZES = [18, 22, 26, 30, 36, 42, 50, 60]
 ROWS = 2              # caption rows shown, like broadcast subtitles
 PAD_X, PAD_Y = 22, 12
@@ -79,10 +81,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.set_resizable(False)
         self.layer = bool(LayerShell and LayerShell.is_supported())
         self.dragging = None
-
+        self.text, self.status, self.status_timer = '', '', None
         self.monitor = self.pick_monitor(self.settings.get('monitor'))
-        geo = self.monitor.get_geometry() if self.monitor else None
-        self.box_width = min(1000, int(geo.width * 0.7)) if geo else 1000
+        self.box_width = self.width_for(self.monitor)
 
         self.css = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css,
@@ -122,12 +123,12 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.set_cursor(Gdk.Cursor.new_from_name('grab', None))
 
         self.popover = Gtk.PopoverMenu.new_from_model(app.build_menu(self.layer and self.monitor_count() > 1))
+        Gdk.Display.get_default().get_monitors().connect('items-changed', self.on_monitors_changed)
         self.popover.set_parent(self.box)
         self.popover.set_has_arrow(False)
         self.popover.set_position(Gtk.PositionType.BOTTOM)
         self.popover.connect('closed', lambda *a: self.layer and LayerShell.set_keyboard_mode(
             self, LayerShell.KeyboardMode.NONE))
-        self.show_text('Loading speech model…')
 
     # --- geometry -------------------------------------------------------------------------
 
@@ -144,6 +145,26 @@ class CaptionWindow(Gtk.ApplicationWindow):
                 return m
         return items[0] if items else None
 
+    @staticmethod
+    def width_for(monitor):
+        geo = monitor.get_geometry() if monitor else None
+        return min(1000, int(geo.width * 0.7)) if geo else 1000
+
+    def use_monitor(self, monitor):
+        """Move to monitor, resizing the box and its text wrapping to fit it."""
+        self.monitor = monitor
+        self.box_width = self.width_for(monitor)
+        if self.layer and monitor:
+            LayerShell.set_monitor(self, monitor)
+        self.restyle()
+
+    def on_monitors_changed(self, monitors, position, removed, added):
+        """A screen was connected or disconnected: stay on a screen that exists, update the menu."""
+        items = [monitors.get_item(i) for i in range(monitors.get_n_items())]
+        if self.monitor not in items:
+            self.use_monitor(self.pick_monitor(self.settings.get('monitor')))
+        self.popover.set_menu_model(self.app.build_menu(self.layer and len(items) > 1))
+
     def box_height(self):
         return ROWS * self.row_height + 2 * PAD_Y
 
@@ -158,6 +179,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
     def place(self, x=None, y=None):
         """Put the caption box at x, y on its monitor."""
         if not self.layer or not self.monitor:
+            self.x = self.y = 0
             return
         self.x, self.y = self.clamp(x, y)
         self.fixed.move(self.box, self.x, self.y)
@@ -175,10 +197,11 @@ class CaptionWindow(Gtk.ApplicationWindow):
         items = [monitors.get_item(i) for i in range(monitors.get_n_items())]
         if len(items) < 2 or not self.layer:
             return
-        self.monitor = items[(items.index(self.monitor) + 1) % len(items)] if self.monitor in items else items[0]
-        self.settings.set('monitor', self.monitor.get_connector() or '')
-        LayerShell.set_monitor(self, self.monitor)
-        self.reset_position()
+        monitor = items[(items.index(self.monitor) + 1) % len(items)] if self.monitor in items else items[0]
+        self.settings.set('monitor', monitor.get_connector() or '')
+        self.settings.set('x', -1)
+        self.settings.set('y', -1)
+        self.use_monitor(monitor)
 
     def reset_position(self):
         self.settings.set('x', -1)
@@ -206,13 +229,31 @@ class CaptionWindow(Gtk.ApplicationWindow):
     # --- text -----------------------------------------------------------------------------
 
     def show_text(self, text):
+        """New caption passage. It replaces a persistent status message such as 'Listening…'."""
         self.text = text
+        if text and self.status and not self.status_timer:
+            self.status = ''
+        self.render()
+        return False
+
+    def show_status(self, message, seconds=None):
+        """Show a status message in the caption box, for some seconds or until the next caption."""
+        if self.status_timer:
+            GLib.source_remove(self.status_timer)
+            self.status_timer = None
+        self.status = message
+        if seconds:
+            self.status_timer = GLib.timeout_add_seconds(seconds, self.end_status)
+        self.render()
+
+    def end_status(self):
+        self.status_timer, self.status = None, ''
         self.render()
         return False
 
     def render(self):
         # the text flows on; only the last ROWS rows show, so the newest words are always visible
-        text = getattr(self, 'text', '')
+        text = self.status or self.text
         self.label.set_text(last_rows(self.layout, text, ROWS) if text else ' ')
 
     def save_png(self, path):
@@ -266,13 +307,23 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
 
 class NowCaption(Adw.Application):
+    """Owns the window, the capture and the recognition worker. All methods run on the GTK
+    thread; worker and capture callbacks are passed here with GLib.idle_add."""
+
     def __init__(self):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.settings = Settings()
-        self.window = self.captioner = None
-        self.capture = audio.Capture(self.on_audio, self.on_audio_error)
+        self.window = self.worker = None
+        self.ready = self.closing = False
+        self.source_gen = self.ui_gen = 0
+        self.capture_failures = self.recognition_failures = 0
+        self.retry_id = None
+        self.capture = audio.Capture(
+            on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
+            on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
+            on_ended=lambda gen, reason: GLib.idle_add(self.capture_ended, gen, reason))
         self.connect('activate', self.on_activate)
-        self.connect('shutdown', lambda *a: self.capture.stop())
+        self.connect('shutdown', self.on_shutdown)
         self.add_actions()
 
     def build_menu(self, several_screens=False):
@@ -356,64 +407,141 @@ class NowCaption(Adw.Application):
             for action, keys in self.accels.items():
                 self.set_accels_for_action(action, keys)
         self.window.present()
-        GLib.idle_add(self.load_models)
+        self.window.show_status('Loading speech model…')
+        # models load on the worker thread, so the window stays responsive meanwhile
+        self.worker = engine.RecognitionWorker(lambda kind, value: GLib.idle_add(self.on_worker, kind, value))
+        self.worker.start()
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
         if shot:
             path, _, after = shot.partition(':')
             GLib.timeout_add_seconds(int(after or 20), self.window.save_png, path)
 
-    def load_models(self):
-        try:
-            rec, punct = engine.load_recognizer(), engine.load_punctuation()
-        except Exception as e:  # missing or broken model files
-            self.window.show_text(f'Could not load the speech model: {e}')
+    def on_shutdown(self, app):
+        self.closing = True
+        self.capture.stop()
+        if self.worker:
+            self.worker.stop()
+            self.worker.join(timeout=2)
+
+    # --- recognition worker events ----------------------------------------------------------
+
+    def on_worker(self, kind, value):
+        if self.closing:
             return False
-        self.captioner = engine.Captioner(rec, punct, self.on_captions)
+        if kind == 'ready':
+            self.ready = True
+            self.start_capture()
+        elif kind == 'caption':
+            gen, text = value
+            if gen == self.ui_gen:  # ignore captions from before the last Clear
+                self.recognition_failures = 0
+                self.window.show_text(text)
+        elif kind == 'snapshot':
+            fn, text = value
+            fn(text)
+        elif kind == 'warning':
+            self.window.show_status(value, seconds=6)
+        elif kind == 'overload':
+            self.window.show_status(f'Falling behind: skipped {value:.1f} s of audio', seconds=4)
+        elif kind == 'load-error':
+            self.ready = False
+            self.window.show_status(f'{value} Right-click and choose a sound source to try again.')
+        elif kind == 'error':
+            self.recognition_failures += 1
+            if self.recognition_failures <= 3:
+                delay = 2 ** self.recognition_failures
+                self.window.show_status(f'{value}. Restarting in {delay} s…')
+                GLib.timeout_add_seconds(delay, lambda: self.worker.restart() and False)
+            else:
+                self.window.show_status(f'{value}. Right-click and choose a sound source to try again.')
+        return False
+
+    # --- capture ----------------------------------------------------------------------------
+
+    def start_capture(self):
+        if not self.ready or self.closing:
+            return
+        if self.retry_id:
+            GLib.source_remove(self.retry_id)
+            self.retry_id = None
+        mic = self.settings.get('source') == 'mic'
+        self.source_gen += 1
+        self.worker.set_source(self.source_gen)
+        # NOWCAPTION_SOURCE names any PulseAudio/PipeWire source, overriding the menu choice
+        device = os.environ.get('NOWCAPTION_SOURCE') or (audio.MICROPHONE if mic else audio.DESKTOP)
+        try:
+            self.capture.start(device, self.source_gen)
+        except Exception as e:
+            return self.capture_ended(self.source_gen, str(e))
+        if not self.window.text:
+            self.window.show_status('Listening to the microphone…' if mic else 'Listening to desktop audio…')
+
+    def capture_started(self, gen):
+        if gen == self.source_gen and self.capture_failures:
+            self.capture_failures = 0
+            self.window.show_status('Audio is back.', seconds=3)
+        return False
+
+    def capture_ended(self, gen, reason):
+        """Capture stopped on its own (device gone, sound server restarted…): retry with backoff."""
+        if gen != self.source_gen or self.closing:
+            return False
+        delay = min(30, 2 ** self.capture_failures)
+        self.capture_failures += 1
+        LOG.warning('Audio capture stopped (%s); retrying in %d s', reason, delay)
+        self.window.show_status(f'Audio capture stopped ({reason}). Retrying in {delay} s…')
+        self.retry_id = GLib.timeout_add_seconds(delay, self.retry_capture)
+        return False
+
+    def retry_capture(self):
+        self.retry_id = None
         self.start_capture()
         return False
 
-    def start_capture(self):
-        if not self.captioner:
-            return
-        mic = self.settings.get('source') == 'mic'
-        self.captioner.flush()
-        # NOWCAPTION_SOURCE names any PulseAudio/PipeWire source, overriding the menu choice
-        self.capture.start(os.environ.get('NOWCAPTION_SOURCE') or (audio.MICROPHONE if mic else audio.DESKTOP))
-        if not self.captioner.lines:
-            self.window.show_text('Listening to the microphone…' if mic else 'Listening to desktop audio…')
-
-    def on_audio(self, pcm):
-        self.captioner.feed(pcm)
-
-    def on_captions(self, text):
-        GLib.idle_add(self.window.show_text, text)
-
-    def on_audio_error(self, message):
-        GLib.idle_add(self.window.show_text, f'Audio capture stopped: {message}')
+    # --- transcript -------------------------------------------------------------------------
 
     def copy_transcript(self):
-        if self.captioner:
-            self.window.get_clipboard().set(self.captioner.transcript())
+        def copy(text):
+            self.window.get_clipboard().set(text)
+            self.window.show_status('Transcript copied.' if text else 'Nothing to copy yet.', seconds=3)
+        if self.worker:
+            self.worker.snapshot(copy)
 
     def clear_transcript(self):
-        if self.captioner:
-            with self.captioner.lock:
-                self.captioner.lines.clear()
+        if self.worker:
+            self.ui_gen += 1  # captions already on their way from before the clear are dropped
+            self.worker.clear(self.ui_gen)
             self.window.show_text('')
 
     def save_transcript(self):
-        if not self.captioner:
+        if not self.worker:
             return
         dialog = Gtk.FileDialog(title='Save transcript', initial_name=GLib.DateTime.new_now_local().format(
             'Captions %Y-%m-%d %H.%M.txt'))
-        def done(d, result):
+
+        def chosen(d, result):
             try:
                 f = d.save_finish(result)
-            except GLib.Error:
+            except GLib.Error as e:
+                if not e.matches(Gtk.dialog_error_quark(), Gtk.DialogError.DISMISSED):
+                    self.window.show_status(f'Could not save the transcript: {e.message}', seconds=8)
                 return
-            f.replace_contents((self.captioner.transcript() + '\n').encode(), None, False,
-                               Gio.FileCreateFlags.REPLACE_DESTINATION, None)
-        dialog.save(None, None, done)  # its own window: the caption overlay is too small to host it
+            self.worker.snapshot(lambda text: self.write_transcript(f, text))
+
+        dialog.save(None, None, chosen)  # its own window: the caption overlay is too small to host it
+
+    def write_transcript(self, f, text):
+        """Write asynchronously (a slow or network destination never stalls the window) and say
+        whether it worked."""
+        def written(f, result):
+            try:
+                f.replace_contents_finish(result)
+                self.window.show_status(f'Transcript saved to {f.get_basename()}.', seconds=4)
+            except GLib.Error as e:
+                LOG.warning('Saving the transcript failed: %s', e.message)
+                self.window.show_status(f'Could not save the transcript: {e.message}', seconds=8)
+        f.replace_contents_bytes_async(GLib.Bytes.new((text + '\n').encode()), None, False,
+                                       Gio.FileCreateFlags.REPLACE_DESTINATION, None, written)
 
     def about(self):
         about = Adw.AboutDialog(
@@ -433,4 +561,13 @@ class NowCaption(Adw.Application):
 
 
 def main():
+    # problems are logged with details to stderr (the terminal, or the journal for the menu entry)
+    logging.basicConfig(level=os.environ.get('NOWCAPTION_LOG', 'WARNING').upper(),
+                        format='%(asctime)s %(levelname)s %(name)s: %(message)s')
+    gtk, adw = (Gtk.get_major_version(), Gtk.get_minor_version()), (Adw.get_major_version(), Adw.get_minor_version())
+    if gtk < (4, 12) or adw < (1, 5):
+        print(f'NowCaption needs GTK 4.12 or newer and libadwaita 1.5 or newer; this system has '
+              f'GTK {gtk[0]}.{gtk[1]} and libadwaita {adw[0]}.{adw[1]}. The Flatpak includes both.',
+              file=sys.stderr)
+        return 1
     return NowCaption().run(sys.argv)

@@ -1,0 +1,11 @@
+{
+ "data": "test-other",
+ "clips": 33,
+ "timed_words": 579,
+ "lag_s_p50": 0.344,
+ "lag_s_p90": 0.59,
+ "lag_s_p99": 1.093,
+ "cpu_cores_speech": 0.191,
+ "cpu_cores_silence": 0.0039,
+ "peak_rss_mb": 304
+}

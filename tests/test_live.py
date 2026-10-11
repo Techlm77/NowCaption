@@ -4,12 +4,13 @@ through the same GStreamer capture and engine the app uses. Nothing is played al
 
     PYTHONPATH=src .venv/bin/python tests/test_live.py
 """
-import json, re, subprocess, sys, threading, time
+import json, os, queue, re, subprocess, sys, time
 from pathlib import Path
 
 from nowcaption import audio, engine
 
 HERE = Path(__file__).parent / 'fixtures'
+SINK = f'nowcaption_test_{os.getpid()}'
 
 
 def words(s):
@@ -28,28 +29,49 @@ def wer(ref, hyp):
 
 
 def main():
-    mod = subprocess.check_output(['pactl', 'load-module', 'module-null-sink', 'sink_name=nowcaption_test']).decode().strip()
+    mod = subprocess.check_output(['pactl', 'load-module', 'module-null-sink',
+                                   f'sink_name={SINK}']).decode().strip()
     try:
-        cap = engine.Captioner(engine.load_recognizer(), engine.load_punctuation())
-        updates = []
-        cap.on_update = lambda text: updates.append(time.monotonic())
-        capture = audio.Capture(cap.feed, lambda e: print('capture error:', e))
-        capture.start('nowcaption_test.monitor')
+        events, updates = queue.Queue(), []
+        def on_event(kind, value):
+            if kind == 'caption':
+                updates.append(time.monotonic())
+            events.put((kind, value))
+        worker = engine.RecognitionWorker(on_event)
+        worker.start()
+        assert wait_for(events, 'ready', 60) is None
+        capture = audio.Capture(worker.feed, on_ended=lambda gen, reason: print('capture ended:', reason))
+        worker.set_source(1)
+        capture.start(f'{SINK}.monitor', 1)
         time.sleep(1)
         refs = json.loads((HERE / 'refs.json').read_text())
         for r in refs:
-            subprocess.run(['paplay', '--device=nowcaption_test', str(HERE / r['audio'])], check=True)
+            subprocess.run(['paplay', f'--device={SINK}', str(HERE / r['audio'])], check=True)
         time.sleep(2.5)
         capture.stop()
-        text = ' '.join(t for _, t, _ in cap.lines)
+        worker.set_source(2)  # flush the last words
+        worker.snapshot(lambda text: None)
+        transcript = wait_for(events, 'snapshot', 10)[1]
+        worker.stop()
+        text = ' '.join(line.split('] ', 1)[-1] for line in transcript.splitlines())
         score = wer([w for r in refs for w in words(r['text'])], words(text))
-        print(cap.transcript())
+        print(transcript)
         print(f'WER {score:.3f}, {len(updates)} caption updates')
         ok = score < 0.15 and any(c in text for c in '.,') and updates
         print('PASS' if ok else 'FAIL')
         return 0 if ok else 1
     finally:
         subprocess.run(['pactl', 'unload-module', mod])
+
+
+def wait_for(events, kind, timeout):
+    end = time.monotonic() + timeout
+    while True:
+        k, v = events.get(timeout=max(0.1, end - time.monotonic()))
+        if k == kind:
+            return v
+        if k in ('load-error', 'error'):
+            raise SystemExit(f'{k}: {v}')
 
 
 if __name__ == '__main__':

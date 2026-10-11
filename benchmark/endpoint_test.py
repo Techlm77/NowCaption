@@ -3,9 +3,9 @@ import json, sys, numpy as np, soundfile as sf, sherpa_onnx as so
 from pathlib import Path
 from bench import words, align
 m = Path(sys.argv[1]); f = lambda n: str(next(m.glob(n + '*.onnx')))
-refs = json.load(open('data/refs.json'))[:30]
+refs = json.load(open('data/dummy/refs.json'))[:30]
 gap = np.zeros(6400, np.float32)
-x = np.concatenate([np.concatenate([sf.read('data/' + r['audio'], dtype='float32')[0], gap]) for r in refs])
+x = np.concatenate([np.concatenate([sf.read('data/dummy/' + r['audio'], dtype='float32')[0], gap]) for r in refs])
 ref = [w for r in refs for w in words(r['text'])]
 for label, kw in [('no endpoint', dict(enable_endpoint_detection=False)),
                   ('rule2 0.8s', dict(enable_endpoint_detection=True, rule2_min_trailing_silence=0.8)),

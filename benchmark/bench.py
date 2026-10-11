@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Stream labelled 16 kHz WAVs through one caption engine in simulated real time.
+"""Engine-only comparison: stream labelled 16 kHz WAVs straight into one recognizer.
 
-For every 100 ms of audio fed, the visible caption text is recorded with the
-audio clock plus the compute time of that step. That gives, per reference word,
-when the engine first showed it correctly and when it stopped changing.
-Run one engine per process. Results go to results/<name>-<cond>-t<threads>.json.
+For every 100 ms of audio fed, the recognizer's text is recorded with the audio clock
+plus the compute time of that step. That gives, per reference word, when the engine
+first produced it correctly. It leaves out audio capture, NowCaption's caption
+logic, punctuation and drawing (see e2e.py for those), and assumes the engine keeps
+up with real time (it does here: CPU is well under one core). CPU is per second of
+audio including 1.5 s of silence after each clip.
+Run one engine per process. Results go to results/<name>-<data>-<cond>-t<threads>.json.
 """
 import argparse, ctypes as c, json, os, re, resource, time
 from pathlib import Path
@@ -94,16 +97,18 @@ def main():
     ap.add_argument('--cond', default='clean', choices=['clean', 'noisy'])
     ap.add_argument('--threads', type=int, default=2)
     ap.add_argument('--limit', type=int)
+    ap.add_argument('--data', default=str(ROOT / 'data' / 'dummy'), help='folder with refs.json and WAVs')
     a = ap.parse_args()
     os.environ['OMP_NUM_THREADS'] = str(a.threads)
     rss0 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     eng = (Sherpa if a.engine == 'sherpa' else April)(a.model, a.threads)
-    refs = json.loads((ROOT / 'data/refs.json').read_text())[:a.limit]
-    timing = json.loads((ROOT / 'data/word_times.json').read_text()) if (ROOT / 'data/word_times.json').exists() else {}
+    D = Path(a.data)
+    refs = json.loads((D / 'refs.json').read_text())[:a.limit]
+    timing = json.loads((D / 'word_times.json').read_text()) if (D / 'word_times.json').exists() else {}
     rng = np.random.default_rng(0)
     tot_err = tot_words = 0; audio_s = cpu_s = 0.0; steps = []; first_lat, stable_lat = [], []; items = []
     for row in refs:
-        x, sr = sf.read(ROOT / 'data' / row['audio'], dtype='int16'); assert sr == 16000
+        x, sr = sf.read(D / row['audio'], dtype='int16'); assert sr == 16000
         if a.cond == 'noisy':  # white noise at 10 dB SNR
             sig = x.astype(np.float64); p = np.mean(sig ** 2)
             x = np.clip(sig + rng.normal(0, np.sqrt(p / 10), len(sig)), -32768, 32767).astype(np.int16)
@@ -127,14 +132,14 @@ def main():
             stable_lat.append(stable - end)
         items.append({'audio': row['audio'], 'ref': row['text'], 'hyp': ' '.join(final), 'errors': err})
     pct = lambda v, q: round(float(np.percentile(v, q)), 3) if v else None
-    out = {'name': a.name, 'cond': a.cond, 'threads': a.threads, 'wer': round(tot_err / tot_words, 4),
+    out = {'name': a.name, 'data': D.name, 'cond': a.cond, 'threads': a.threads, 'wer': round(tot_err / tot_words, 4),
            'words': tot_words, 'errors': tot_err,
            'cpu_rtf': round(cpu_s / audio_s, 4), 'step_ms_p50': pct(steps, 50), 'step_ms_p99': pct(steps, 99),
            'first_shown_lag_s_p50': pct(first_lat, 50), 'first_shown_lag_s_p90': pct(first_lat, 90),
            'stable_lag_s_p50': pct(stable_lat, 50), 'stable_lag_s_p90': pct(stable_lat, 90), 'timed_words': len(stable_lat),
            'peak_rss_mb': round((resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - 0 * rss0) / 1024), 'items': items}
     (ROOT / 'results').mkdir(exist_ok=True)
-    (ROOT / f'results/{a.name}-{a.cond}-t{a.threads}.json').write_text(json.dumps(out, indent=1))
+    (ROOT / f'results/{a.name}-{D.name}-{a.cond}-t{a.threads}.json').write_text(json.dumps(out, indent=1))
     print(json.dumps({k: v for k, v in out.items() if k != 'items'}))
 
 if __name__ == '__main__':
