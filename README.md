@@ -18,6 +18,18 @@ for people who are deaf or hard of hearing.
 
 ## Install
 
+### Download (x86_64)
+
+Download `NowCaption-1.0.0-x86_64.flatpak` from the
+[latest release](https://github.com/Techlm77/NowCaption/releases/latest), then run:
+
+```sh
+flatpak install --user NowCaption-1.0.0-x86_64.flatpak
+```
+
+Flatpak downloads the GNOME runtime from Flathub automatically. This file doesn't
+update itself, so get new versions from the releases page.
+
 ### From Flathub
 
 NowCaption is not on Flathub yet. Once it is accepted:
