@@ -32,7 +32,7 @@ def main():
     try:
         cap = engine.Captioner(engine.load_recognizer(), engine.load_punctuation())
         updates = []
-        cap.on_update = lambda lines, partial: updates.append(time.monotonic())
+        cap.on_update = lambda text: updates.append(time.monotonic())
         capture = audio.Capture(cap.feed, lambda e: print('capture error:', e))
         capture.start('nowcaption_test.monitor')
         time.sleep(1)
@@ -41,7 +41,7 @@ def main():
             subprocess.run(['paplay', '--device=nowcaption_test', str(HERE / r['audio'])], check=True)
         time.sleep(2.5)
         capture.stop()
-        text = ' '.join(t for _, t in cap.lines)
+        text = ' '.join(t for _, t, _ in cap.lines)
         score = wer([w for r in refs for w in words(r['text'])], words(text))
         print(cap.transcript())
         print(f'WER {score:.3f}, {len(updates)} caption updates')

@@ -110,10 +110,10 @@ class Captioner:
             cut = len(new)
             if not force and len(new) > MAX_LINE:
                 cut = new.rfind(' ', 0, MAX_LINE) + 1 or len(new)
-            line = self.format(new[:cut])
-            if line:
+            raw = new[:cut].strip()
+            if raw:
                 with self.lock:
-                    self.lines.append((time.time(), line))
+                    self.lines.append((time.time(), self.format(raw), raw))
             self.done += cut
             new, committed = new[cut:], True
             if len(text) > 20000 and not new.strip():  # bound memory at a natural break
@@ -122,12 +122,20 @@ class Captioner:
         if committed or new != self.partial:
             self.partial = new
             if self.on_update:
-                self.on_update(self.recent(2), self.format(new) if new.strip() else '')
+                self.on_update(self.caption_text())
 
     def recent(self, n):
         with self.lock:
-            return [t for _, t in list(self.lines)[-n:]]
+            return [t for _, t, _ in list(self.lines)[-n:]]
+
+    def caption_text(self, n=4):
+        """The last few lines and the words still coming, punctuated together as one passage,
+        so that phrases split at pauses still read as sentences."""
+        with self.lock:
+            raw = [r for _, _, r in list(self.lines)[-n:]]
+        partial = self.partial.strip()
+        return self.format(' '.join(raw + ([partial] if partial else [])))
 
     def transcript(self):
         with self.lock:
-            return '\n'.join(time.strftime('[%H:%M:%S] ', time.localtime(ts)) + t for ts, t in self.lines)
+            return '\n'.join(time.strftime('[%H:%M:%S] ', time.localtime(ts)) + t for ts, t, _ in self.lines)

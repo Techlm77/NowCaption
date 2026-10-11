@@ -66,15 +66,17 @@ folder too to remove them.
 
 Captions start straight away, from whatever your computer is playing.
 
-- **Right-click** the captions for the menu:
+- **Drag** the captions anywhere on the screen.
+- **Right-click** them for a small menu:
   - Listen to desktop audio or the microphone
-  - Make the text larger or smaller
-  - Make the background more see-through or more solid
+  - Text size − / +, and background − / +
+  - Reset position, or move to another screen if you have more than one
   - Copy, save or clear the transcript
   - Quit
-- **Drag** the captions to move them.
 
-Settings are remembered between sessions.
+The captions always show two lines. New words appear at the end of the second
+line, and older text scrolls up out of view. Settings and position are remembered
+between sessions.
 
 ### Staying above other windows
 
@@ -82,12 +84,13 @@ How the caption window behaves depends on your desktop:
 
 | Desktop | Behaviour |
 |---|---|
-| KDE Plasma, Hyprland, Sway and other wlroots compositors (Wayland) | Captions float above all windows. Dragging moves them up and down, and the menu can place them at the top or bottom of the screen. The overlay never takes keyboard focus, so use the menu rather than keyboard shortcuts. |
+| KDE Plasma, Hyprland, Sway and other wlroots compositors (Wayland) | Captions float above all windows. Clicks outside the caption box go to the windows underneath. The captions never take keyboard focus, so use the menu. |
 | GNOME (Wayland) | A normal window. To keep it on top, press Alt + Space while it is focused and choose **Always on Top**. Drag it anywhere. |
 | X11 sessions | A normal window. Use your window manager's "keep above" option. |
 
 In a normal window, Ctrl + plus and Ctrl + minus change the text size, Ctrl + S
-saves the transcript, and Ctrl + Q quits.
+saves the transcript, and Ctrl + Q quits. These shortcuts aren't available on the
+overlay desktops above.
 
 ### If no captions appear
 
