@@ -1,0 +1,83 @@
+name: Flatpak repo
+# Builds the Flatpak on every release tag and publishes a signed Flatpak repository to
+# GitHub Pages (https://techlm77.github.io/NowCaption/), so installs get updates with
+# `flatpak update`. Needs the FLATPAK_GPG_PRIVATE_KEY secret (an armored GPG private key).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: flatpak-repo
+  cancel-in-progress: false
+env:
+  REPO_URL: https://techlm77.github.io/NowCaption/
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Import signing key
+        env:
+          KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+        run: |
+          test -n "$KEY" || { echo "::error::FLATPAK_GPG_PRIVATE_KEY secret is not set"; exit 1; }
+          printf '%s\n' "$KEY" | gpg --batch --import
+          echo "GPG_KEY=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')" >> "$GITHUB_ENV"
+      - name: Build and sign
+        run: |
+          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --disable-rofiles-fuse --install-deps-from=flathub --force-clean \
+            --gpg-sign="$GPG_KEY" --repo=repo build-dir io.github.Techlm77.NowCaption.yml
+          flatpak build-update-repo --gpg-sign="$GPG_KEY" --title=NowCaption \
+            --default-branch=master repo
+          rm -rf repo/tmp
+      - name: Write install files
+        run: |
+          key=$(gpg --export "$GPG_KEY" | base64 -w0)
+          cat > repo/nowcaption.flatpakrepo <<EOF
+          [Flatpak Repo]
+          Title=NowCaption
+          Url=$REPO_URL
+          Homepage=https://github.com/Techlm77/NowCaption
+          Comment=On-device live captions for Linux
+          GPGKey=$key
+          EOF
+          cat > repo/nowcaption.flatpakref <<EOF
+          [Flatpak Ref]
+          Name=io.github.Techlm77.NowCaption
+          Branch=master
+          Title=NowCaption
+          Url=$REPO_URL
+          SuggestRemoteName=nowcaption
+          RuntimeRepo=https://dl.flathub.org/repo/flathub.flatpakrepo
+          IsRuntime=false
+          GPGKey=$key
+          EOF
+          cat > repo/index.html <<EOF
+          <!doctype html><meta charset="utf-8"><title>NowCaption Flatpak repository</title>
+          <p>This is the Flatpak repository for <a href="https://github.com/Techlm77/NowCaption">NowCaption</a>.
+          <p>Install: <code>flatpak install --user --from ${REPO_URL}nowcaption.flatpakref</code>
+          EOF
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: repo
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1

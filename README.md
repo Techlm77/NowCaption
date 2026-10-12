@@ -21,6 +21,17 @@ for people who are deaf or hard of hearing.
 
 ## Install
 
+### With automatic updates (x86_64)
+
+```sh
+flatpak install --user --from https://techlm77.github.io/NowCaption/nowcaption.flatpakref
+```
+
+This adds the NowCaption repository, installs the app and pulls the GNOME runtime from
+Flathub. New versions arrive with `flatpak update` or in your software centre. If you
+installed a `.flatpak` file before, remove it first with
+`flatpak uninstall io.github.Techlm77.NowCaption` (your settings are kept).
+
 ### Download (x86_64)
 
 Download the `.flatpak` file from the
