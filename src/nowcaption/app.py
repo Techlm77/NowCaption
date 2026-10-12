@@ -29,6 +29,14 @@ EDGE = 10             # width of the band along the box's edges that resizes ins
 MIN_WIDTH = 240
 CURSORS = {'n': 'n-resize', 's': 's-resize', 'e': 'e-resize', 'w': 'w-resize',
            'ne': 'ne-resize', 'nw': 'nw-resize', 'se': 'se-resize', 'sw': 'sw-resize'}
+# Rows of − / + buttons in the menu. They are real buttons rather than menu items, because
+# GTK closes a menu when one of its items is chosen, and these are pressed several times.
+STEPPERS = {
+    'text-size': ('Text size', ('Smaller text', 'app.smaller', 'zoom-out-symbolic'),
+                  ('Larger text', 'app.larger', 'zoom-in-symbolic')),
+    'background': ('Background', ('More see-through', 'app.lighter', 'value-decrease-symbolic'),
+                   ('More solid', 'app.darker', 'value-increase-symbolic')),
+}
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
             'width': -1, 'rows': ROWS, 'music_filter': 0}
 LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'music_filter': (0, 1)}
@@ -155,7 +163,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.add_controller(click)
         self.set_cursor(Gdk.Cursor.new_from_name('grab', None))
 
-        self.popover = Gtk.PopoverMenu.new_from_model(app.build_menu(self.layer and self.monitor_count() > 1))
+        self.popover = Gtk.PopoverMenu()
+        self.update_menu(self.layer and self.monitor_count() > 1)
         self._monitor_handlers = []
         self._monitors = Gdk.Display.get_default().get_monitors()
         self._monitors_handler = self._monitors.connect('items-changed', self.on_monitors_changed)
@@ -201,7 +210,20 @@ class CaptionWindow(Gtk.ApplicationWindow):
         items = [monitors.get_item(i) for i in range(monitors.get_n_items())]
         if self.monitor not in items:
             self.use_monitor(self.pick_monitor(self.settings.get('monitor')))
-        self.popover.set_menu_model(self.app.build_menu(self.layer and len(items) > 1))
+        self.update_menu(self.layer and len(items) > 1)
+
+    def update_menu(self, several_screens):
+        """Set the menu, with the text size and background rows as buttons that keep it open."""
+        self.popover.set_menu_model(self.app.build_menu(several_screens))
+        for name, (title, *buttons) in STEPPERS.items():
+            row = Gtk.Box(spacing=4, margin_start=12, margin_end=6)
+            row.append(Gtk.Label(label=title, xalign=0, hexpand=True))
+            for tooltip, action, icon in buttons:
+                button = Gtk.Button(icon_name=icon, action_name=action, tooltip_text=tooltip)
+                button.add_css_class('flat')
+                button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
+                row.append(button)
+            self.popover.add_child(row, name)
 
     def watch_monitor(self):
         for monitor, handler in self._monitor_handlers:
@@ -485,28 +507,25 @@ class NowCaption(Adw.Application):
 
     def build_menu(self, several_screens=False):
         """Compact menu: sound source, one-row size/background controls, transcript, app."""
-        def section(*items, label=None, hint=None):
+        def section(*items):
             m = Gio.Menu()
             for text, action, icon in items:
                 item = Gio.MenuItem.new(text, action)
                 if icon:
                     item.set_attribute_value('verb-icon', GLib.Variant('s', icon))
                 m.append_item(item)
-            sec = Gio.MenuItem.new_section(label, m)
-            if hint:
-                sec.set_attribute_value('display-hint', GLib.Variant('s', hint))
-            return sec
+            return Gio.MenuItem.new_section(None, m)
 
         menu = Gio.Menu()
         menu.append_item(section(('Desktop audio', 'app.source::desktop', None),
                                  ('Microphone', 'app.source::mic', None)))
         menu.append_item(section(('Filter out music', 'app.music-filter', None)))
-        menu.append_item(section(('Smaller text', 'app.smaller', 'zoom-out-symbolic'),
-                                 ('Larger text', 'app.larger', 'zoom-in-symbolic'),
-                                 label='Text size', hint='inline-buttons'))
-        menu.append_item(section(('More see-through', 'app.lighter', 'value-decrease-symbolic'),
-                                 ('More solid', 'app.darker', 'value-increase-symbolic'),
-                                 label='Background', hint='inline-buttons'))
+        steppers = Gio.Menu()  # filled with button rows by CaptionWindow.update_menu
+        for name in STEPPERS:
+            item = Gio.MenuItem.new(None, None)
+            item.set_attribute_value('custom', GLib.Variant('s', name))
+            steppers.append_item(item)
+        menu.append_section(None, steppers)
         place = [('Reset position', 'app.reset-position', None), ('Reset size', 'app.reset-size', None)]
         if several_screens:
             place.append(('Move to next screen', 'app.next-screen', None))

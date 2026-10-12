@@ -48,6 +48,44 @@ class WindowTests(unittest.TestCase):
         self.assertEqual(other.get_accessible_role(), nc.Gtk.AccessibleRole.LABEL)
         self.assertIsNotNone(self.window.popover)
 
+    def settle(self):
+        context = nc.GLib.MainContext.default()
+        for _ in range(50):
+            while context.pending():
+                context.iteration(False)
+
+    def buttons(self, widget):
+        child = widget.get_first_child()
+        while child:
+            if isinstance(child, nc.Gtk.Button) and child.get_action_name():
+                yield child
+            yield from self.buttons(child)
+            child = child.get_next_sibling()
+
+    def test_text_size_and_background_buttons_keep_the_menu_open(self):
+        w = self.window
+        w.present()
+        w.popover.popup()
+        self.settle()
+        found = {b.get_action_name(): b for b in self.buttons(w.popover)}
+        for action in ('app.smaller', 'app.larger', 'app.lighter', 'app.darker'):
+            self.assertIn(action, found)
+        before = self.app.settings.get('size')
+        for _ in range(3):
+            found['app.larger'].emit('clicked')
+            self.settle()
+        self.assertGreater(self.app.settings.get('size'), before)
+        self.assertTrue(w.popover.get_visible(), 'the menu closed after pressing a + button')
+        found['app.darker'].emit('clicked')
+        self.settle()
+        self.assertTrue(w.popover.get_visible())
+        w.popover.popdown()
+
+    def test_menu_rows_survive_a_menu_rebuild(self):
+        self.window.update_menu(True)
+        actions = {b.get_action_name() for b in self.buttons(self.window.popover)}
+        self.assertTrue({'app.smaller', 'app.larger', 'app.lighter', 'app.darker'} <= actions)
+
     def test_two_row_caption_renders_and_font_size_can_change(self):
         self.window.show_text('hello ' * 100)
         self.assertLessEqual(len(self.window.label.get_text().splitlines()), nc.ROWS)
