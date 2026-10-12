@@ -419,6 +419,7 @@ class TraceBenchmarkTests(unittest.TestCase):
 
     def test_full_worker_trace_keeps_every_word_after_actual_caption_window_scrolls(self):
         reference = [f'word{i:03}' for i in range(120)]
+        self.enterContext(patch.object(engine.Captioner, 'DISPLAY_LINES', 4))  # make the window scroll
         events, traces = Events(), []
         worker = engine.RecognitionWorker(events, load=lambda: (FakeRecognizer(
             [word + ' ' for word in reference]), None), on_trace=lambda text: traces.append(self.e2e.words(text)))
@@ -517,6 +518,35 @@ class TraceBenchmarkTests(unittest.TestCase):
             self.assertEqual(result['timed_word_coverage'], 1)
             self.assertTrue((root / 'results/e2e-v3-clips.json').is_file())
         self.assertEqual(cleanup, ['capture', 'worker', 'sink'])
+
+
+
+class StablePunctuationTests(unittest.TestCase):
+    class FlakyPunctuation:
+        """Moves its commas whenever the passage grows, like the real model reconsidering."""
+        def add_punctuation_with_case(self, text):
+            words = text.split()
+            return ' '.join(w + (',' if (i + len(words)) % 3 == 0 else '') for i, w in enumerate(words))
+
+    def test_older_lines_keep_their_punctuation_as_new_words_arrive(self):
+        captioner = engine.Captioner(NS(create_stream=lambda: None), self.FlakyPunctuation())
+        before = ''
+        for n in range(10):
+            captioner.lines.append((0, '', f'line{n} a b c'))
+            for partial in ('', 'x', 'x y', 'x y z'):
+                captioner.partial = partial
+                now = captioner.caption_text()
+                settled = max(0, len(captioner.lines) - captioner.LIVE_LINES)
+                frozen = ' '.join(now.split()[:4 * settled])
+                self.assertTrue(before.startswith(frozen), (before, now))
+                before = now
+        self.assertEqual(len(before.split()), 4 * 10 + 3)
+
+    def test_passage_still_holds_only_the_last_display_lines(self):
+        captioner = engine.Captioner(NS(create_stream=lambda: None), self.FlakyPunctuation())
+        captioner.lines = [(0, f'line{n}', f'line{n}') for n in range(10)]
+        with patch.object(engine.Captioner, 'DISPLAY_LINES', 3):
+            self.assertEqual(captioner.caption_text().replace(',', '').split(), ['line7', 'line8', 'line9'])
 
 
 if __name__ == '__main__':

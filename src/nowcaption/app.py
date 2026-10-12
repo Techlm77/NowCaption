@@ -437,7 +437,10 @@ class CaptionWindow(Gtk.ApplicationWindow):
         bx, by = (self.x, self.y) if self.layer else (0, 0)
         rect.x, rect.y, rect.width, rect.height = int(x - bx), int(y - by), 1, 1
         self.popover.set_pointing_to(rect)
-        self.popover.popup()
+        if self.layer:  # let the compositor apply the keyboard mode first, or KWin closes the menu at once
+            GLib.timeout_add(60, lambda: self.popover.popup() and False)
+        else:
+            self.popover.popup()
 
 
 class NowCaption(Adw.Application):

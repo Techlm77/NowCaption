@@ -92,12 +92,15 @@ class Captioner:
     """Turns 16 kHz mono int16 audio into caption text. Not thread-safe: one thread owns it
     (RecognitionWorker). on_update(text) receives the caption passage after each change."""
 
-    DISPLAY_LINES = 4  # finished lines kept for the on-screen passage
+    DISPLAY_LINES = 60  # finished lines kept for the on-screen passage; the box shows its last rows
+    LIVE_LINES = 2      # finished lines still re-punctuated with the words being spoken
 
     def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None):
         self.rec, self.punct = recognizer, punctuation
         self.on_update, self.on_warning = on_update, on_warning
         self.lines = []  # (time, formatted, raw) for the whole session, until cleared
+        self.shown = []  # punctuation each settled line was last shown with, frozen so text never jumps
+        self.live = []  # words of the live passage as last shown, for freezing its oldest line
         self.stream = recognizer.create_stream()
         self.done, self.partial, self.quiet = 0, '', 0.0
         self.partial_since = None  # when the words still being spoken started
@@ -135,6 +138,7 @@ class Captioner:
     def clear(self):
         """Clear is an explicit acoustic boundary: buffered old speech must not return."""
         self.lines = []
+        self.shown, self.live = [], []
         self.done = 0
         self.partial, self.quiet, self.partial_since = '', 0.0, None
         self.silent_for, self.flushed = 0.0, True
@@ -182,10 +186,32 @@ class Captioner:
 
     def caption_text(self):
         """The last few lines and the words still coming, punctuated together as one passage,
-        so that phrases split at pauses still read as sentences."""
-        raw = [r for _, _, r in self.lines[-self.DISPLAY_LINES:]]
+        so that phrases split at pauses still read as sentences. Only the newest LIVE_LINES are
+        re-punctuated; older lines keep the punctuation they were last shown with, otherwise a
+        comma that comes and goes far back in the passage would re-wrap every row."""
+        while len(self.lines) - len(self.shown) > self.LIVE_LINES:
+            self.shown.append(self.settle(self.lines[len(self.shown)]))
+        context = self.lines[len(self.shown) - 1][2].split() if self.shown else []
+        live = [r for _, _, r in self.lines[len(self.shown):]]
         partial = self.partial.strip()
-        return self.format(' '.join(raw + ([partial] if partial else [])))
+        words = ' '.join(live + ([partial] if partial else [])).split()
+        out = self.format(' '.join(context + words)).split() if words else []
+        if len(out) == len(context) + len(words):  # punctuation keeps one output word per input word
+            out = out[len(context):]
+        else:
+            out = self.format(' '.join(words)).split()
+        self.live = out
+        shown = [s for s in self.shown[max(0, len(self.lines) - self.DISPLAY_LINES):] if s]
+        return ' '.join(shown + out)
+
+    def settle(self, line):
+        """The words of a line leaving the live passage, punctuated as they were last shown."""
+        n = len(line[2].split())
+        if len(self.live) >= n:
+            words, self.live = self.live[:n], self.live[n:]
+            return ' '.join(words)
+        self.live = []
+        return line[1]
 
     def transcript(self):
         """Every finished line since start or the last clear, plus the words still being spoken."""

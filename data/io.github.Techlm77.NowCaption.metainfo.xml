@@ -57,6 +57,16 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.0.6" date="2026-10-12">
+      <description>
+        <p>
+          Captions no longer jump around: punctuation in older lines stays as it was shown, so
+          commas and full stops do not come and go and re-wrap the text. A large caption box now
+          fills all its rows instead of stopping at two or three. The right-click menu opens on
+          the first click on KDE Plasma.
+        </p>
+      </description>
+    </release>
     <release version="1.0.5" date="2026-10-12">
       <description>
         <p>
