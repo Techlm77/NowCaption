@@ -10,7 +10,7 @@ PIPELINE = ('pulsesrc name=src client-name=NowCaption buffer-time=100000 latency
             '! audioconvert ! audioresample '
             '! audio/x-raw,format=S16LE,rate=16000,channels=1 '
             '! appsink name=sink sync=false max-buffers=50 drop=false emit-signals=false')
-BLOCK = 3200  # 100 ms of 16 kHz PCM16
+BLOCK = 1280  # 40 ms of 16 kHz PCM16: smaller blocks reach the model sooner (benchmark/README.md)
 
 
 class Capture:

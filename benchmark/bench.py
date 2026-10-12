@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Engine-only comparison: stream labelled 16 kHz WAVs straight into one recognizer.
 
-For every 100 ms of audio fed, the recognizer's text is recorded with the audio clock
+For every block of audio fed (100 ms, or --chunk-ms), the recognizer's text is recorded with the audio clock
 plus the compute time of that step. That gives, per reference word, when the engine
 first produced it correctly. It leaves out audio capture, NowCaption's caption
 logic, punctuation and drawing (see e2e.py for those), and assumes the engine keeps
@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np, soundfile as sf
 
 ROOT = Path(__file__).resolve().parent
-CHUNK = 1600  # 100 ms
+CHUNK = 1600  # 100 ms, as NowCaption's capture delivers it (--chunk-ms changes it)
 TAIL = 1.5    # seconds of silence after each clip, as in live use
 
 ABBR = {'mr': 'mister', 'mrs': 'missus', 'dr': 'doctor', 'st': 'saint'}
@@ -37,12 +37,12 @@ def align(ref, hyp):
     return int(d[n, m]), match
 
 class Sherpa:
-    def __init__(self, path, threads):
+    def __init__(self, path, threads, decoding='greedy_search'):
         import sherpa_onnx as so
         p = Path(path); f = lambda n: str(next(p.glob(n + '*.onnx')))
         self.r = so.OnlineRecognizer.from_transducer(
             tokens=str(p / 'tokens.txt'), encoder=f('encoder'), decoder=f('decoder'), joiner=f('joiner'),
-            num_threads=threads, decoding_method='greedy_search')
+            num_threads=threads, decoding_method=decoding)
     def start(self): self.s = self.r.create_stream()
     def feed(self, x):
         self.s.accept_waveform(16000, x.astype(np.float32) / 32768)
@@ -56,7 +56,7 @@ class Sherpa:
 class April:
     """The library and model the Live Captions build actually uses, in sync mode."""
     LC = Path(os.environ.get('LIVECAPTIONS_DIR', 'LiveCaptions'))  # a built Live Captions checkout
-    def __init__(self, path, threads):
+    def __init__(self, path, threads, decoding=None):
         class Token(c.Structure):
             _fields_ = [('token', c.c_char_p), ('logprob', c.c_float), ('flags', c.c_int), ('time_ms', c.c_size_t), ('reserved', c.c_void_p)]
         self.CB = c.CFUNCTYPE(None, c.c_void_p, c.c_int, c.c_size_t, c.POINTER(Token))
@@ -97,11 +97,15 @@ def main():
     ap.add_argument('--cond', default='clean', choices=['clean', 'noisy'])
     ap.add_argument('--threads', type=int, default=2)
     ap.add_argument('--limit', type=int)
+    ap.add_argument('--chunk-ms', type=int, default=100, help='audio fed per step')
+    ap.add_argument('--decoding', default='greedy_search', choices=['greedy_search', 'modified_beam_search'],
+                    help='sherpa only')
     ap.add_argument('--data', default=str(ROOT / 'data' / 'dummy'), help='folder with refs.json and WAVs')
     a = ap.parse_args()
     os.environ['OMP_NUM_THREADS'] = str(a.threads)
     rss0 = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    eng = (Sherpa if a.engine == 'sherpa' else April)(a.model, a.threads)
+    eng = (Sherpa if a.engine == 'sherpa' else April)(a.model, a.threads, a.decoding)
+    CHUNK = a.chunk_ms * 16
     D = Path(a.data)
     refs = json.loads((D / 'refs.json').read_text())[:a.limit]
     timing = json.loads((D / 'word_times.json').read_text()) if (D / 'word_times.json').exists() else {}

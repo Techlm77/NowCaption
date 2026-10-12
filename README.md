@@ -267,23 +267,6 @@ This writes `encoder.int8.onnx`, `decoder.int8.onnx`, `joiner.int8.onnx` and
 `tokens.txt`. The release archive holds those four files and a README in a folder
 named `nowcaption-fastconformer-en-80ms-cc-by-v1`.
 
-## Releasing a new version (maintainers)
-
-1. Add a `<release>` entry to `data/io.github.Techlm77.NowCaption.metainfo.xml`
-   and set `__version__` in `src/nowcaption/__init__.py`.
-2. Tag and push, for example: `git tag v1.0.4 && git push --tags`.
-3. Run `tools/make-flathub-manifest.sh v1.0.4`. It writes
-   `flathub/io.github.Techlm77.NowCaption.yml` with the source pinned to that tag.
-4. Check it:
-   `flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest flathub/io.github.Techlm77.NowCaption.yml`
-5. For the first release, follow the
-   [Flathub submission guide](https://docs.flathub.org/docs/for-app-authors/submission).
-   Later releases go to the app's own repository on Flathub.
-
-The Python dependencies are pinned upstream wheels for x86_64 and aarch64, because
-building sherpa-onnx and ONNX Runtime from source in flatpak-builder takes much
-more work. If Flathub reviewers ask for source builds, that is the part to change.
-
 ## License
 
 NowCaption's code is MIT licensed. The bundled models and libraries keep their own

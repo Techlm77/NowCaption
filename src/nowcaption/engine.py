@@ -79,6 +79,12 @@ def load_models(on_warning=None):
     return rec, punct
 
 
+def duration(pcm):
+    """Seconds of 16 kHz mono audio, given PCM16 bytes or an array of samples."""
+    samples = len(pcm) // 2 if isinstance(pcm, (bytes, bytearray, memoryview)) else len(pcm)
+    return samples / RATE
+
+
 def tidy(text):
     """Sentence case for all-lower or all-upper text; mixed case is kept."""
     text = text.strip()
@@ -248,7 +254,8 @@ class RecognitionWorker(threading.Thread):
     Pending audio is bounded at enqueue time; commands are never dropped for lack of space.
     """
 
-    MAX_BACKLOG = 20  # at most 2 s of pending capture audio, excluding one in-flight call
+    MAX_BACKLOG = 50  # at most 2 s of pending 40 ms capture blocks, excluding one in-flight call
+    REPORT_DROPPED_S = 2.0  # say so while the worker is stalled, after this much audio is dropped
 
     def __init__(self, on_event, load=None, on_trace=None):
         super().__init__(name='nowcaption-recognition', daemon=True)
@@ -272,15 +279,15 @@ class RecognitionWorker(threading.Thread):
                 return
             if self.backlog >= self.MAX_BACKLOG:
                 # Preserve command ordering while removing only the oldest audio.
-                for i, (kind, _) in enumerate(self.inbox):
+                for i, (kind, value) in enumerate(self.inbox):
                     if kind == 'audio':
                         del self.inbox[i]
                         self.backlog -= 1
+                        self.dropped += duration(value[1])
                         break
                 self.discontinuity = True
-                self.dropped += 1
-                if self.dropped >= self.MAX_BACKLOG:
-                    report, self.dropped = self.dropped / 10, 0
+                if self.dropped >= self.REPORT_DROPPED_S:
+                    report, self.dropped = self.dropped, 0
             self.backlog += 1
             self.inbox.append(('audio', (gen, pcm)))
             self.lock.notify()
@@ -359,7 +366,7 @@ class RecognitionWorker(threading.Thread):
                         self.confirmed = True
                         self.on_event('recognition-ok', gen)
                 if dropped:
-                    self.on_event('overload', dropped / 10)
+                    self.on_event('overload', dropped)
             elif kind == 'clear':
                 self._handle(kind, value)  # generations apply even when models failed to load
             elif kind == 'snapshot':

@@ -57,6 +57,15 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.0.9" date="2026-10-12">
+      <description>
+        <p>
+          Captions appear sooner: audio now reaches the speech model in smaller pieces,
+          cutting the typical delay by 60 to 80 milliseconds with the same accuracy and
+          processor use.
+        </p>
+      </description>
+    </release>
     <release version="1.0.8" date="2026-10-12">
       <description>
         <p>

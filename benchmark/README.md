@@ -37,6 +37,27 @@ the word correctly.
 **CPU** is CPU seconds per second of audio, including 1.5 s of silence after each
 clip.
 
+## Capture block size (engine-only)
+
+NowCaption's capture hands audio to the recognizer in fixed blocks. Smaller blocks
+reach the model sooner; below 40 ms there is no further gain. Since 1.0.9 the app
+uses 40 ms (`bench.py --chunk-ms`):
+
+| Block | WER test-clean | WER test-other | Median lag clean / other | p90 lag clean / other | CPU |
+|---|---|---|---|---|---|
+| 100 ms (before 1.0.9) | 2.44% | 6.96% | 0.306 / 0.366 s | 0.469 / 0.546 s | 0.159 |
+| 60 ms | 2.44% | 6.96% | 0.267 / 0.345 s | 0.466 / 0.508 s | 0.160 |
+| **40 ms** | **2.44%** | **6.96%** | **0.227 / 0.306 s** | **0.465 / 0.468 s** | **0.157** |
+| 20 ms | 2.44% | 6.96% | 0.228 / 0.306 s | 0.465 / 0.467 s | 0.158 |
+
+Through the whole caption pipeline (silence handling, line splitting and
+punctuation, with clips joined by 2–2.1 s of digital silence at nine random
+offsets), 40 ms and 100 ms blocks gave the same WER: 2.65% against 2.66% on
+test-clean and 6.84% against 6.83% on test-other.
+
+`modified_beam_search` is not available: sherpa-onnx supports only greedy search
+for streaming NeMo transducers such as this model.
+
 ## Historical capture-to-worker-event results (scorer version 1)
 
 These archived runs used the older `e2e.py`, with one clip from each speaker,

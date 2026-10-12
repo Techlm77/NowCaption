@@ -248,6 +248,19 @@ class WorkerTests(unittest.TestCase):
             self.worker.feed(1, SPEECH)
         self.assertGreater(events.wait('overload'), 0)
 
+    def test_overload_reports_the_seconds_of_audio_actually_dropped(self):
+        reports = []
+        worker = engine.RecognitionWorker(lambda kind, value: reports.append((kind, value)))  # not started
+        block = np.full(640, 1000, dtype=np.int16).tobytes()  # 40 ms, as the capture delivers it
+        extra = int(worker.REPORT_DROPPED_S / 0.04)
+        for _ in range(worker.MAX_BACKLOG + extra):
+            worker.feed(0, block)
+        self.assertEqual(worker.backlog, worker.MAX_BACKLOG)
+        self.assertEqual(len(reports), 1)
+        kind, seconds = reports[0]
+        self.assertEqual(kind, 'overload')
+        self.assertAlmostEqual(seconds, worker.REPORT_DROPPED_S)
+
 
 # --- capture lifecycle with a fake GStreamer ------------------------------------------------
 
