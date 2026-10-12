@@ -11,7 +11,6 @@ import io
 import json
 import queue
 import threading
-import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace as NS
@@ -413,7 +412,7 @@ class TranscriptRegressions(unittest.TestCase):
 
 class CaptureReadinessRegressions(unittest.TestCase):
     def test_ready_waits_for_actual_samples_and_optional_warning_is_allowed(self):
-        events, requested, capture_box, result = [], threading.Event(), [], []
+        requested, capture_box, result = threading.Event(), [], []
         class Worker:
             def __init__(self, on_event):
                 self.on_event = on_event

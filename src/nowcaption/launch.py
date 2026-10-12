@@ -10,7 +10,8 @@ def preload_layer_shell():
     if os.environ.get('NOWCAPTION_REEXEC') or not os.environ.get('WAYLAND_DISPLAY'):
         return
     lib = ctypes.util.find_library('gtk4-layer-shell')
-    for d in ('/app/lib', '/usr/lib', '/usr/local/lib', '/usr/lib64', '/usr/lib/x86_64-linux-gnu'):
+    for d in ('/app/lib', '/usr/lib', '/usr/local/lib', '/usr/lib64',
+              '/usr/lib/x86_64-linux-gnu', '/usr/lib/aarch64-linux-gnu'):
         if not lib and Path(d, 'libgtk4-layer-shell.so.0').exists():
             lib = str(Path(d, 'libgtk4-layer-shell.so.0'))
     if lib and 'layer-shell' not in os.environ.get('LD_PRELOAD', ''):

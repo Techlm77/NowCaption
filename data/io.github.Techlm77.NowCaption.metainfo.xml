@@ -57,6 +57,16 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.0.8" date="2026-10-12">
+      <description>
+        <p>
+          Settings that are out of range, for example after editing the settings file by hand,
+          are corrected instead of giving an unreadable caption box. If the settings file cannot
+          be saved, changes still apply until you quit, and switching the sound source keeps
+          working.
+        </p>
+      </description>
+    </release>
     <release version="1.0.7" date="2026-10-12">
       <description>
         <p>

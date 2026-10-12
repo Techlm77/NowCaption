@@ -101,5 +101,39 @@ class AppTests(unittest.TestCase):
             self.assertEqual(open(path).read(), 'hello\n')
 
 
+
+@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+class SettingsTests(unittest.TestCase):
+    def setUp(self):
+        self.settings = nc.Settings()
+        self.settings.path = nc.Path(tempfile.mkdtemp()) / 'settings.ini'
+
+    def test_hand_edited_values_are_brought_back_into_range(self):
+        kf = self.settings.kf
+        kf.set_integer('main', 'size', 0)
+        kf.set_double('main', 'opacity', 5.0)
+        kf.set_integer('main', 'rows', -3)
+        kf.set_integer('main', 'width', 5)
+        kf.set_string('main', 'source', 'speakers')
+        self.assertEqual(self.settings.get('size'), nc.SIZES[0])
+        self.assertEqual(self.settings.get('opacity'), 1.0)
+        self.assertEqual(self.settings.get('rows'), 1)
+        self.assertEqual(self.settings.get('width'), nc.MIN_WIDTH)
+        self.assertEqual(self.settings.get('source'), 'desktop')
+
+    def test_default_width_and_valid_values_are_kept(self):
+        self.assertEqual(self.settings.get('width'), -1)
+        self.settings.set('source', 'mic')
+        self.settings.set('size', 42)
+        self.assertEqual((self.settings.get('source'), self.settings.get('size')), ('mic', 42))
+
+    def test_a_settings_file_that_cannot_be_written_does_not_raise(self):
+        blocker = nc.Path(tempfile.mkdtemp()) / 'not-a-folder'
+        blocker.write_text('')
+        self.settings.path = blocker / 'settings.ini'
+        self.settings.set('source', 'mic')  # must not raise
+        self.assertEqual(self.settings.get('source'), 'mic')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

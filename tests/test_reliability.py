@@ -214,7 +214,7 @@ class WorkerTests(unittest.TestCase):
         """Finding 6: more than 500 finished lines are all exported."""
         rec = FakeRecognizer([f'segment{i:04d} ' for i in range(600)])
         self.worker, events = make_worker(rec)
-        for i in range(600):
+        for _ in range(600):
             self.worker.feed(1, SPEECH)
             self.worker.feed(1, SILENCE)
             self.worker.feed(1, SILENCE * 12)  # > SILENCE_FLUSH_S: commits the line
@@ -403,7 +403,7 @@ class ModelFileTests(unittest.TestCase):
     def make(self, sizes):
         d = self.root / engine.ASR_DIR
         d.mkdir(parents=True, exist_ok=True)
-        for name, size in zip(engine.ASR_FILES, sizes):
+        for name, size in zip(engine.ASR_FILES, sizes, strict=True):
             (d / name).write_bytes(b'x' * size)
 
     def test_incomplete_explicit_model_folder_is_rejected(self):

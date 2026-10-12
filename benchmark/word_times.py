@@ -1,7 +1,7 @@
 """Reference word end times from offline Parakeet TDT timestamps, kept only where it matches the reference word."""
 import argparse, json, sys
 from pathlib import Path
-import numpy as np, soundfile as sf, sherpa_onnx as so
+import soundfile as sf, sherpa_onnx as so
 sys.path.insert(0, str(Path(__file__).parent)); from bench import words, align
 ap = argparse.ArgumentParser()
 ap.add_argument('--data', default='data/dummy')
@@ -23,7 +23,7 @@ for row in json.load(open(D / 'refs.json')):
         if t.startswith(' ') or t.startswith('▁') or not wl: wl.append(t); we.append(end)
         else: wl[-1] += t; we[-1] = end
     hyp, times = [], []
-    for w, e in zip(wl, we):
+    for w, e in zip(wl, we, strict=True):
         for n in words(w): hyp.append(n); times.append(e)
     ref = words(row['text']); err, match = align(ref, hyp); errs += err; total += len(ref)
     out[row['audio']] = {str(ri): round(times[hi], 3) for ri, hi in match.items()}; kept += len(match)

@@ -31,6 +31,8 @@ CURSORS = {'n': 'n-resize', 's': 's-resize', 'e': 'e-resize', 'w': 'w-resize',
            'ne': 'ne-resize', 'nw': 'nw-resize', 'se': 'se-resize', 'sw': 'sw-resize'}
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
             'width': -1, 'rows': ROWS}
+LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100)}
+CHOICES = {'source': ('desktop', 'mic')}
 
 
 class Settings:
@@ -45,20 +47,34 @@ class Settings:
             pass
 
     def get(self, key):
+        """The stored value, brought back into range if the file was edited by hand."""
         default = DEFAULTS[key]
         try:
             if isinstance(default, int):
-                return self.kf.get_integer('main', key)
-            if isinstance(default, float):
-                return self.kf.get_double('main', key)
-            return self.kf.get_string('main', key)
+                value = self.kf.get_integer('main', key)
+            elif isinstance(default, float):
+                value = self.kf.get_double('main', key)
+            else:
+                value = self.kf.get_string('main', key)
         except GLib.Error:
             return default
+        if key in LIMITS:
+            low, high = LIMITS[key]
+            value = max(low, min(high, value))
+        if key == 'width' and 0 < value < MIN_WIDTH:
+            value = MIN_WIDTH
+        if key in CHOICES and value not in CHOICES[key]:
+            value = default
+        return value
 
     def set(self, key, value):
+        """Remember value; if the file cannot be written it still applies until the app quits."""
         {int: self.kf.set_integer, float: self.kf.set_double}.get(type(DEFAULTS[key]), self.kf.set_string)('main', key, value)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.kf.save_to_file(str(self.path))
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.kf.save_to_file(str(self.path))
+        except (OSError, GLib.Error) as e:
+            LOG.warning('Could not save settings to %s: %s', self.path, e)
 
 
 def last_rows(layout, text, rows):
