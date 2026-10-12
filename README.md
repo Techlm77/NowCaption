@@ -9,9 +9,9 @@ for people who are deaf or hard of hearing.
 - **Private.** Speech is recognised on your computer. Audio never leaves it, it
   needs no account, and it works offline.
 - **Accurate.** It writes punctuation and capital letters. Across 73 speakers of
-  read English, it made about a third of the word errors of Live Captions' April
-  model on clear speech (2.4% against 7.8%), and fewer than half on harder
-  recordings (7.0% against 16.0%) ([benchmark](benchmark/)).
+  read English, it made under a third of the word errors of the April model in
+  upstream Live Captions on clear speech (2.4% against 8.1%), and about two-fifths
+  on harder recordings (7.0% against 17.9%) ([benchmark](benchmark/)).
 - **Streaming.** Captions update as speech arrives. The model uses 80 ms lookahead;
   the delay you see also depends on audio capture, processor load and your desktop.
 - **Runs on the CPU.** No dedicated GPU is needed. After digital silence has flushed

@@ -22,8 +22,16 @@ words). test-other is the harder half of LibriSpeech's test data.
 
 | Engine | WER test-clean | WER test-other | Median lag | p90 lag | CPU | RAM |
 |---|---|---|---|---|---|---|
-| April English (Live Captions) | 7.8% | 16.0% | 0.40 s | 0.49–0.52 s | 0.29 | 908 MB |
+| April English (upstream Live Captions) | 8.1% | 17.9% | 0.42 s | 0.52–0.54 s | 0.21 | 895 MB |
 | **NowCaption (FastConformer multi, 80 ms, CC-BY)** | **2.4%** | **7.0%** | **0.31–0.37 s** | **0.47–0.55 s** | **0.15** | **277 MB** |
+
+**April** is measured as upstream Live Captions by abb128 ships it: abb128/april-asr
+at commit `8b52f65` (the one Live Captions pins), built against ONNX Runtime 1.14.1 as
+in its Flatpak manifest, with the `april-english-dev-01110_en.april` model it downloads
+(`build-april.sh` reproduces this). Like every engine here it runs in sync mode on one
+thread; the Live Captions app itself runs April in its asynchronous real-time mode.
+April figures published before 1.0.9 came from a modified fork of Live Captions with
+changes to April, not from upstream, and have been replaced.
 
 **WER** is word error rate after lower-casing and removing punctuation ("mr" counts
 as "mister"; digits are not expanded). Each clip starts from a fresh stream, as it
@@ -113,7 +121,7 @@ the table above for that. "Noisy" adds white noise at 10 dB SNR.
 
 | Engine | WER clean | WER noisy | Median lag | p90 lag | CPU | RAM |
 |---|---|---|---|---|---|---|
-| April English (Live Captions) | 12.5% | 22.4% | 0.40 s | 0.52 s | 0.29 | 907 MB |
+| April English (upstream Live Captions) | 12.6% | 24.1% | 0.42 s | 0.52 s | 0.21 | 895 MB |
 | **FastConformer multi, 80 ms, CC-BY (NowCaption)** | **6.1%** | **10.2%** | **0.35 s** | **0.55 s** | **0.16** | **277 MB** |
 | FastConformer 80 ms (NGC terms, not redistributable) | 6.3% | 9.9% | 0.41 s | 0.61 s | 0.16 | 276 MB |
 | Nemotron Speech Streaming 0.6B, 560 ms | 4.7% | 8.4% | 0.61 s | 0.97 s | 0.25 | 1007 MB |
@@ -133,16 +141,18 @@ Screened and rejected:
 
 Install `huggingface_hub pyarrow soundfile numpy sherpa-onnx` in a virtual
 environment. `word_times.py` also needs the `sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8`
-model from the sherpa-onnx `asr-models` release. April is measured through the
-`libaprilasr.so` that Live Captions builds; point `LIVECAPTIONS_DIR` at that
-checkout.
+model from the sherpa-onnx `asr-models` release. For April, `build-april.sh` builds
+upstream april-asr with ONNX Runtime 1.14.1 and downloads the model into `april/`
+(needs git, curl, cmake and a C compiler).
 
 ```sh
 python get-data.py --set test-clean        # also: --set test-other, or no option for the 73-clip set
 python word_times.py --data data/test-clean
 python bench.py sherpa --model ../models/nowcaption-fastconformer-en-80ms-cc-by-v1 \
     --name nowcaption --threads 1 --data data/test-clean
-LIVECAPTIONS_DIR=~/LiveCaptions python bench.py april --name april-livecaptions --threads 1 --data data/test-clean
+./build-april.sh
+APRIL_LIB=april/build/libaprilasr.so python bench.py april --model april/april-english-dev-01110_en.april \
+    --name april-upstream --threads 1 --data data/test-clean
 PYTHONPATH=../src python e2e.py --data data/test-clean     # needs pactl and paplay
 ```
 

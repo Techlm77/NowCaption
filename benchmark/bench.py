@@ -54,8 +54,9 @@ class Sherpa:
         return self.r.get_result(self.s)
 
 class April:
-    """The library and model the Live Captions build actually uses, in sync mode."""
-    LC = Path(os.environ.get('LIVECAPTIONS_DIR', 'LiveCaptions'))  # a built Live Captions checkout
+    """April ASR in sync mode. APRIL_LIB names libaprilasr.so; otherwise the one a built
+    Live Captions checkout (LIVECAPTIONS_DIR) contains is used."""
+    LC = Path(os.environ.get('LIVECAPTIONS_DIR', 'LiveCaptions'))
     def __init__(self, path, threads, decoding=None):
         class Token(c.Structure):
             _fields_ = [('token', c.c_char_p), ('logprob', c.c_float), ('flags', c.c_int), ('time_ms', c.c_size_t), ('reserved', c.c_void_p)]
@@ -63,7 +64,7 @@ class April:
         class Config(c.Structure):
             _fields_ = [('speaker', c.c_uint8 * 16), ('handler', self.CB), ('userdata', c.c_void_p), ('flags', c.c_int)]
         self.Config = Config
-        L = self.L = c.CDLL(str(self.LC / 'builddir/subprojects/april-asr/libaprilasr.so'))
+        L = self.L = c.CDLL(os.environ.get('APRIL_LIB') or str(self.LC / 'builddir/subprojects/april-asr/libaprilasr.so'))
         for name, args, res in [('aam_api_init', [c.c_int], None), ('aam_create_model', [c.c_char_p], c.c_void_p),
                                 ('aas_create_session', [c.c_void_p, Config], c.c_void_p),
                                 ('aas_feed_pcm16', [c.c_void_p, c.POINTER(c.c_short), c.c_size_t], None),
