@@ -87,10 +87,21 @@ Captions start straight away, from whatever your computer is playing.
   height snaps to whole rows, so a taller box shows more lines of captions.
 - **Right-click** them for a small menu:
   - Listen to desktop audio or the microphone
+  - Filter out music (off by default, see below)
   - Text size − / +, and background − / +
   - Reset position or size, or move to another screen if you have more than one
   - Copy, save or clear the transcript
   - Quit
+
+### Filter out music
+
+For songs, or speech over background music, turn on **Filter out music** in the
+menu. A small voice-enhancement model then removes most of the music before
+recognition. On a test song it lifted the words captioned from 49 to 134 out of
+244. It is off by default because it uses about 0.1 of a processor core more, adds
+about 20 ms of delay, and slightly lowers accuracy on plain speech (2.7% to 3.2%
+word errors on clear speech). Sung lyrics remain much harder to caption than
+speech, even with the filter ([benchmark](benchmark/#music-filter)).
 
 The transcript keeps everything said since NowCaption started, or since you
 last chose **Clear**, including the words still being spoken. It's only kept in
@@ -248,6 +259,7 @@ Two choices came from measurements:
 |---|---|---|
 | Speech recognition | NVIDIA [`stt_en_fastconformer_hybrid_large_streaming_multi`](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi), exported to ONNX int8 with 80 ms lookahead | CC-BY-4.0 |
 | Punctuation and casing | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) CNN-BiLSTM, packaged by k2-fsa | Apache-2.0 |
+| Music filter (optional) | [DPDFNet2](https://github.com/ceva-ip/DPDFNet) streaming speech enhancement by Ceva, packaged by k2-fsa | Apache-2.0 |
 
 [MODEL-LICENSES.md](MODEL-LICENSES.md) lists everything bundled in the Flatpak.
 

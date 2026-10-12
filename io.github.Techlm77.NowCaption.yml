@@ -67,11 +67,13 @@ modules:
   # Speech model: NVIDIA stt_en_fastconformer_hybrid_large_streaming_multi (CC-BY-4.0),
   # exported to ONNX at 80 ms lookahead by tools/export-model.py and attached to a GitHub release.
   # Punctuation/casing model: Edge-Punct-Casing (Apache-2.0), packaged by k2-fsa.
+  # Optional music filter: DPDFNet2 speech enhancement by Ceva (Apache-2.0), packaged by k2-fsa.
   - name: models
     buildsystem: simple
     build-commands:
       - install -Dm644 -t /app/share/nowcaption/models/nowcaption-fastconformer-en-80ms-cc-by-v1 asr/tokens.txt asr/encoder.int8.onnx asr/decoder.int8.onnx asr/joiner.int8.onnx asr/README.md
       - install -Dm644 -t /app/share/nowcaption/models/sherpa-onnx-online-punct-en-2024-08-06 punct/model.int8.onnx punct/bpe.vocab punct/README.md
+      - install -Dm644 -t /app/share/nowcaption/models/dpdfnet2 filter/dpdfnet2.onnx
     sources:
       - type: archive
         url: https://github.com/Techlm77/NowCaption/releases/download/models-v1/nowcaption-fastconformer-en-80ms-cc-by-v1.tar.bz2
@@ -82,6 +84,10 @@ modules:
         sha256: 9f5e5a72c7d2829635bd074fce92b6bbd5b78da8a52e7ad8ed1be933f366b99d
         strip-components: 2  # entries are ./<dir>/<file>
         dest: punct
+      - type: file
+        url: https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/dpdfnet2.onnx
+        sha256: ce35d6025fc71df0ef10d1540e1b7916837bbfe5f6896deb744508d2cad487a9
+        dest: filter
 
   - name: nowcaption
     buildsystem: simple

@@ -262,6 +262,90 @@ class WorkerTests(unittest.TestCase):
         self.assertAlmostEqual(seconds, worker.REPORT_DROPPED_S)
 
 
+class FakeFilter:
+    """Stands in for the music filter: halves the audio and records how it was used."""
+
+    def __init__(self):
+        self.runs, self.flushes, self.resets = 0, 0, 0
+
+    def run(self, samples, rate):
+        self.runs += 1
+        return NS(samples=np.asarray(samples) * 0.5)
+
+    def flush(self):
+        self.flushes += 1
+        return NS(samples=np.full(160, 0.01, np.float32))
+
+    def reset(self):
+        self.resets += 1
+
+
+class MusicFilterTests(unittest.TestCase):
+    def test_filter_runs_only_on_sound_and_is_flushed_when_speech_ends(self):
+        rec, f = FakeRecognizer(['hello ', 'world ']), FakeFilter()
+        cap = engine.Captioner(rec)
+        cap.set_music_filter(f)
+        self.assertEqual(f.resets, 1)  # a filter starts afresh when switched on
+        cap.feed(SPEECH)
+        cap.feed(SPEECH)
+        self.assertEqual(f.runs, 2)
+        cap.feed(SILENCE)
+        cap.feed(SILENCE)
+        self.assertEqual((f.runs, f.flushes, f.resets), (2, 1, 2))  # silence skips it; one flush at the end
+        cap.flush()
+        self.assertIn('hello world', cap.transcript().lower())
+
+    def test_switching_the_filter_off_feeds_audio_directly(self):
+        rec, f = FakeRecognizer(['a ']), FakeFilter()
+        cap = engine.Captioner(rec)
+        cap.set_music_filter(f)
+        cap.set_music_filter(None)
+        cap.feed(SPEECH)
+        self.assertEqual(f.runs, 0)
+        self.assertTrue(cap.decoded)
+
+    def test_worker_loads_the_filter_once_and_keeps_it_across_sources(self):
+        loads = []
+        def load_filter():
+            loads.append(1)
+            return FakeFilter()
+        events = Events()
+        worker = engine.RecognitionWorker(events, load=lambda: (FakeRecognizer(['x '] * 10), None),
+                                          load_filter=load_filter)
+        worker.start()
+        try:
+            events.wait('ready')
+            worker.set_music_filter(True)
+            self.assertIs(events.wait('music-filter'), True)
+            worker.set_source(2)
+            worker.set_music_filter(False)
+            self.assertIs(events.wait('music-filter'), False)
+            worker.set_music_filter(True)
+            events.wait('music-filter')
+            events.snapshot(worker)
+            self.assertEqual(len(loads), 1)
+            self.assertIs(worker.captioner.music_filter, worker.music_filter)
+        finally:
+            worker.stop()
+            worker.join(2)
+
+    def test_a_filter_that_cannot_load_is_reported_and_stays_off(self):
+        def load_filter():
+            raise FileNotFoundError('dpdfnet2/dpdfnet2.onnx is missing')
+        events = Events()
+        worker = engine.RecognitionWorker(events, load=lambda: (FakeRecognizer(), None), load_filter=load_filter)
+        worker.start()
+        try:
+            events.wait('ready')
+            worker.set_music_filter(True)
+            self.assertIn('could not be loaded', events.wait('warning'))
+            self.assertIs(events.wait('music-filter'), False)
+            self.assertIsNone(worker.captioner.music_filter)
+        finally:
+            worker.stop()
+            worker.join(2)
+
+
 # --- capture lifecycle with a fake GStreamer ------------------------------------------------
 
 class FakeGst:

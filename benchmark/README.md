@@ -66,6 +66,34 @@ test-clean and 6.84% against 6.83% on test-other.
 `modified_beam_search` is not available: sherpa-onnx supports only greedy search
 for streaming NeMo transducers such as this model.
 
+## Music filter
+
+**Filter out music** puts a streaming speech-enhancement model in front of the
+recognizer. Candidates were run through NowCaption's caption pipeline (40 ms
+blocks, punctuation, line splitting) on a 3 min 50 s pop song, scored against its
+244 sung words (backing vocals in brackets excluded). The song is not included here.
+
+| Filter | Words captioned | WER | Extra CPU | Streams live |
+|---|---|---|---|---|
+| None | 49 | 86.1% | — | — |
+| GStreamer `webrtcdsp` noise suppression, very high | 53 | 83.6% | ~0.001 | yes |
+| RNNoise 0.2 (xiph) | 87 | 82.8% | 0.009 | yes |
+| GTCRN | 128 | 77.9% | 0.050 | yes, 24 ms delay |
+| DPDFNet baseline | 136 | 71.7% | 0.049 | yes, 20 ms delay |
+| **DPDFNet2 (used)** | **134** | **69.3%** | **0.096** | **yes, 20 ms delay** |
+| Spleeter 2-stem vocals | 97 | 74.6% | 0.04 | no: separates long chunks |
+| UVR MDX-NET Voc_FT vocals | 163 | 52.5% | 1.24 | no: slower than real time |
+
+RNNoise and WebRTC are built for steady background noise and let most music
+through. The music filter is off by default because it costs accuracy on plain
+speech (full pipeline, one run each):
+
+| WER | No filter | DPDFNet2 |
+|---|---|---|
+| test-clean | 2.73% | 3.17% |
+| test-clean + white noise at 10 dB SNR | 6.16% | 6.47% |
+| test-other | 7.01% | 7.39% |
+
 ## Historical capture-to-worker-event results (scorer version 1)
 
 These archived runs used the older `e2e.py`, with one clip from each speaker,

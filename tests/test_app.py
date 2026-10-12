@@ -43,7 +43,9 @@ class AppTests(unittest.TestCase):
         a = nc.NowCaption()
         a.window = FakeWindow()
         a.capture = NS(starts=[], start=lambda device, gen: a.capture.starts.append(gen), stop=lambda: None)
-        a.worker = NS(set_source=lambda gen: None, clear=lambda gen: None, restart=lambda: None)
+        a.worker = NS(set_source=lambda gen: None, clear=lambda gen: None, restart=lambda: None,
+                      filter_calls=[])
+        a.worker.set_music_filter = a.worker.filter_calls.append
         return a
 
     def test_quitting_during_model_loading_never_starts_capture(self):
@@ -100,6 +102,32 @@ class AppTests(unittest.TestCase):
             self.assertIn('saved', a.window.statuses[-1])
             self.assertEqual(open(path).read(), 'hello\n')
 
+
+
+@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+class MusicFilterAppTests(unittest.TestCase):
+    def make(self):
+        return AppTests.make(self)
+
+    def test_music_filter_is_off_by_default_and_the_menu_toggles_and_remembers_it(self):
+        a = self.make()
+        action = a.lookup_action('music-filter')
+        self.assertFalse(action.get_state().get_boolean())
+        action.activate(None)
+        self.assertTrue(action.get_state().get_boolean())
+        self.assertEqual(a.settings.get('music_filter'), 1)
+        self.assertEqual(a.worker.filter_calls, [True])
+        action.activate(None)
+        self.assertEqual(a.worker.filter_calls, [True, False])
+        self.assertEqual(a.settings.get('music_filter'), 0)
+
+    def test_a_filter_that_could_not_load_unticks_the_menu_item(self):
+        a = self.make()
+        action = a.lookup_action('music-filter')
+        action.activate(None)
+        a.on_worker('music-filter', False)
+        self.assertFalse(action.get_state().get_boolean())
+        self.assertEqual(a.settings.get('music_filter'), 0)
 
 
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))

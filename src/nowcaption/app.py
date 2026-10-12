@@ -30,8 +30,8 @@ MIN_WIDTH = 240
 CURSORS = {'n': 'n-resize', 's': 's-resize', 'e': 'e-resize', 'w': 'w-resize',
            'ne': 'ne-resize', 'nw': 'nw-resize', 'se': 'se-resize', 'sw': 'sw-resize'}
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
-            'width': -1, 'rows': ROWS}
-LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100)}
+            'width': -1, 'rows': ROWS, 'music_filter': 0}
+LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'music_filter': (0, 1)}
 CHOICES = {'source': ('desktop', 'mic')}
 
 
@@ -500,6 +500,7 @@ class NowCaption(Adw.Application):
         menu = Gio.Menu()
         menu.append_item(section(('Desktop audio', 'app.source::desktop', None),
                                  ('Microphone', 'app.source::mic', None)))
+        menu.append_item(section(('Filter out music', 'app.music-filter', None)))
         menu.append_item(section(('Smaller text', 'app.smaller', 'zoom-out-symbolic'),
                                  ('Larger text', 'app.larger', 'zoom-in-symbolic'),
                                  label='Text size', hint='inline-buttons'))
@@ -529,6 +530,10 @@ class NowCaption(Adw.Application):
                                                GLib.Variant('s', self.settings.get('source')))
         source.connect('activate', self.on_source)
         self.add_action(source)
+        music = Gio.SimpleAction.new_stateful('music-filter', None,
+                                              GLib.Variant('b', bool(self.settings.get('music_filter'))))
+        music.connect('activate', self.on_music_filter)
+        self.add_action(music)
         act('larger', lambda: self.resize(+1), ['<Control>plus', '<Control>equal'])
         act('smaller', lambda: self.resize(-1), ['<Control>minus'])
         act('lighter', lambda: self.opacity(-0.15))
@@ -554,6 +559,19 @@ class NowCaption(Adw.Application):
             self.window.show_status('Retrying the speech model…')
             self.worker.restart()
 
+    def on_music_filter(self, action, value):
+        """Optional voice filter for songs and speech over music. Off by default: it uses more
+        processor time and slightly lowers accuracy on plain speech."""
+        on = not action.get_state().get_boolean()
+        action.set_state(GLib.Variant('b', on))
+        self.settings.set('music_filter', int(on))
+        if self.worker:
+            self.worker.set_music_filter(on)
+        if on:
+            self.window.show_status('Music filter on: voices are picked out from music.', seconds=4)
+        else:
+            self.window.show_status('Music filter off.', seconds=3)
+
     def resize(self, step):
         size = self.settings.get('size')
         i = min(range(len(SIZES)), key=lambda k: abs(SIZES[k] - size))
@@ -577,6 +595,8 @@ class NowCaption(Adw.Application):
         # models load on the worker thread, so the window stays responsive meanwhile
         self.worker = engine.RecognitionWorker(lambda kind, value: GLib.idle_add(self.on_worker, kind, value))
         self.worker.start()
+        if self.settings.get('music_filter'):
+            self.worker.set_music_filter(True)
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
         if shot:
             path, _, after = shot.partition(':')
@@ -642,6 +662,11 @@ class NowCaption(Adw.Application):
             fn(text)
         elif kind == 'warning':
             self.window.show_status(value, seconds=6)
+        elif kind == 'music-filter':
+            action = self.lookup_action('music-filter')
+            if action and action.get_state().get_boolean() != value:  # it could not be loaded
+                action.set_state(GLib.Variant('b', value))
+                self.settings.set('music_filter', int(value))
         elif kind == 'overload':
             self.window.show_status(f'Falling behind: skipped {value:.1f} s of audio', seconds=4)
         elif kind == 'load-error':
@@ -799,6 +824,7 @@ class NowCaption(Adw.Application):
                                 'Exported to ONNX and quantized to int8 for NowCaption. '
                                 'https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi')
         about.add_legal_section('Punctuation model', 'Edge-Punct-Casing by frankyoujian', Gtk.License.APACHE_2_0, None)
+        about.add_legal_section('Music filter model', 'DPDFNet2 © Ceva', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('sherpa-onnx', '© k2-fsa', Gtk.License.APACHE_2_0, None)
         about.present(None)  # its own window, not squeezed into the caption box
 

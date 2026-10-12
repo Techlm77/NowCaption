@@ -24,6 +24,8 @@ ASR_DIR = 'nowcaption-fastconformer-en-80ms-cc-by-v1'
 ASR_FILES = ('tokens.txt', 'encoder.int8.onnx', 'decoder.int8.onnx', 'joiner.int8.onnx')
 PUNCT_DIR = 'sherpa-onnx-online-punct-en-2024-08-06'
 PUNCT_FILES = ('model.int8.onnx', 'bpe.vocab')
+MUSIC_FILTER_DIR = 'dpdfnet2'  # streaming speech enhancement (Apache-2.0), used by the optional music filter
+MUSIC_FILTER_FILE = 'dpdfnet2.onnx'
 
 
 def complete(folder, names):
@@ -63,6 +65,18 @@ def load_punctuation():
         raise FileNotFoundError(f'{PUNCT_DIR} is missing or incomplete')
     return so.OnlinePunctuation(so.OnlinePunctuationConfig(model_config=so.OnlinePunctuationModelConfig(
         cnn_bilstm=str(p / 'model.int8.onnx'), bpe_vocab=str(p / 'bpe.vocab'), num_threads=1)))
+
+
+def load_music_filter():
+    """DPDFNet2, a causal speech enhancer that keeps voices and suppresses music and noise.
+    It adds about 20 ms of delay and roughly 0.1 core, so the app only loads it on request."""
+    import sherpa_onnx as so
+    p = models_dir() / MUSIC_FILTER_DIR
+    if not complete(p, (MUSIC_FILTER_FILE,)):
+        raise FileNotFoundError(f'{MUSIC_FILTER_DIR}/{MUSIC_FILTER_FILE} is missing')
+    config = so.OfflineSpeechDenoiserModelConfig(num_threads=1)
+    config.dpdfnet.model = str(p / MUSIC_FILTER_FILE)
+    return so.OnlineSpeechDenoiser(so.OnlineSpeechDenoiserConfig(model=config))
 
 
 def load_models(on_warning=None):
@@ -112,6 +126,14 @@ class Captioner:
         self.partial_since = None  # when the words still being spoken started
         self.silent_for, self.flushed = 0.0, True
         self.decoded = False  # audio buffering alone does not prove native inference works
+        self.music_filter = None  # optional OnlineSpeechDenoiser in front of the recognizer
+        self.filtering = False  # the filter holds the last few ms of the current speech
+
+    def set_music_filter(self, music_filter):
+        if music_filter is not self.music_filter:
+            if music_filter:
+                music_filter.reset()
+            self.music_filter, self.filtering = music_filter, False
 
     def format(self, text):
         text = text.strip()
@@ -128,13 +150,25 @@ class Captioner:
     def feed(self, pcm16):
         x = np.frombuffer(pcm16, dtype=np.int16) if isinstance(pcm16, (bytes, bytearray, memoryview)) else pcm16
         if not x.any():
+            if self.filtering:  # speech ended: let the filter's last few ms out, then start afresh
+                self.filtering = False
+                tail = np.asarray(self.music_filter.flush().samples, dtype=np.float32)
+                self.music_filter.reset()
+                if len(tail):
+                    self._decode(tail)
             self.silent_for += len(x) / RATE
             if self.silent_for < SILENCE_FLUSH_S:
                 return self._decode(np.zeros(len(x), np.float32))
             self.flush()  # push the model's lookahead through once, then stay idle
             return
         self.silent_for, self.flushed = 0.0, False
-        self._decode(x.astype(np.float32) / 32768)
+        samples = x.astype(np.float32) / 32768
+        if self.music_filter:
+            self.filtering = True
+            samples = np.asarray(self.music_filter.run(samples, RATE).samples, dtype=np.float32)
+            if not len(samples):
+                return
+        self._decode(samples)
 
     def flush(self):
         if not self.flushed:
@@ -149,6 +183,9 @@ class Captioner:
         self.partial, self.quiet, self.partial_since = '', 0.0, None
         self.silent_for, self.flushed = 0.0, True
         self.decoded = False
+        if self.music_filter:
+            self.music_filter.reset()
+            self.filtering = False
         if self.on_update:
             self.on_update('')
         self.stream = self.rec.create_stream()
@@ -249,6 +286,7 @@ class RecognitionWorker(threading.Thread):
       ('load-error', message)    the models could not be loaded; a new source or restart() retries
       ('overload', seconds)      audio arrived faster than it could be recognised and was dropped
       ('recognition-ok', gen)    the new stream processed audio successfully
+      ('music-filter', on)       the music filter is now on or off (off if it could not load)
     Audio is tagged with a source generation; blocks from an older source are ignored, so a
     capture thread that is still shutting down can never feed the new source's captions.
     Pending audio is bounded at enqueue time; commands are never dropped for lack of space.
@@ -257,11 +295,13 @@ class RecognitionWorker(threading.Thread):
     MAX_BACKLOG = 50  # at most 2 s of pending 40 ms capture blocks, excluding one in-flight call
     REPORT_DROPPED_S = 2.0  # say so while the worker is stalled, after this much audio is dropped
 
-    def __init__(self, on_event, load=None, on_trace=None):
+    def __init__(self, on_event, load=None, on_trace=None, load_filter=None):
         super().__init__(name='nowcaption-recognition', daemon=True)
         self.on_event = on_event
         self.on_trace = on_trace  # optional complete-text trace, used only by benchmarks
         self.load = load or (lambda: load_models(lambda m: self.on_event('warning', m)))
+        self.load_filter = load_filter or load_music_filter
+        self.music_filter, self.music_filter_on = None, False
         self.inbox = deque()  # ordered commands and at most MAX_BACKLOG audio blocks
         self.lock = threading.Condition()
         self.backlog = self.dropped = 0
@@ -327,6 +367,10 @@ class RecognitionWorker(threading.Thread):
     def snapshot(self, fn):
         self._put('snapshot', fn)
 
+    def set_music_filter(self, on):
+        """Turn the optional music filter on or off; it is loaded the first time it is needed."""
+        self._put('music-filter', bool(on))
+
     def restart(self, recover_only=False, source_gen=None):
         """Manual restart, or a guarded automatic retry for a failed source generation."""
         self._put('recover' if recover_only else 'restart', source_gen)
@@ -369,7 +413,7 @@ class RecognitionWorker(threading.Thread):
                     self.on_event('overload', dropped)
             elif kind == 'clear':
                 self._handle(kind, value)  # generations apply even when models failed to load
-            elif kind == 'snapshot':
+            elif kind in ('snapshot', 'music-filter'):
                 self._handle(kind, value)
             elif loaded:
                 if kind != 'source' or value == self.source_gen:
@@ -397,6 +441,7 @@ class RecognitionWorker(threading.Thread):
         if old:  # keep the session transcript when recovering from an error
             old.commit_partial()
             new.lines, new.punct = old.lines, old.punct
+        new.set_music_filter(self.music_filter if self.music_filter_on else None)
         self.captioner = new
         self.broken = False
         self.confirmed = False
@@ -418,6 +463,18 @@ class RecognitionWorker(threading.Thread):
         elif kind == 'snapshot':
             text = self.captioner.transcript() if self.captioner else ''
             self.on_event('snapshot', (value, text))
+        elif kind == 'music-filter':
+            if value and self.music_filter is None:
+                try:
+                    self.music_filter = self.load_filter()
+                except Exception as e:
+                    LOG.exception('Could not load the music filter')
+                    self.on_event('warning', f'The music filter could not be loaded: {e}')
+                    value = False
+            self.music_filter_on = value
+            if self.captioner:
+                self.captioner.set_music_filter(self.music_filter if value else None)
+            self.on_event('music-filter', value)
         elif kind == 'restart':
             self._safely(self._new_captioner)
         elif kind == 'recover' and self.broken and (value is None or value == self.source_gen):
