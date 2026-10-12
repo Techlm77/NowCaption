@@ -419,7 +419,9 @@ class TraceBenchmarkTests(unittest.TestCase):
 
     def test_full_worker_trace_keeps_every_word_after_actual_caption_window_scrolls(self):
         reference = [f'word{i:03}' for i in range(120)]
-        self.enterContext(patch.object(engine.Captioner, 'DISPLAY_LINES', 4))  # make the window scroll
+        patcher = patch.object(engine.Captioner, 'DISPLAY_LINES', 4)  # make the window scroll
+        patcher.start()
+        self.addCleanup(patcher.stop)  # enterContext() needs Python 3.11+
         events, traces = Events(), []
         worker = engine.RecognitionWorker(events, load=lambda: (FakeRecognizer(
             [word + ' ' for word in reference]), None), on_trace=lambda text: traces.append(self.e2e.words(text)))
