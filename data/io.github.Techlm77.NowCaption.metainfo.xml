@@ -57,6 +57,14 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.1" date="2026-10-12">
+      <description>
+        <p>
+          The right-click menu now stays open while you change the text size or background,
+          so you can press − or + several times in a row and watch the captions change.
+        </p>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-10-12">
       <description>
         <p>
