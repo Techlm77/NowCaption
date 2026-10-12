@@ -57,6 +57,15 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.0.7" date="2026-10-12">
+      <description>
+        <p>
+          NowCaption now runs on 64-bit ARM computers as well as x86_64. It can be installed
+          from its own Flatpak repository, so new versions arrive with your other updates
+          instead of being downloaded by hand.
+        </p>
+      </description>
+    </release>
     <release version="1.0.6" date="2026-10-12">
       <description>
         <p>

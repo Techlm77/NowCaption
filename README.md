@@ -21,7 +21,7 @@ for people who are deaf or hard of hearing.
 
 ## Install
 
-### With automatic updates (x86_64)
+### With automatic updates (x86_64 and ARM64)
 
 ```sh
 flatpak install --user --from https://techlm77.github.io/NowCaption/nowcaption.flatpakref
@@ -32,19 +32,19 @@ Flathub. New versions arrive with `flatpak update` or in your software centre. I
 installed a `.flatpak` file before, remove it first with
 `flatpak uninstall io.github.Techlm77.NowCaption` (your settings are kept).
 
-### Download (x86_64)
+### Download a file
 
-Download the `.flatpak` file from the
-[latest release](https://github.com/Techlm77/NowCaption/releases/latest), then
-install it from the folder you saved it in:
+Download the `.flatpak` file for your computer from the
+[latest release](https://github.com/Techlm77/NowCaption/releases/latest)
+(`x86_64` for most PCs, `aarch64` for 64-bit ARM), then install it from the folder you
+saved it in:
 
 ```sh
-flatpak install --user NowCaption-*-x86_64.flatpak
+flatpak install --user NowCaption-*.flatpak
 ```
 
-Flatpak downloads the GNOME runtime from Flathub automatically. This file doesn't
-update itself, so get new versions from the releases page. Installing a newer one
-replaces the old version and keeps your settings.
+Flatpak downloads the GNOME runtime from Flathub automatically. From 1.0.7 on, the file
+also adds the NowCaption repository, so later versions arrive with `flatpak update`.
 
 ### From Flathub
 
