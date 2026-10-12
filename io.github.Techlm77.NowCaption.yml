@@ -101,7 +101,7 @@ modules:
       - install -Dm644 LICENSE -t /app/share/licenses/io.github.Techlm77.NowCaption
       - install -Dm644 MODEL-LICENSES.md -t /app/share/licenses/io.github.Techlm77.NowCaption
     sources:
-      # Local builds use this checkout. tools/make-flathub-manifest.sh swaps in a pinned git tag for Flathub.
+      # This checkout: the release workflow builds each tagged version from it.
       - type: dir
         path: .
         skip:

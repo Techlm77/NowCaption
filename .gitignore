@@ -11,4 +11,3 @@ benchmark/april/
 benchmark/models/
 dist/
 .local-manifest.yml
-flathub/

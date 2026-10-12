@@ -46,17 +46,6 @@ flatpak install --user NowCaption-*.flatpak
 Flatpak downloads the GNOME runtime from Flathub automatically. From 1.0.7 on, the file
 also adds the NowCaption repository, so later versions arrive with `flatpak update`.
 
-### From Flathub
-
-NowCaption is not on Flathub yet. Once it is accepted:
-
-```sh
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install flathub io.github.Techlm77.NowCaption
-```
-
-Then open **NowCaption** from your app menu.
-
 ### Build the Flatpak yourself
 
 ```sh
