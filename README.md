@@ -4,7 +4,7 @@ Live captions for Linux. NowCaption shows what is being said in videos, calls,
 streams and games, or into your microphone, in a small caption window. It is made
 for people who are deaf or hard of hearing.
 
-![NowCaption showing two lines of live captions](data/screenshots/captions.png)
+![NowCaption showing three lines of live captions](data/screenshots/captions.png)
 
 - **Private.** Speech is recognised on your computer. Audio never leaves it, it
   needs no account, and it works offline.
@@ -133,7 +133,8 @@ recovers. Buffered or replayed captions do not clear those warnings. Brief
 notifications such as “Transcript copied” restore any unresolved warning when
 they finish.
 
-The captions always show two lines. New words appear at the end of the second
+The captions show two lines unless you make the box taller (the screenshot shows
+three, with the most solid background). New words appear at the end of the last
 line, and older text scrolls up out of view. Status messages use a separate,
 small row while captions are visible, so copying, saving and warnings do not
 cover speech. Long status messages have a tooltip with the full text.
