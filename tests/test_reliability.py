@@ -10,6 +10,7 @@ stream, Clear, Copy/Save content, long sessions, model files and the setup scrip
 import os
 import queue
 import subprocess
+import tempfile
 import threading
 import time
 import unittest
@@ -17,6 +18,10 @@ from pathlib import Path
 from types import SimpleNamespace as NS
 
 import numpy as np
+
+# Captioners keep the transcript in an unnamed file in the cache folder; tests use their own.
+CACHE = tempfile.TemporaryDirectory()
+os.environ['XDG_CACHE_HOME'] = CACHE.name
 
 from nowcaption import audio, engine
 

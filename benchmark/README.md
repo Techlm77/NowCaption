@@ -160,6 +160,22 @@ first minute (warm-up) to the end of the run. `tests/test_memory.py 30` repeats
 the first row with the real models (`--filter` for the second) and fails above
 1 MB per audio minute.
 
+1.1.3 still kept every finished transcript line in memory, and glibc held on to
+about 45 MB that it had freed. 1.1.4 writes finished lines to an unnamed
+temporary file, keeps only the lines the caption box shows, and returns freed
+memory to the system once a minute (`malloc_trim`, about 0.3 ms):
+
+| | 1.1.3 | 1.1.4 |
+|---|---|---|
+| Caption pipeline as the app runs it, minutes 50–140 of looped speech | +5.1 KB per minute | +0.3 KB per minute |
+| Whole app on Wayland after 17 min of speech | 279.0 MB | 237.6 MB |
+
+The whole-app run used the layer-shell overlay and the GPU renderer on a headless
+sway, with both versions captioning the same speech. In the first 20–30 minutes
+of speech, memory still grows once while the models' buffers and the
+recognizer's text reach their working size (the text is reset at 20,000
+characters); after that, 1.1.4 stays flat.
+
 ## How the model was chosen
 
 This first screen used 73 LibriSpeech dev-clean utterances (1,150 words, 8

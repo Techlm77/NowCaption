@@ -639,10 +639,17 @@ class NowCaption(Adw.Application):
         self.worker.start()
         if self.settings.get('music_filter'):
             self.worker.set_music_filter(True)
+        GLib.timeout_add_seconds(60, self.release_memory)
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
         if shot:
             path, _, after = shot.partition(':')
             GLib.timeout_add_seconds(int(after or 20), self.window.save_png, path)
+
+    def release_memory(self):
+        if self.closing:
+            return False
+        engine.release_free_memory()
+        return True
 
     def on_shutdown(self, app):
         self.closing = True

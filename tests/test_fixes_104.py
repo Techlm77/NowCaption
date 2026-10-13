@@ -536,11 +536,11 @@ class StablePunctuationTests(unittest.TestCase):
         captioner = engine.Captioner(NS(create_stream=lambda: None), self.FlakyPunctuation())
         before = ''
         for n in range(10):
-            captioner.lines.append((0, '', f'line{n} a b c'))
+            captioner.add_line(f'line{n} a b c')
             for partial in ('', 'x', 'x y', 'x y z'):
                 captioner.partial = partial
                 now = captioner.caption_text()
-                settled = max(0, len(captioner.lines) - captioner.LIVE_LINES)
+                settled = max(0, captioner.count - captioner.LIVE_LINES)
                 frozen = ' '.join(now.split()[:4 * settled])
                 self.assertTrue(before.startswith(frozen), (before, now))
                 before = now
@@ -548,7 +548,8 @@ class StablePunctuationTests(unittest.TestCase):
 
     def test_passage_still_holds_only_the_last_display_lines(self):
         captioner = engine.Captioner(NS(create_stream=lambda: None), self.FlakyPunctuation())
-        captioner.lines = [(0, f'line{n}', f'line{n}') for n in range(10)]
+        for n in range(10):
+            captioner.add_line(f'line{n}')
         with patch.object(engine.Captioner, 'DISPLAY_LINES', 3):
             self.assertEqual(captioner.caption_text().replace(',', '').split(), ['line7', 'line8', 'line9'])
 

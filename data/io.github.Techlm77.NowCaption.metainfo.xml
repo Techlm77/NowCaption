@@ -57,6 +57,16 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.4" date="2026-10-13">
+      <description>
+        <p>
+          Memory use no longer grows with the length of a session, and NowCaption uses about
+          15% less memory. Finished caption lines now go to a temporary file that only
+          NowCaption can open and that is deleted when it quits, and memory it no longer
+          needs is returned to the system. Captions, Copy and Save are unchanged.
+        </p>
+      </description>
+    </release>
     <release version="1.1.3" date="2026-10-13">
       <description>
         <p>

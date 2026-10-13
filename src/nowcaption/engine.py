@@ -4,10 +4,12 @@ The recognizer stream is never reset at pauses. Resetting drops the first words
 of the next phrase (it doubled the word error rate in testing), so pauses only
 split caption lines. Silence is fed briefly to flush words, then recognition waits.
 """
+import ctypes
 import logging
 import os
 from collections import deque
 import re
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -108,6 +110,115 @@ def duration(pcm):
     return samples / RATE
 
 
+def release_free_memory():
+    """Give memory the C allocator has freed back to the system (glibc's malloc_trim).
+
+    After a long session glibc holds about 45 MB of freed memory that the models and
+    GTK no longer use. Trimming once a minute keeps NowCaption about 16% smaller and
+    takes well under a millisecond. Returns False where it is not available.
+    """
+    global _malloc_trim
+    if _malloc_trim is None:
+        try:
+            _malloc_trim = ctypes.CDLL('libc.so.6').malloc_trim
+        except (OSError, AttributeError):  # not glibc
+            _malloc_trim = False
+    if not _malloc_trim:
+        return False
+    _malloc_trim(0)
+    return True
+
+
+_malloc_trim = None
+
+
+def stamp(ts):
+    return time.strftime('[%H:%M:%S] ', time.localtime(ts))
+
+
+def cache_dir():
+    """$XDG_CACHE_HOME/nowcaption (in the Flatpak, ~/.var/app/<app id>/cache/nowcaption)."""
+    base = os.environ.get('XDG_CACHE_HOME') or os.path.join(os.path.expanduser('~'), '.cache')
+    return Path(base) / 'nowcaption'
+
+
+class TranscriptStore:
+    """The session's finished lines as Copy and Save export them, until Clear.
+
+    They are appended to an unnamed temporary file in the cache folder instead of being
+    kept in memory, so a long session does not make NowCaption grow. The file never has
+    a name: other programs cannot open it, and the system deletes it when NowCaption
+    exits, even after a crash. If it cannot be created or written, lines stay in memory.
+    """
+
+    def __init__(self, folder=None):
+        self.count = self.size = 0
+        self.file, self.memory = None, None
+        try:
+            folder = Path(folder) if folder else cache_dir()
+            folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+            self.file = tempfile.TemporaryFile(dir=folder, buffering=0)  # O_TMPFILE where supported
+        except OSError as e:
+            LOG.warning('Keeping the transcript in memory: %s', e)
+            self.memory = []
+
+    def append(self, ts, text):
+        line = stamp(ts) + text
+        if self.file is not None:
+            data = (line + '\n').encode()
+            try:
+                written = 0
+                while written < len(data):
+                    written += os.pwrite(self.file.fileno(), data[written:], self.size + written)
+            except OSError as e:
+                self._keep_in_memory(e)
+            else:
+                self.size += len(data)
+        if self.memory is not None:
+            self.memory.append(line)
+        self.count += 1
+
+    def lines(self):
+        if self.file is None:
+            return list(self.memory)
+        return self._read().splitlines()
+
+    def clear(self):
+        self.count = self.size = 0
+        if self.file is not None:
+            try:
+                os.ftruncate(self.file.fileno(), 0)  # Clear frees the old text, not just hides it
+            except OSError as e:
+                self.memory = []
+                self._keep_in_memory(e)
+        if self.memory is not None:
+            self.memory = []
+
+    def __del__(self):
+        if getattr(self, 'file', None) is not None:
+            self.file.close()  # the system deletes the unnamed file with its last descriptor
+
+    def _read(self):
+        data, fd = b'', self.file.fileno()
+        while len(data) < self.size:
+            chunk = os.pread(fd, self.size - len(data), len(data))
+            if not chunk:
+                break
+            data += chunk
+        return data.decode(errors='replace')
+
+    def _keep_in_memory(self, error):
+        LOG.warning('Keeping the transcript in memory from now on: %s', error)
+        if self.memory is None:
+            try:
+                self.memory = self._read().splitlines()
+            except OSError:
+                LOG.exception('Earlier transcript lines could not be read back')
+                self.memory = []
+        self.file.close()
+        self.file = None
+
+
 def tidy(text):
     """Sentence case for all-lower or all-upper text; mixed case is kept."""
     text = text.strip()
@@ -124,13 +235,20 @@ class Captioner:
     DISPLAY_LINES = 60  # finished lines kept for the on-screen passage; the box shows its last rows
     LIVE_LINES = 2      # finished lines still re-punctuated with the words being spoken
 
-    def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None, on_filter_error=None):
+    def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None, on_filter_error=None,
+                 store=None, keep_raw=False):
         self.rec, self.punct = recognizer, punctuation
         self.on_update, self.on_warning = on_update, on_warning
         self.on_filter_error = on_filter_error
-        self.lines = []  # (time, formatted, raw) for the whole session, until cleared
-        self.shown = []  # punctuation each settled line was last shown with, frozen so text never jumps
+        self.store = store if store is not None else TranscriptStore()  # every finished line, until cleared
+        # Only the lines the caption passage still needs stay in memory: recent[0] is line
+        # number first, and the newest LIVE_LINES are still re-punctuated with the words
+        # being spoken. The others are settled: their punctuation is frozen in shown (the
+        # last DISPLAY_LINES of them), so text already on screen never jumps.
+        self.recent, self.first, self.settled = [], 0, 0  # (time, formatted, raw)
+        self.shown = []
         self.live = []  # words of the live passage as last shown, for freezing its oldest line
+        self.raw = [] if keep_raw else None  # the whole session's raw text, for benchmark tracing only
         self.stream = recognizer.create_stream()
         self.result = None  # the stream's text after its last decode
         self.done, self.partial, self.quiet = 0, '', 0.0
@@ -218,8 +336,11 @@ class Captioner:
 
     def clear(self):
         """Clear is an explicit acoustic boundary: buffered old speech must not return."""
-        self.lines = []
+        self.store.clear()
+        self.recent, self.first, self.settled = [], 0, 0
         self.shown, self.live = [], []
+        if self.raw is not None:
+            self.raw = []
         self.done = 0
         self.partial, self.quiet, self.partial_since = '', 0.0, None
         self.silent_for, self.flushed = 0.0, True
@@ -235,8 +356,41 @@ class Captioner:
         """Keep the last known visible words, even if the old native stream has failed."""
         raw = self.partial.strip()
         if raw:
-            self.lines.append((self.partial_since or time.time(), self.format(raw), raw))
+            self.add_line(raw)
         self.partial, self.partial_since = '', None
+
+    def continue_from(self, old):
+        """Carry a replaced captioner's session over: its lines and frozen punctuation."""
+        old.commit_partial()
+        self.store, self.punct, self.raw = old.store, old.punct, old.raw
+        self.recent, self.first, self.settled = old.recent, old.first, old.settled
+        self.shown, self.live = old.shown.copy(), old.live.copy()
+
+    @property
+    def count(self):
+        """Finished lines since start or the last clear."""
+        return self.first + len(self.recent)
+
+    def add_line(self, raw):
+        """A finished line, timestamped when it started rather than when it ended."""
+        line = (self.partial_since or time.time(), self.format(raw), raw)
+        self.recent.append(line)
+        self.store.append(line[0], line[1])
+        if self.raw is not None:
+            self.raw.append(raw)
+        if self.count - self.settled > self.DISPLAY_LINES + self.LIVE_LINES:
+            self._settle()  # nothing is showing captions: memory stays bounded all the same
+
+    def _settle(self):
+        """Freeze the punctuation of all but the newest LIVE_LINES lines, and forget the lines
+        the passage no longer needs."""
+        while self.count - self.settled > self.LIVE_LINES:
+            self.shown.append(self.settle(self.recent[self.settled - self.first]))
+            self.settled += 1
+        del self.shown[:-self.DISPLAY_LINES]
+        keep = max(self.first, self.settled - 1)  # the newest settled line is context for the live ones
+        del self.recent[:keep - self.first]
+        self.first = keep
 
     def _decode(self, samples, force=False):
         rec, s = self.rec, self.stream
@@ -255,8 +409,8 @@ class Captioner:
             if not force and len(new) > MAX_LINE:
                 cut = new.rfind(' ', 0, MAX_LINE) + 1 or len(new)
             raw = new[:cut].strip()
-            if raw:  # timestamped when the line started, not when it ended
-                self.lines.append((self.partial_since or time.time(), self.format(raw), raw))
+            if raw:
+                self.add_line(raw)
             self.done += cut
             new, committed = new[cut:], True
             if len(text) > 20000 and not new.strip():  # bound the stream's text at a natural break
@@ -276,10 +430,9 @@ class Captioner:
         so that phrases split at pauses still read as sentences. Only the newest LIVE_LINES are
         re-punctuated; older lines keep the punctuation they were last shown with, otherwise a
         comma that comes and goes far back in the passage would re-wrap every row."""
-        while len(self.lines) - len(self.shown) > self.LIVE_LINES:
-            self.shown.append(self.settle(self.lines[len(self.shown)]))
-        context = self.lines[len(self.shown) - 1][2].split() if self.shown else []
-        live = [r for _, _, r in self.lines[len(self.shown):]]
+        self._settle()
+        context = self.recent[self.settled - 1 - self.first][2].split() if self.settled else []
+        live = [r for _, _, r in self.recent[self.settled - self.first:]]
         partial = self.partial.strip()
         words = ' '.join(live + ([partial] if partial else [])).split()
         out = self.format(' '.join(context + words)).split() if words else []
@@ -288,7 +441,8 @@ class Captioner:
         else:
             out = self.format(' '.join(words)).split()
         self.live = out
-        shown = [s for s in self.shown[max(0, len(self.lines) - self.DISPLAY_LINES):] if s]
+        oldest = self.count - self.DISPLAY_LINES  # first line still in the passage
+        shown = [s for s in self.shown[max(0, oldest - (self.settled - len(self.shown))):] if s]
         return ' '.join(shown + out)
 
     def settle(self, line):
@@ -302,10 +456,9 @@ class Captioner:
 
     def transcript(self):
         """Every finished line since start or the last clear, plus the words still being spoken."""
-        out = [time.strftime('[%H:%M:%S] ', time.localtime(ts)) + t for ts, t, _ in self.lines]
+        out = self.store.lines()
         if self.partial.strip():
-            out.append(time.strftime('[%H:%M:%S] ', time.localtime(self.partial_since or time.time()))
-                       + self.format(self.partial))
+            out.append(stamp(self.partial_since or time.time()) + self.format(self.partial))
         return '\n'.join(out)
 
     def raw_text(self):
@@ -314,7 +467,9 @@ class Captioner:
         Reading this does not run punctuation again. The normal caption update has
         already paid that cost before the benchmark receives its trace.
         """
-        return ' '.join([raw for _, _, raw in self.lines] + [self.partial.strip()]).strip()
+        if self.raw is None:
+            raise RuntimeError('raw_text() needs Captioner(keep_raw=True)')
+        return ' '.join(self.raw + [self.partial.strip()]).strip()
 
 
 class RecognitionWorker(threading.Thread):
@@ -487,11 +642,10 @@ class RecognitionWorker(threading.Thread):
         old = self.captioner
         new = Captioner(rec, punct, on_update=self._caption,
                         on_warning=lambda m: self.on_event('warning', m),
-                        on_filter_error=self._filter_failed)
+                        on_filter_error=self._filter_failed,
+                        store=old.store if old else None, keep_raw=self.on_trace is not None)
         if old:  # keep the session transcript when recovering from an error
-            old.commit_partial()
-            new.lines, new.punct = old.lines, old.punct
-            new.shown, new.live = old.shown.copy(), old.live.copy()
+            new.continue_from(old)
         new.set_music_filter(self.music_filter if self.music_filter_on else None)
         self.captioner = new
         self.broken = False

@@ -4,8 +4,10 @@ as fast as the CPU allows, and fail if memory keeps growing. No audio device is 
 
     PYTHONPATH=src .venv/bin/python tests/test_memory.py [audio-minutes] [--filter]
 
-1.1.2 and earlier grew by 4-14 MB per audio minute (sherpa-onnx leaked result.text);
-1.1.3 stays flat. It takes about 10 s per audio minute.
+1.1.2 and earlier grew by 4-14 MB per audio minute (sherpa-onnx leaked result.text).
+Since 1.1.3 growth is a few KB per audio minute, until the recognizer's text resets at
+20,000 characters (about 25 minutes of speech); since 1.1.4 the transcript itself is in
+a temporary file. It takes about 10 s per audio minute.
 """
 import ctypes, sys, time, wave
 from pathlib import Path
@@ -49,8 +51,8 @@ def main():
         cap.feed(blocks[i % len(blocks)])
     end = anon_mb()
     rate = (end - start) / (minutes - 1)
-    print(f'{minutes:g} audio minutes in {time.monotonic() - t0:.0f} s, {len(cap.lines)} lines; '
-          f'memory {start:.0f} -> {end:.0f} MB, {rate:+.2f} MB per audio minute')
+    print(f'{minutes:g} audio minutes in {time.monotonic() - t0:.0f} s, {cap.count} lines; '
+          f'memory {start:.1f} -> {end:.1f} MB, {rate * 1024:+.1f} KB per audio minute')
     ok = rate < LIMIT_MB_PER_MIN
     print('PASS' if ok else f'FAIL: more than {LIMIT_MB_PER_MIN} MB per audio minute')
     return 0 if ok else 1

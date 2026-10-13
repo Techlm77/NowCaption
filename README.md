@@ -97,9 +97,14 @@ captioning without it. Changing sources or turning the filter off drains its
 remaining audio first. Clear deliberately discards buffered speech.
 
 The transcript keeps everything said since NowCaption started, or since you
-last chose **Clear**, including the words still being spoken. It's only kept in
-memory and is lost when you quit, unless you save it. Nothing is written to disk
-unless you choose **Save transcript**.
+last chose **Clear**, including the words still being spoken. So that a long
+session doesn't use more and more memory, finished lines go to a temporary file
+in NowCaption's cache folder (`~/.var/app/io.github.Techlm77.NowCaption/cache/`
+for the Flatpak). The file never has a name, so other programs can't open it, and
+it is deleted when NowCaption quits, even if it crashes. **Clear** empties it. Like
+any deleted file, its contents can remain on the disk until they are overwritten,
+unless the disk is encrypted. Nothing else is written unless you choose
+**Save transcript**.
 
 After choosing a destination, Quit and closing the window wait for that save
 to finish. If the write fails, NowCaption stays open and shows the error so you
@@ -208,6 +213,7 @@ PYTHONPATH=src .venv/bin/python tests/test_reliability.py   # worker, capture, t
 PYTHONPATH=src .venv/bin/python tests/test_regressions.py   # the ten 1.0.3 fixes
 PYTHONPATH=src .venv/bin/python tests/test_fixes_112.py      # filter, recovery, warnings and setup fixes
 PYTHONPATH=src .venv/bin/python tests/test_fixes_113.py      # the 1.1.3 memory-leak fix
+PYTHONPATH=src .venv/bin/python tests/test_fixes_114.py      # the transcript file and bounded memory
 PYTHONPATH=src .venv/bin/python tests/test_app.py           # application logic with real GTK, no display
 xvfb-run -a env PYTHONPATH=src .venv/bin/python tests/test_window.py  # real GTK window and menu
 PYTHONPATH=src .venv/bin/python tests/test_live.py          # from source (run tools/run-dev.sh once first)
