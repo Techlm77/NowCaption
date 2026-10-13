@@ -270,6 +270,21 @@ class StatusTests(unittest.TestCase):
         self.assertIn('device disappeared', self.window.status)
         self.assertIn('capture', self.window.failures)
 
+    def test_retrying_the_model_replaces_its_load_error_until_it_loads(self):
+        restarts = []
+        self.app.ready = False
+        self.app.worker = NS(restart=lambda: restarts.append(True), set_source=lambda gen: None)
+        self.app.on_worker('load-error', 'Could not load the speech model: missing file.')
+        self.app.on_source(NS(set_state=lambda value: None), NS(get_string=lambda: 'mic'))
+        self.assertEqual(restarts, [True])
+        self.assertEqual(self.window.status, 'Retrying the speech model…')
+        self.window.show_status('Transcript copied.', seconds=3)
+        self.timers.fire(self.window.status_timer)
+        self.assertEqual(self.window.status, 'Retrying the speech model…')
+        self.app.on_worker('ready', None)
+        self.assertNotIn('model', self.window.failures)
+        self.assertEqual(self.window.status, '')
+
     def test_stale_recognition_success_does_not_clear_the_current_failure(self):
         self.app.source_gen = 2
         self.app.on_worker('error', 'current inference failed')

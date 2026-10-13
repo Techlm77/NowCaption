@@ -597,7 +597,8 @@ class NowCaption(Adw.Application):
         if self.ready:
             self.start_capture()
         elif self.worker and not self.closing:
-            self.window.show_status('Retrying the speech model…')
+            # replaces the load error until the model loads or fails again
+            self.window.show_failure('model', 'Retrying the speech model…')
             self.worker.restart()
 
     def on_music_filter(self, action, value):
