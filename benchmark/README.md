@@ -23,7 +23,12 @@ words). test-other is the harder half of LibriSpeech's test data.
 | Engine | WER test-clean | WER test-other | Median lag | p90 lag | CPU | RAM |
 |---|---|---|---|---|---|---|
 | April English (upstream Live Captions) | 8.1% | 17.9% | 0.42 s | 0.52–0.54 s | 0.21 | 895 MB |
-| **NowCaption (FastConformer multi, 80 ms, CC-BY)** | **2.4%** | **7.0%** | **0.31–0.37 s** | **0.47–0.55 s** | **0.15** | **277 MB** |
+| **NowCaption (FastConformer multi, 80 ms, CC-BY)** | **2.4%** | **7.0%** | **0.23–0.31 s** | **0.47 s** | **0.15** | **275 MB** |
+
+**NowCaption** was re-measured for 1.1.3: audio fed in 40 ms blocks, as the app
+captures it, and the text read as the app reads it. April was measured with
+100 ms blocks; fed 100 ms blocks, NowCaption has a median lag of 0.31–0.37 s
+([block size](#capture-block-size-engine-only)).
 
 **April** is measured as upstream Live Captions by abb128 ships it: abb128/april-asr
 at commit `8b52f65` (the one Live Captions pins), built against ONNX Runtime 1.14.1 as
@@ -94,31 +99,30 @@ speech (full pipeline, one run each):
 | test-clean + white noise at 10 dB SNR | 6.16% | 6.47% |
 | test-other | 7.01% | 7.39% |
 
-## Historical capture-to-worker-event results (scorer version 1)
+## Capture to worker event
 
-These archived runs used the older `e2e.py`, with one clip from each speaker,
-played in real time. That scorer could count a repeated word from the next clip
-for the previous clip, and did not publish missed-word coverage. Treat the latency
-figures below as historical results awaiting a rerun, rather than verified
-performance of 1.0.4. The previous speech CPU denominator also included gaps
-and settling time.
+Measured for 1.1.3 with `e2e.py` (scorer version 3): one clip from each speaker,
+played in real time into a private sink with 3 s gaps, captured by GStreamer in
+40 ms blocks as in the app, then recognised and punctuated by the app's worker.
 
 | | test-clean (40 speakers) | test-other (33 speakers) |
 |---|---|---|
-| Median lag | 0.31 s | 0.34 s |
-| p90 lag | 0.55 s | 0.59 s |
-| p99 lag | 1.09 s | 1.09 s |
-| CPU over playback, gaps and settling | 0.19 core | 0.19 core |
+| Median lag | 0.25 s | 0.30 s |
+| p90 lag | 0.40 s | 0.46 s |
+| p99 lag | 0.55 s | 0.64 s |
+| Timed words recognised correctly | 679 of 687 (98.8%) | 575 of 598 (96.2%) |
+| CPU while a clip plays | 0.20 core | 0.20 core |
+| CPU in the 3 s after each clip | 0.11 core | 0.11 core |
 | CPU during digital silence | 0.004 core | 0.004 core |
-| Peak memory | 303 MB | 304 MB |
+| Peak memory | 320 MB | 315 MB |
 
-The current scorer (version 3) uses the worker's optional complete session trace
-after normal caption formatting, rather than the moving caption excerpt. Words
-remain available to the scorer after they scroll away, and repeated words keep
-separate positions. No extra punctuation inference runs for the trace. Raw
-recognition words are scored; GTK delivery and display remain outside the metric.
-The trace adds text copying and recording to the measured process; CPU results
-therefore include benchmark instrumentation.
+The scorer uses the worker's optional complete session trace after normal
+caption formatting, rather than the moving caption excerpt. Words remain
+available to the scorer after they scroll away, and repeated words keep separate
+positions. No extra punctuation inference runs for the trace. Raw recognition
+words are scored; GTK delivery and display remain outside the metric. The trace
+adds text copying and recording to the measured process, so CPU and peak memory
+include benchmark instrumentation.
 
 The scorer never uses an event at or after the next clip's start for the preceding
 clip. It aligns the complete final text before scoring word occurrences, uses
@@ -131,14 +135,30 @@ startup delay are included; this is not a hardware-synchronised audio clock.
 CPU is measured separately over playback subprocess intervals, settling gaps
 and final digital silence. Capture failures, recognition errors and overload
 abort a run. Silence that is not digitally silent, such as background noise,
-is processed like speech. Corrected runs write `e2e-v3-*.json` and leave the
-historical result files intact. No corrected native run was performed in this
-repair environment.
+is processed like speech. Results are in `results/e2e-v3-*.json`.
 
-Version 2 fixed clip-boundary attribution but scored moving caption excerpts;
-long utterances could lose already displayed words and shift latency positions.
-Those results also require a rerun with version 3. Dumped caption records now
-contain complete recognition history, not screenshots or the two visible rows.
+Earlier runs with scorer version 1 and 100 ms blocks (`results/e2e-test-*.json`)
+reported a median of 0.31 / 0.34 s and a p99 of 1.09 s. That scorer could count a
+repeated word from the next clip for the previous one and scored a moving caption
+excerpt, so those figures are kept only for reference.
+
+## Memory over time
+
+Before 1.1.3, memory grew with every minute of speech: sherpa-onnx 1.13.8 leaks a
+copy of the recognised text each time Python reads `result.text`, and NowCaption
+read it after every 40 ms block. Real sessions reached 1.9 GB after 2.5 hours and
+7.5 GB after 13 hours. 1.1.3 reads the same text from the result's tokens.
+
+| | 1.1.2 | 1.1.3 |
+|---|---|---|
+| Caption pipeline, 30 min of looped speech, as fast as possible | 208 → 616 MB | 208 → 209 MB |
+| The same with the music filter | 224 → 631 MB | 227 → 228 MB |
+| Whole app, 15 min of speech played in real time | +7.7 MB per minute | +0.08 MB per minute |
+
+Memory is anonymous resident memory after `malloc_trim`, from the end of the
+first minute (warm-up) to the end of the run. `tests/test_memory.py 30` repeats
+the first row with the real models (`--filter` for the second) and fails above
+1 MB per audio minute.
 
 ## How the model was chosen
 
@@ -180,11 +200,10 @@ python bench.py sherpa --model ../models/nowcaption-fastconformer-en-80ms-cc-by-
     --name nowcaption --threads 1 --data data/test-clean
 ./build-april.sh
 APRIL_LIB=april/build/libaprilasr.so python bench.py april --model april/april-english-dev-01110_en.april \
-    --name april-upstream --threads 1 --data data/test-clean
+    --name april-upstream --threads 1 --chunk-ms 100 --data data/test-clean   # as published
 PYTHONPATH=../src python e2e.py --data data/test-clean     # needs pactl and paplay
 ```
 
 Results are written to `results/`. Files named `*-dummy-*` are from the
-single-speaker set. A corrected capture benchmark result contains
-`score_version: 3` and `metric_scope: capture_to_worker_event`; it must be rerun
-on Linux with the real models before quoting new latency or CPU figures.
+single-speaker set. Capture results from the current scorer are `e2e-v3-*.json`
+(`score_version: 3`, `metric_scope: capture_to_worker_event`).

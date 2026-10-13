@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Engine-only comparison: stream labelled 16 kHz WAVs straight into one recognizer.
 
-For every block of audio fed (100 ms, or --chunk-ms), the recognizer's text is recorded with the audio clock
+For every block of audio fed (40 ms, or --chunk-ms), the recognizer's text is recorded with the audio clock
 plus the compute time of that step. That gives, per reference word, when the engine
 first produced it correctly. It leaves out audio capture, NowCaption's caption
 logic, punctuation and drawing (see e2e.py for those), and assumes the engine keeps
@@ -14,7 +14,6 @@ from pathlib import Path
 import numpy as np, soundfile as sf
 
 ROOT = Path(__file__).resolve().parent
-CHUNK = 1600  # 100 ms, as NowCaption's capture delivers it (--chunk-ms changes it)
 TAIL = 1.5    # seconds of silence after each clip, as in live use
 
 ABBR = {'mr': 'mister', 'mrs': 'missus', 'dr': 'doctor', 'st': 'saint'}
@@ -47,11 +46,15 @@ class Sherpa:
     def feed(self, x):
         self.s.accept_waveform(16000, x.astype(np.float32) / 32768)
         while self.r.is_ready(self.s): self.r.decode_stream(self.s)
-        return self.r.get_result(self.s)
+        return self.text()
     def finish(self):
         self.s.input_finished()
         while self.r.is_ready(self.s): self.r.decode_stream(self.s)
-        return self.r.get_result(self.s)
+        return self.text()
+    def text(self):
+        # As the app reads it since 1.1.3: sherpa-onnx 1.13.8 leaks a copy of the text on
+        # every result.text read, and for these English BPE models the tokens join to it.
+        return ''.join(self.r.recognizer.get_result(self.s).tokens).strip()
 
 class April:
     """April ASR in sync mode. APRIL_LIB names libaprilasr.so; otherwise the one a built
@@ -98,7 +101,7 @@ def main():
     ap.add_argument('--cond', default='clean', choices=['clean', 'noisy'])
     ap.add_argument('--threads', type=int, default=2)
     ap.add_argument('--limit', type=int)
-    ap.add_argument('--chunk-ms', type=int, default=100, help='audio fed per step')
+    ap.add_argument('--chunk-ms', type=int, default=40, help='audio fed per step (40 ms, as NowCaption captures it)')
     ap.add_argument('--decoding', default='greedy_search', choices=['greedy_search', 'modified_beam_search'],
                     help='sherpa only')
     ap.add_argument('--data', default=str(ROOT / 'data' / 'dummy'), help='folder with refs.json and WAVs')
