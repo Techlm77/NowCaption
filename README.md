@@ -207,9 +207,11 @@ from LibriSpeech clips played into a virtual sink.
 PYTHONPATH=src .venv/bin/python tests/test_reliability.py   # worker, capture, transcript, setup scripts
 PYTHONPATH=src .venv/bin/python tests/test_regressions.py   # the ten 1.0.3 fixes
 PYTHONPATH=src .venv/bin/python tests/test_fixes_112.py      # filter, recovery, warnings and setup fixes
+PYTHONPATH=src .venv/bin/python tests/test_fixes_113.py      # the 1.1.3 memory-leak fix
 PYTHONPATH=src .venv/bin/python tests/test_app.py           # application logic with real GTK, no display
 xvfb-run -a env PYTHONPATH=src .venv/bin/python tests/test_window.py  # real GTK window and menu
 PYTHONPATH=src .venv/bin/python tests/test_live.py          # from source (run tools/run-dev.sh once first)
+PYTHONPATH=src .venv/bin/python tests/test_memory.py        # memory stays flat with the real models
 ./tests/test_flatpak.sh                                     # inside the installed Flatpak
 ```
 

@@ -198,6 +198,7 @@ class RecoveryTests(unittest.TestCase):
                 else:
                     self.text += self.pending
                     self.pending = ''
+                self.ready = True  # like the real model, the text changes only in a decode
 
         class Rec(FakeRecognizer):
             def create_stream(self):

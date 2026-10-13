@@ -57,6 +57,15 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.3" date="2026-10-13">
+      <description>
+        <p>
+          Fixes a memory leak that made NowCaption use about 800 MB more memory for every
+          hour of speech, reaching several gigabytes in a long session. Memory use now stays
+          flat. Captions are unchanged.
+        </p>
+      </description>
+    </release>
     <release version="1.1.2" date="2026-10-13">
       <description>
         <p>

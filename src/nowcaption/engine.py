@@ -50,8 +50,17 @@ def models_dir():
 
 def load_recognizer(threads=1):
     import sherpa_onnx as so  # imported here so that tests and tools can import this module without it
+
+    class Recognizer(so.OnlineRecognizer):
+        def get_result(self, s):
+            # sherpa-onnx 1.13.8's result.text leaks a copy of the whole text on every read
+            # (py::str(PyUnicode_DecodeUTF8(...)) keeps an extra reference): about 800 MB per
+            # hour of speech at 25 reads a second. Its C++ result text is the tokens joined,
+            # and the tokens list converts without leaking.
+            return ''.join(self.recognizer.get_result(s).tokens).strip()
+
     p = models_dir() / ASR_DIR
-    return so.OnlineRecognizer.from_transducer(
+    return Recognizer.from_transducer(
         tokens=str(p / 'tokens.txt'), encoder=str(p / 'encoder.int8.onnx'),
         decoder=str(p / 'decoder.int8.onnx'), joiner=str(p / 'joiner.int8.onnx'),
         num_threads=threads, decoding_method='greedy_search')
@@ -123,6 +132,7 @@ class Captioner:
         self.shown = []  # punctuation each settled line was last shown with, frozen so text never jumps
         self.live = []  # words of the live passage as last shown, for freezing its oldest line
         self.stream = recognizer.create_stream()
+        self.result = None  # the stream's text after its last decode
         self.done, self.partial, self.quiet = 0, '', 0.0
         self.partial_since = None  # when the words still being spoken started
         self.silent_for, self.flushed = 0.0, True
@@ -219,6 +229,7 @@ class Captioner:
         if self.on_update:
             self.on_update('')
         self.stream = self.rec.create_stream()
+        self.result = None
 
     def commit_partial(self):
         """Keep the last known visible words, even if the old native stream has failed."""
@@ -230,10 +241,13 @@ class Captioner:
     def _decode(self, samples, force=False):
         rec, s = self.rec, self.stream
         s.accept_waveform(RATE, samples)
+        ran = False
         while rec.is_ready(s):
             rec.decode_stream(s)
-            self.decoded = True
-        text = rec.get_result(s)
+            ran = self.decoded = True
+        if ran or self.result is None:  # only a decode changes it: one 40 ms block in four here
+            self.result = rec.get_result(s)
+        text = self.result
         new, committed = text[self.done:], False
         self.quiet = 0.0 if new != self.partial else self.quiet + len(samples) / RATE
         if new.strip() and (force or self.quiet >= PAUSE_S or len(new) > MAX_LINE):
@@ -247,7 +261,7 @@ class Captioner:
             new, committed = new[cut:], True
             if len(text) > 20000 and not new.strip():  # bound the stream's text at a natural break
                 rec.reset(s)
-                self.done = 0
+                self.done, self.result = 0, None
         if committed or new != self.partial:
             if not new.strip():
                 self.partial_since = None
