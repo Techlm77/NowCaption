@@ -92,6 +92,10 @@ about 20 ms of delay, and slightly lowers accuracy on plain speech (2.7% to 3.2%
 word errors on clear speech). Sung lyrics remain much harder to caption than
 speech, even with the filter ([benchmark](benchmark/#music-filter)).
 
+If the filter fails, NowCaption turns it off, explains the error, and continues
+captioning without it. Changing sources or turning the filter off drains its
+remaining audio first. Clear deliberately discards buffered speech.
+
 The transcript keeps everything said since NowCaption started, or since you
 last chose **Clear**, including the words still being spoken. It's only kept in
 memory and is lost when you quit, unless you save it. Nothing is written to disk
@@ -118,6 +122,11 @@ itself, retrying after 1, 2, 4, 8 and 16 seconds and then every 30 seconds for a
 long as it takes. If the computer is too busy to keep up, NowCaption skips audio
 rather than letting the captions fall more than about two seconds behind, and
 says so.
+
+Capture and recognition failures remain visible until that component actually
+recovers. Buffered or replayed captions do not clear those warnings. Brief
+notifications such as “Transcript copied” restore any unresolved warning when
+they finish.
 
 The captions always show two lines. New words appear at the end of the second
 line, and older text scrolls up out of view. Status messages use a separate,
@@ -177,8 +186,10 @@ Then run:
 ```
 
 On the first run it downloads the models into `models/` and creates `.venv`.
-Every start checks both and repairs them if an earlier setup was interrupted or
-`requirements.txt` changed.
+Every start checks all three models and required Python imports. It repairs
+missing model files or broken packages, and recreates the Python environment
+when its interpreter changes. Requirements and interpreter stamps are written
+only after successful setup.
 
 Problems are logged with details to standard error (the terminal, or the system
 journal when started from the menu). `NOWCAPTION_LOG=info` logs more.
@@ -195,6 +206,7 @@ from LibriSpeech clips played into a virtual sink.
 ```sh
 PYTHONPATH=src .venv/bin/python tests/test_reliability.py   # worker, capture, transcript, setup scripts
 PYTHONPATH=src .venv/bin/python tests/test_regressions.py   # the ten 1.0.3 fixes
+PYTHONPATH=src .venv/bin/python tests/test_fixes_112.py      # filter, recovery, warnings and setup fixes
 PYTHONPATH=src .venv/bin/python tests/test_app.py           # application logic with real GTK, no display
 xvfb-run -a env PYTHONPATH=src .venv/bin/python tests/test_window.py  # real GTK window and menu
 PYTHONPATH=src .venv/bin/python tests/test_live.py          # from source (run tools/run-dev.sh once first)

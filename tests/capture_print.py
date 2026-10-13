@@ -18,7 +18,7 @@ def get_event(events, deadline):
         kind, value = events.get(timeout=remaining)
     except queue.Empty as e:
         raise TimeoutError('Timed out waiting for capture or recognition') from e
-    if kind in ('load-error', 'error', 'capture-error', 'overload'):
+    if kind in ('load-error', 'error', 'capture-error', 'overload', 'snapshot-error'):
         raise RuntimeError(f'{kind}: {value}')
     if kind == 'warning':
         emit('warning', message=value)

@@ -57,6 +57,17 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.2" date="2026-10-13">
+      <description>
+        <p>
+          Music-filter errors now turn the filter off while ordinary captions continue.
+          Source changes keep buffered filter audio and settled punctuation. Audio and
+          recognition warnings stay visible until recovery, and failed transcript exports
+          release pending saves. Source setup now fetches the filter model and repairs
+          broken Python environments after interpreter changes.
+        </p>
+      </description>
+    </release>
     <release version="1.1.1" date="2026-10-12">
       <description>
         <p>

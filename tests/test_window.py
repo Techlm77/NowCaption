@@ -130,6 +130,14 @@ class WindowTests(unittest.TestCase):
         self.window.end_status()
         self.assertFalse(self.window.status_label.get_visible())
 
+    def test_capture_failure_stays_visible_until_explicit_recovery(self):
+        self.window.show_text('Already displayed speech')
+        self.window.show_failure('capture', 'Device unavailable')
+        self.window.show_text('Buffered speech')
+        self.assertEqual(self.window.status_label.get_text(), 'Device unavailable')
+        self.window.clear_failure('capture')
+        self.assertFalse(self.window.status_label.get_visible())
+
 
 if __name__ == '__main__':
     try:

@@ -237,6 +237,7 @@ class NotificationTests(unittest.TestCase):
         window = self.window
         window.text, window.status, window.status_timer = '', '', None
         window.status_sticky = False
+        window.failures, window.status_scope = {}, None
         window.x = window.y = 0
         window.row_height, window.status_height, window.rows = 30, 24, 2
         window.layout = None
@@ -334,7 +335,7 @@ class SaveTests(unittest.TestCase):
     def test_quit_waits_for_queued_snapshot_and_delayed_write(self):
         file = self.delayed_file()
         callbacks = []
-        self.app.worker = NS(snapshot=callbacks.append)
+        self.app.worker = NS(snapshot=lambda callback, on_error=None: callbacks.append(callback))
         self.accept_destination(file)
         self.assertEqual(self.app.pending_saves, 1)
         self.assertEqual(self.app.holds, 1)
@@ -398,7 +399,7 @@ class SaveTests(unittest.TestCase):
         self.assertIn('cannot start writing', self.app.window.statuses[-1])
 
     def test_snapshot_request_failure_releases_its_hold(self):
-        def fail(callback):
+        def fail(callback, on_error=None):
             raise RuntimeError('snapshot failed')
         self.app.worker = NS(snapshot=fail)
         self.accept_destination(self.delayed_file())

@@ -115,6 +115,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.rows = self.settings.get('rows')
         self.text, self.status, self.status_timer = '', '', None
         self.status_sticky = False
+        self.failures, self.status_scope = {}, None
         self.monitor = self.pick_monitor(self.settings.get('monitor'))
         self.box_width = self.width_for(self.monitor)
 
@@ -354,15 +355,36 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if self.status_timer:
             GLib.source_remove(self.status_timer)
             self.status_timer = None
+        self.status_scope = None
+        if self.failures and not seconds and not sticky:
+            self.end_status()  # replayed captions and a new Listening notice do not prove recovery
+            return
         self.status = message
         self.status_sticky = sticky
         if seconds:
             self.status_timer = GLib.timeout_add_seconds(seconds, self.end_status)
         self.render()
 
+    def show_failure(self, scope, message):
+        """Retain a runtime problem until that component actually recovers."""
+        self.failures.pop(scope, None)
+        self.failures[scope] = message
+        self.show_status(message, sticky=True)
+        self.status_scope = scope
+
+    def clear_failure(self, scope):
+        self.failures.pop(scope, None)
+        if self.status_scope == scope:
+            self.end_status()
+
     def end_status(self):
         self.status_timer, self.status = None, ''
         self.status_sticky = False
+        self.status_scope = None
+        if self.failures:
+            self.status_scope = next(reversed(self.failures))
+            self.status = self.failures[self.status_scope]
+            self.status_sticky = True
         self.render()
         return False
 
@@ -668,6 +690,7 @@ class NowCaption(Adw.Application):
             return False
         if kind == 'ready':
             self.ready = True
+            self.window.clear_failure('model')
             self.start_capture()
         elif kind == 'caption':
             gen, text = value
@@ -676,9 +699,16 @@ class NowCaption(Adw.Application):
         elif kind == 'recognition-ok':
             if value == self.source_gen:
                 self.cancel_recognition_retry(reset=True)
+                self.window.clear_failure('recognition')
         elif kind == 'snapshot':
             fn, text = value
             fn(text)
+        elif kind == 'snapshot-error':
+            fn, message = value
+            if fn:
+                fn(message)
+            else:
+                self.window.show_status(f'Could not prepare the transcript: {message}', seconds=8)
         elif kind == 'warning':
             self.window.show_status(value, seconds=6)
         elif kind == 'music-filter':
@@ -690,7 +720,7 @@ class NowCaption(Adw.Application):
             self.window.show_status(f'Falling behind: skipped {value:.1f} s of audio', seconds=4)
         elif kind == 'load-error':
             self.ready = False
-            self.window.show_status(f'{value} Right-click and choose a sound source to try again.')
+            self.window.show_failure('model', f'{value} Right-click and choose a sound source to try again.')
         elif kind == 'error':
             if not getattr(self.worker, 'broken', True):
                 return False  # a source change already recovered this queued error
@@ -698,11 +728,11 @@ class NowCaption(Adw.Application):
             self.recognition_failures += 1
             if self.recognition_failures <= 3:
                 delay = 2 ** self.recognition_failures
-                self.window.show_status(f'{value}. Restarting in {delay} s…')
+                self.window.show_failure('recognition', f'{value}. Restarting in {delay} s…')
                 self.recognition_retry_id = GLib.timeout_add_seconds(
                     delay, self.retry_recognition, self.recognition_retry_token, self.source_gen)
             else:
-                self.window.show_status(f'{value}. Right-click and choose a sound source to try again.')
+                self.window.show_failure('recognition', f'{value}. Right-click and choose a sound source to try again.')
         return False
 
     # --- capture ----------------------------------------------------------------------------
@@ -729,6 +759,7 @@ class NowCaption(Adw.Application):
     def capture_started(self, gen):
         if gen == self.source_gen and self.capture_failures:
             self.capture_failures = 0
+            self.window.clear_failure('capture')
             self.window.show_status('Audio is back.', seconds=3)
         return False
 
@@ -739,7 +770,7 @@ class NowCaption(Adw.Application):
         delay = min(30, 2 ** self.capture_failures)
         self.capture_failures += 1
         LOG.warning('Audio capture stopped (%s); retrying in %d s', reason, delay)
-        self.window.show_status(f'Audio capture stopped ({reason}). Retrying in {delay} s…')
+        self.window.show_failure('capture', f'Audio capture stopped ({reason}). Retrying in {delay} s…')
         self.retry_id = GLib.timeout_add_seconds(delay, self.retry_capture)
         return False
 
@@ -755,7 +786,10 @@ class NowCaption(Adw.Application):
             self.window.get_clipboard().set(text)
             self.window.show_status('Transcript copied.' if text else 'Nothing to copy yet.', seconds=3)
         if self.worker:
-            self.worker.snapshot(copy)
+            try:
+                self.worker.snapshot(copy)
+            except Exception as e:
+                self.window.show_status(f'Could not copy the transcript: {e}', seconds=8)
 
     def clear_transcript(self):
         if self.worker and not self.closing and not self.quit_requested:
@@ -783,11 +817,16 @@ class NowCaption(Adw.Application):
             if self.closing or self.quit_requested:
                 return
             self.begin_save()
-            try:
-                self.worker.snapshot(lambda text: self.write_transcript(f, text, tracked=True))
-            except Exception as e:
-                self.window.show_status(f'Could not save the transcript: {e}', seconds=8)
+
+            def failed_snapshot(error):
+                self.window.show_status(f'Could not save the transcript: {error}', seconds=8)
                 self.finish_save(False)
+
+            try:
+                self.worker.snapshot(lambda text: self.write_transcript(f, text, tracked=True),
+                                     on_error=failed_snapshot)
+            except Exception as e:
+                failed_snapshot(e)
 
         dialog.save(None, None, chosen)  # its own window: the caption overlay is too small to host it
 

@@ -36,6 +36,12 @@ class FakeWindow:
     def show_status(self, message, seconds=None, sticky=False):
         self.statuses.append(message)
 
+    def show_failure(self, scope, message):
+        self.show_status(message, sticky=True)
+
+    def clear_failure(self, scope):
+        pass
+
 
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))
 class AppTests(unittest.TestCase):

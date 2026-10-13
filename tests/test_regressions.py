@@ -28,11 +28,12 @@ ROOT = Path(__file__).resolve().parents[1]
 def load_app_methods():
     tree = ast.parse((ROOT / 'src/nowcaption/app.py').read_text())
     wanted = {'on_source', 'start_capture', 'on_worker', 'clear_transcript', 'on_shutdown',
-              'capture_ended', 'retry_capture', 'width_for', 'watch_monitor', 'use_monitor',
+              'capture_ended', 'capture_started', 'retry_capture', 'width_for', 'watch_monitor', 'use_monitor',
               'on_monitor_geometry', 'disconnect_monitors', 'on_monitors_changed',
               'cancel_recognition_retry', 'retry_recognition', 'request_quit', 'on_window_close',
               'save_transcript', 'write_transcript', 'begin_save', 'finish_save',
-              'show_text', 'show_status', 'end_status', 'render', 'caption_height', 'box_height'}
+              'show_text', 'show_status', 'show_failure', 'clear_failure', 'end_status',
+              'render', 'caption_height', 'box_height'}
     classes = []
     for node in tree.body:
         if isinstance(node, ast.ClassDef) and node.name in ('NowCaption', 'CaptionWindow'):
@@ -58,6 +59,8 @@ def app_with_fakes():
     a.window = NS(text='', statuses=[])
     a.window.show_text = lambda text: setattr(a.window, 'text', text)
     a.window.show_status = lambda text, seconds=None, sticky=False: a.window.statuses.append(text)
+    a.window.show_failure = lambda scope, text: a.window.statuses.append(text)
+    a.window.clear_failure = lambda scope: None
     a.ready = a.closing = False
     a.source_gen = a.ui_gen = a.capture_failures = a.recognition_failures = 0
     a.retry_id = None

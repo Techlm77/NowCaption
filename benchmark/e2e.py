@@ -128,7 +128,7 @@ def main():
             if remaining <= 0:
                 raise TimeoutError(f'No {expected} event')
             _, kind, value = events.get(timeout=remaining)
-            if kind in ('load-error', 'error', 'capture-error', 'overload'):
+            if kind in ('load-error', 'error', 'capture-error', 'overload', 'snapshot-error'):
                 raise RuntimeError(f'{kind}: {value}')
             if kind == expected:
                 return value
@@ -139,7 +139,7 @@ def main():
                 t, kind, value = events.get_nowait()
             except queue.Empty:
                 return
-            if kind in ('load-error', 'error', 'capture-error', 'overload'):
+            if kind in ('load-error', 'error', 'capture-error', 'overload', 'snapshot-error'):
                 raise RuntimeError(f'{kind}: {value}')
             if kind == 'caption-history':
                 captions.append((t, words(value)))

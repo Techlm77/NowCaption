@@ -115,9 +115,10 @@ class Captioner:
     DISPLAY_LINES = 60  # finished lines kept for the on-screen passage; the box shows its last rows
     LIVE_LINES = 2      # finished lines still re-punctuated with the words being spoken
 
-    def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None):
+    def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None, on_filter_error=None):
         self.rec, self.punct = recognizer, punctuation
         self.on_update, self.on_warning = on_update, on_warning
+        self.on_filter_error = on_filter_error
         self.lines = []  # (time, formatted, raw) for the whole session, until cleared
         self.shown = []  # punctuation each settled line was last shown with, frozen so text never jumps
         self.live = []  # words of the live passage as last shown, for freezing its oldest line
@@ -131,9 +132,38 @@ class Captioner:
 
     def set_music_filter(self, music_filter):
         if music_filter is not self.music_filter:
-            if music_filter:
-                music_filter.reset()
+            self._flush_filter()  # an orderly disable must keep audio already accepted by the filter
             self.music_filter, self.filtering = music_filter, False
+            self._reset_filter()
+
+    def _filter_failed(self, error):
+        """An optional enhancer must never take ordinary recognition down with it."""
+        LOG.exception('Music filter failed; continuing without it')
+        self.music_filter, self.filtering = None, False
+        if self.on_filter_error:
+            self.on_filter_error(error)
+        elif self.on_warning:
+            self.on_warning(f'The music filter was turned off after an error: {error}')
+
+    def _reset_filter(self):
+        if self.music_filter is not None:
+            try:
+                self.music_filter.reset()
+            except Exception as e:
+                self._filter_failed(e)
+
+    def _flush_filter(self):
+        if not self.filtering:
+            return
+        self.filtering = False
+        try:
+            # The denoiser's flush() returns its tail and resets its native state.
+            tail = np.asarray(self.music_filter.flush().samples, dtype=np.float32)
+        except Exception as e:
+            self._filter_failed(e)
+            return
+        if len(tail):
+            self._decode(tail)  # recognizer failures still use the recognizer's recovery policy
 
     def format(self, text):
         text = text.strip()
@@ -150,12 +180,7 @@ class Captioner:
     def feed(self, pcm16):
         x = np.frombuffer(pcm16, dtype=np.int16) if isinstance(pcm16, (bytes, bytearray, memoryview)) else pcm16
         if not x.any():
-            if self.filtering:  # speech ended: let the filter's last few ms out, then start afresh
-                self.filtering = False
-                tail = np.asarray(self.music_filter.flush().samples, dtype=np.float32)
-                self.music_filter.reset()
-                if len(tail):
-                    self._decode(tail)
+            self._flush_filter()
             self.silent_for += len(x) / RATE
             if self.silent_for < SILENCE_FLUSH_S:
                 return self._decode(np.zeros(len(x), np.float32))
@@ -165,12 +190,18 @@ class Captioner:
         samples = x.astype(np.float32) / 32768
         if self.music_filter:
             self.filtering = True
-            samples = np.asarray(self.music_filter.run(samples, RATE).samples, dtype=np.float32)
-            if not len(samples):
-                return
+            try:
+                filtered = np.asarray(self.music_filter.run(samples, RATE).samples, dtype=np.float32)
+            except Exception as e:
+                self._filter_failed(e)  # the current input block can still be recognised unfiltered
+            else:
+                samples = filtered
+                if not len(samples):
+                    return
         self._decode(samples)
 
     def flush(self):
+        self._flush_filter()
         if not self.flushed:
             self.flushed = True
             self._decode(np.zeros(int(0.8 * RATE), np.float32), force=True)
@@ -183,9 +214,8 @@ class Captioner:
         self.partial, self.quiet, self.partial_since = '', 0.0, None
         self.silent_for, self.flushed = 0.0, True
         self.decoded = False
-        if self.music_filter:
-            self.music_filter.reset()
-            self.filtering = False
+        self.filtering = False  # Clear discards the tail instead of draining pre-Clear speech
+        self._reset_filter()
         if self.on_update:
             self.on_update('')
         self.stream = self.rec.create_stream()
@@ -281,6 +311,7 @@ class RecognitionWorker(threading.Thread):
       ('ready', None)            models loaded
       ('caption', (gen, text))   new caption passage; gen is the clear() generation it belongs to
       ('snapshot', (fn, text))   reply to snapshot(fn)
+      ('snapshot-error', (fn, message)) reply to snapshot(..., on_error=fn) when export fails
       ('warning', message)       something degraded but captioning continues
       ('error', message)         recognition stopped; restart() or a new source tries again
       ('load-error', message)    the models could not be loaded; a new source or restart() retries
@@ -364,8 +395,12 @@ class RecognitionWorker(threading.Thread):
             self.inbox.append(('clear', ui_gen))
             self.lock.notify()
 
-    def snapshot(self, fn):
-        self._put('snapshot', fn)
+    def snapshot(self, fn, on_error=None):
+        with self.lock:
+            if self.stopping or not self.is_alive():
+                raise RuntimeError('The recognition worker is not running')
+            self.inbox.append(('snapshot', (fn, on_error)))
+            self.lock.notify()
 
     def set_music_filter(self, on):
         """Turn the optional music filter on or off; it is loaded the first time it is needed."""
@@ -412,12 +447,12 @@ class RecognitionWorker(threading.Thread):
                 if dropped:
                     self.on_event('overload', dropped)
             elif kind == 'clear':
-                self._handle(kind, value)  # generations apply even when models failed to load
+                self._safely(self._handle, kind, value)  # generations apply even when loading failed
             elif kind in ('snapshot', 'music-filter'):
-                self._handle(kind, value)
+                self._safely(self._handle, kind, value)
             elif loaded:
                 if kind != 'source' or value == self.source_gen:
-                    self._handle(kind, value)
+                    self._safely(self._handle, kind, value)
             elif kind in ('restart', 'source'):  # loading failed earlier: try again
                 loaded = self._load()
 
@@ -437,10 +472,12 @@ class RecognitionWorker(threading.Thread):
         rec, punct = self.models
         old = self.captioner
         new = Captioner(rec, punct, on_update=self._caption,
-                        on_warning=lambda m: self.on_event('warning', m))
+                        on_warning=lambda m: self.on_event('warning', m),
+                        on_filter_error=self._filter_failed)
         if old:  # keep the session transcript when recovering from an error
             old.commit_partial()
             new.lines, new.punct = old.lines, old.punct
+            new.shown, new.live = old.shown.copy(), old.live.copy()
         new.set_music_filter(self.music_filter if self.music_filter_on else None)
         self.captioner = new
         self.broken = False
@@ -461,8 +498,14 @@ class RecognitionWorker(threading.Thread):
             if self.captioner:
                 self._safely(self.captioner.clear)
         elif kind == 'snapshot':
-            text = self.captioner.transcript() if self.captioner else ''
-            self.on_event('snapshot', (value, text))
+            callback, on_error = value
+            try:
+                text = self.captioner.transcript() if self.captioner else ''
+            except Exception as e:
+                LOG.exception('Could not prepare the transcript')
+                self.on_event('snapshot-error', (on_error, str(e)))
+            else:
+                self.on_event('snapshot', (callback, text))
         elif kind == 'music-filter':
             if value and self.music_filter is None:
                 try:
@@ -474,13 +517,18 @@ class RecognitionWorker(threading.Thread):
             self.music_filter_on = value
             if self.captioner:
                 self.captioner.set_music_filter(self.music_filter if value else None)
-            self.on_event('music-filter', value)
+            self.on_event('music-filter', self.music_filter_on)
         elif kind == 'restart':
             self._safely(self._new_captioner)
         elif kind == 'recover' and self.broken and (value is None or value == self.source_gen):
             # An automatic timer may already have queued its command when a user
             # recovers manually. Never replace a healthy or newer stream for it.
             self._safely(self._new_captioner)
+
+    def _filter_failed(self, error):
+        self.music_filter, self.music_filter_on = None, False
+        self.on_event('warning', f'The music filter was turned off after an error: {error}')
+        self.on_event('music-filter', False)
 
     def _safely(self, fn, *args):
         try:

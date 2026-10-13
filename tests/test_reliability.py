@@ -291,7 +291,7 @@ class MusicFilterTests(unittest.TestCase):
         self.assertEqual(f.runs, 2)
         cap.feed(SILENCE)
         cap.feed(SILENCE)
-        self.assertEqual((f.runs, f.flushes, f.resets), (2, 1, 2))  # silence skips it; one flush at the end
+        self.assertEqual((f.runs, f.flushes, f.resets), (2, 1, 1))  # flush also resets the native denoiser
         cap.flush()
         self.assertIn('hello world', cap.transcript().lower())
 
@@ -582,9 +582,18 @@ class ScriptTests(unittest.TestCase):
         for n in engine.PUNCT_FILES:
             (self.dir / 'models' / engine.PUNCT_DIR).mkdir(parents=True, exist_ok=True)
             (self.dir / 'models' / engine.PUNCT_DIR / n).write_text('x')
+        (self.dir / 'models' / engine.MUSIC_FILTER_DIR).mkdir(parents=True)
+        (self.dir / 'models' / engine.MUSIC_FILTER_DIR / engine.MUSIC_FILTER_FILE).write_text('x')
         (self.dir / '.venv/bin').mkdir(parents=True)
-        self.script(self.dir / '.venv/bin/python', 'echo PYTHON "$@"; exit 0\n')
-        self.script(self.dir / '.venv/bin/pip', 'echo PIP_INSTALL; exit 1\n')
+        self.script(self.dir / 'bin/python3', 'echo FAKE_RUNTIME\n')
+        self.script(self.dir / '.venv/bin/python', '''
+if [ "$1" = -c ]; then echo FAKE_RUNTIME; exit 0; fi
+if [ "$1" = -m ] && [ "$2" = pip ]; then
+    [ "$3" = --version ] && exit 0
+    echo PIP_INSTALL; exit 1
+fi
+echo PYTHON "$@"; exit 0
+''')
         r = self.run_sh('tools/run-dev.sh')
         self.assertIn('PIP_INSTALL', r.stdout)
         self.assertFalse((self.dir / '.venv/.deps').exists())
