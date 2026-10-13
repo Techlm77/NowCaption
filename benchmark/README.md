@@ -23,9 +23,9 @@ words). test-other is the harder half of LibriSpeech's test data.
 | Engine | WER test-clean | WER test-other | Median lag | p90 lag | CPU | RAM |
 |---|---|---|---|---|---|---|
 | April English (upstream Live Captions) | 8.1% | 17.9% | 0.42 s | 0.52–0.54 s | 0.21 | 895 MB |
-| **NowCaption (FastConformer multi, 80 ms, CC-BY)** | **2.4%** | **7.0%** | **0.23–0.31 s** | **0.47 s** | **0.15** | **275 MB** |
+| **NowCaption (FastConformer multi, 80 ms, CC-BY)** | **2.4%** | **7.0%** | **0.23–0.31 s** | **0.47 s** | **0.15–0.16** | **271–273 MB** |
 
-**NowCaption** was re-measured for 1.1.3: audio fed in 40 ms blocks, as the app
+**NowCaption** was re-measured for 1.1.4: audio fed in 40 ms blocks, as the app
 captures it, and the text read as the app reads it. April was measured with
 100 ms blocks; fed 100 ms blocks, NowCaption has a median lag of 0.31–0.37 s
 ([block size](#capture-block-size-engine-only)).
@@ -101,20 +101,20 @@ speech (full pipeline, one run each):
 
 ## Capture to worker event
 
-Measured for 1.1.3 with `e2e.py` (scorer version 3): one clip from each speaker,
+Measured for 1.1.4 with `e2e.py` (scorer version 3): one clip from each speaker,
 played in real time into a private sink with 3 s gaps, captured by GStreamer in
 40 ms blocks as in the app, then recognised and punctuated by the app's worker.
 
 | | test-clean (40 speakers) | test-other (33 speakers) |
 |---|---|---|
-| Median lag | 0.25 s | 0.30 s |
+| Median lag | 0.26 s | 0.29 s |
 | p90 lag | 0.40 s | 0.46 s |
-| p99 lag | 0.55 s | 0.64 s |
-| Timed words recognised correctly | 679 of 687 (98.8%) | 575 of 598 (96.2%) |
+| p99 lag | 0.54 s | 0.62 s |
+| Timed words recognised correctly | 677 of 687 (98.5%) | 577 of 598 (96.5%) |
 | CPU while a clip plays | 0.20 core | 0.20 core |
 | CPU in the 3 s after each clip | 0.11 core | 0.11 core |
-| CPU during digital silence | 0.004 core | 0.004 core |
-| Peak memory | 320 MB | 315 MB |
+| CPU during digital silence | 0.005 core | 0.004 core |
+| Peak memory | 313 MB | 312 MB |
 
 The scorer uses the worker's optional complete session trace after normal
 caption formatting, rather than the moving caption excerpt. Words remain

@@ -7,14 +7,14 @@
  "clips": 40,
  "reference_words": 694,
  "timed_reference_words": 687,
- "timed_words": 679,
- "missed_timed_words": 8,
- "timed_word_coverage": 0.9884,
- "lag_s_p50": 0.25,
+ "timed_words": 677,
+ "missed_timed_words": 10,
+ "timed_word_coverage": 0.9854,
+ "lag_s_p50": 0.257,
  "lag_s_p90": 0.403,
- "lag_s_p99": 0.551,
- "cpu_cores_playback": 0.197,
- "cpu_cores_settling_gaps": 0.1084,
- "cpu_cores_silence": 0.0043,
- "peak_rss_mb": 320
+ "lag_s_p99": 0.54,
+ "cpu_cores_playback": 0.196,
+ "cpu_cores_settling_gaps": 0.1081,
+ "cpu_cores_silence": 0.0051,
+ "peak_rss_mb": 313
 }
