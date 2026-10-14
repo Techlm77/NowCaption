@@ -1,0 +1,14 @@
+[
+ {
+  "audio": "fleurs-es-419.wav",
+  "fleurs": "es_419 test 1008205615316519958.wav",
+  "source": "Fue tanta la cantidad de gente que se concentró, que no todos pudieron acceder al funeral en la Plaza de San Pedro.",
+  "english": "The number of people present was so large that it was not possible for everybody to gain access to the funeral in St. Peter's Square."
+ },
+ {
+  "audio": "fleurs-ja-jp.wav",
+  "fleurs": "ja_jp test 10112379500600537933.wav",
+  "source": "バルセロナの公用語はカタルーニャ語とスペイン語です。約半数がカタルーニャ語を好み、大多数がカタルーニャ語を理解し、ほぼ全員がスペイン語を知っています。",
+  "english": "Barcelona's official languages are Catalan and Spanish. About a half prefer to speak Catalan, a vast majority understands it, and virtually everyone knows Spanish."
+ }
+]

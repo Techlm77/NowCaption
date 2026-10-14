@@ -176,6 +176,58 @@ of speech, memory still grows once while the models' buffers and the
 recognizer's text reach their working size (the text is reset at 20,000
 characters); after that, 1.1.4 stays flat.
 
+## Translation to English
+
+**Translate to English** (1.2.0) was chosen by measuring speech translation on
+FLEURS, whose sentences are recorded in many languages and share one English
+reference translation: the first 40 test sentences in each of 12 widely spoken
+languages (`translation/fetch_fleurs.py`). Scores are chrF from sacrebleu (0–100,
+higher is better; it compares character sequences with the reference, so a
+correct paraphrase still scores below 100).
+
+| Approach | Mean chrF | Live | Notes |
+|---|---|---|---|
+| **Nemotron 3.5 streaming → langid.py → M2M100 418M int8 (shipped)** | **50.5** | **yes** | 33 languages |
+| Whisper small, translate task | 45.3 | no, per phrase | weak on Chinese, Japanese, Korean, Hindi and Arabic |
+| Whisper medium, translate task | 52.2 | no, per phrase | 5–9 s per sentence on 4 threads, 900 MB |
+| Nemotron 3.5 → Opus-MT mul-en | 41.3 | yes | fails on Korean |
+| Canary 180m flash | 57.2 | no, per phrase | Spanish, French and German only |
+
+Per language, with the shipped pipeline and the two Whisper models:
+
+| Language | NowCaption | Whisper small | Whisper medium |
+|---|---|---|---|
+| Portuguese | **60** | 59 | 63 |
+| German | **57** | 54 | 60 |
+| French | **56** | 52 | 58 |
+| Arabic | **54** | 38 | 52 |
+| Hindi | **52** | 39 | 45 |
+| Russian | **52** | 51 | 53 |
+| Spanish | **51** | 51 | 54 |
+| Italian | **51** | 49 | 54 |
+| Turkish | **50** | 46 | 53 |
+| Korean | **44** | 38 | 45 |
+| Japanese | **41** | 35 | 44 |
+| Chinese | **39** | 32 | 45 |
+
+M2M100 needs the source language. langid.py identified it from Nemotron's text
+for 478 of 480 sentences, scoring the same as giving the true language; a wrong
+language tag lowers the mean to 39.2. With perfect transcripts the translator
+alone averages 56.5, so most of the remaining loss is speech recognition,
+especially in Chinese and Japanese.
+
+Cost on the Ryzen 7 7800X3D: Nemotron uses 0.36 CPU seconds per second of audio
+on one thread, and M2M100 int8 0.6 s per sentence on two threads (1.0 s on one).
+Captioning continuous speech in real time with translation on averaged 0.84 of a
+core in all. The models load in about 1.7 s and use about 1.3 GB, which is
+returned when translation is turned off.
+
+`results/translation-fleurs.json` has the per-language scores. To repeat the
+measurements: `translation/fetch_fleurs.py`, then `translation/eval_whisper_canary.py`
+for Whisper and Canary, or `translation/eval_nemotron.py` followed by
+`translation/eval_shipped.py` (and `translation/eval_mt.py` for the other
+translators); each script's docstring gives its arguments.
+
 ## How the model was chosen
 
 This first screen used 73 LibriSpeech dev-clean utterances (1,150 words, 8

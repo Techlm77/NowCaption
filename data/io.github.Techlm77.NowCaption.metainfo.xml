@@ -16,11 +16,14 @@
     </p>
     <p>
       Speech is recognised on your own computer. Audio never leaves it, no account is needed,
-      and it works offline. NowCaption currently understands English only.
+      and it works offline. Captions are in English, and speech in 33 other languages can be
+      translated to English, also on your computer.
     </p>
     <ul>
       <li>Punctuation and capital letters, written as people speak</li>
       <li>Streaming captions that update as people speak</li>
+      <li>Optional live translation to English from 33 languages, such as Spanish, French,
+        German, Japanese, Chinese, Korean, Hindi and Arabic</li>
       <li>Light on the processor, and idle while everything is quiet</li>
       <li>Floats above other windows on KDE Plasma, Hyprland and Sway</li>
       <li>Adjustable text size and background, and a transcript you can copy or save</li>
@@ -57,6 +60,18 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.2.0" date="2026-10-14">
+      <description>
+        <p>
+          New: Translate to English. Turn it on in the right-click menu to see English captions
+          of speech in 33 other languages, including Spanish, French, German, Portuguese,
+          Italian, Russian, Chinese, Japanese, Korean, Hindi, Arabic and Turkish. The language
+          is recognised automatically, and the English follows the speaker live. Translation
+          runs on your computer like everything else. It is off by default: it needs about
+          1.3 GB more memory and about one processor core while it is on.
+        </p>
+      </description>
+    </release>
     <release version="1.1.4" date="2026-10-13">
       <description>
         <p>

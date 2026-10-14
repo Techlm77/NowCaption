@@ -38,8 +38,9 @@ STEPPERS = {
                    ('More solid', 'app.darker', 'value-increase-symbolic')),
 }
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
-            'width': -1, 'rows': ROWS, 'music_filter': 0}
-LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'music_filter': (0, 1)}
+            'width': -1, 'rows': ROWS, 'music_filter': 0, 'translate': 0}
+LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'music_filter': (0, 1),
+          'translate': (0, 1)}
 CHOICES = {'source': ('desktop', 'mic')}
 
 
@@ -541,7 +542,8 @@ class NowCaption(Adw.Application):
         menu = Gio.Menu()
         menu.append_item(section(('Desktop audio', 'app.source::desktop', None),
                                  ('Microphone', 'app.source::mic', None)))
-        menu.append_item(section(('Filter out music', 'app.music-filter', None)))
+        menu.append_item(section(('Filter out music', 'app.music-filter', None),
+                                 ('Translate to English', 'app.translate', None)))
         steppers = Gio.Menu()  # filled with button rows by CaptionWindow.update_menu
         for name in STEPPERS:
             item = Gio.MenuItem.new(None, None)
@@ -575,6 +577,9 @@ class NowCaption(Adw.Application):
                                               GLib.Variant('b', bool(self.settings.get('music_filter'))))
         music.connect('activate', self.on_music_filter)
         self.add_action(music)
+        translate = Gio.SimpleAction.new_stateful('translate', None, GLib.Variant('b', False))
+        translate.connect('activate', self.on_translate)  # turned on once the speech models are loaded
+        self.add_action(translate)
         act('larger', lambda: self.resize(+1), ['<Control>plus', '<Control>equal'])
         act('smaller', lambda: self.resize(-1), ['<Control>minus'])
         act('lighter', lambda: self.opacity(-0.15))
@@ -614,6 +619,22 @@ class NowCaption(Adw.Application):
         else:
             self.window.show_status('Music filter off.', seconds=3)
 
+    def on_translate(self, action, value):
+        """Optional translation to English from 33 languages. Off by default: it needs about
+        1.3 GB more memory and a core of processor time, and is less accurate on English."""
+        on = not action.get_state().get_boolean()
+        if on:
+            missing = engine.translation_missing()
+            if missing:
+                self.window.show_status(missing, seconds=10)
+                return
+        action.set_state(GLib.Variant('b', on))
+        self.settings.set('translate', int(on))
+        if self.worker:
+            self.worker.set_translation(on)
+        if not on:
+            self.window.show_status('Translation off.', seconds=3)
+
     def resize(self, step):
         size = self.settings.get('size')
         i = min(range(len(SIZES)), key=lambda k: abs(SIZES[k] - size))
@@ -639,6 +660,9 @@ class NowCaption(Adw.Application):
         self.worker.start()
         if self.settings.get('music_filter'):
             self.worker.set_music_filter(True)
+        if self.settings.get('translate') and not engine.translation_missing():
+            self.lookup_action('translate').set_state(GLib.Variant('b', True))
+            self.worker.set_translation(True)
         GLib.timeout_add_seconds(60, self.release_memory)
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
         if shot:
@@ -724,6 +748,22 @@ class NowCaption(Adw.Application):
             if action and action.get_state().get_boolean() != value:  # it could not be loaded
                 action.set_state(GLib.Variant('b', value))
                 self.settings.set('music_filter', int(value))
+        elif kind == 'translation':
+            if value == 'loading':
+                self.window.show_status('Loading translation…', sticky=True)
+            else:
+                action = self.lookup_action('translate')
+                if action and action.get_state().get_boolean() != value:
+                    action.set_state(GLib.Variant('b', value))
+                    self.settings.set('translate', int(value))
+                if value:
+                    self.window.show_status('Translating to English from 33 languages.', seconds=5)
+        elif kind == 'translation-error':
+            self.window.show_status(value, seconds=8)
+        elif kind == 'translation-language':
+            name = engine.LANGUAGES.get(value, value)
+            self.window.show_status('English speech, shown as it is.' if value == 'en'
+                                    else f'Translating from {name}.', seconds=3)
         elif kind == 'overload':
             self.window.show_status(f'Falling behind: skipped {value:.1f} s of audio', seconds=4)
         elif kind == 'load-error':
@@ -892,6 +932,14 @@ class NowCaption(Adw.Application):
         about.add_legal_section('Punctuation model', 'Edge-Punct-Casing by frankyoujian', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('Music filter model', 'DPDFNet2 © Ceva', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('sherpa-onnx', '© k2-fsa', Gtk.License.APACHE_2_0, None)
+        about.add_legal_section('Translation speech model', 'Nemotron 3.5 ASR Streaming 0.6B © NVIDIA',
+                                Gtk.License.CUSTOM, 'OpenMDW License Agreement, version 1.1 (OpenMDW-1.1). '
+                                'https://openmdw.ai/license/1-1/')
+        about.add_legal_section('Translation model', 'M2M100 418M © Facebook, Inc. and its affiliates. '
+                                'Converted to CTranslate2 int8 for NowCaption.', Gtk.License.MIT_X11, None)
+        about.add_legal_section('CTranslate2', '© OpenNMT', Gtk.License.MIT_X11, None)
+        about.add_legal_section('SentencePiece', '© Google', Gtk.License.APACHE_2_0, None)
+        about.add_legal_section('langid.py', '© Marco Lui', Gtk.License.BSD, None)
         about.present(None)  # its own window, not squeezed into the caption box
 
 

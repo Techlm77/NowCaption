@@ -2,7 +2,10 @@
 # Download, verify and unpack the speech and punctuation models into ./models
 # (for running from a checkout). Safe to re-run: it repairs partial downloads and
 # unpacks into a temporary folder first, so ./models never holds half a model.
+# --translation also fetches the optional translation models (about 0.9 GB).
 set -eu
+translation=0
+[ "${1:-}" = --translation ] && translation=1
 cd "$(dirname "$0")/.."
 mkdir -p models .cache
 fetch() {  # url sha256 folder
@@ -37,4 +40,15 @@ fi
     https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/dpdfnet2.onnx
 echo "ce35d6025fc71df0ef10d1540e1b7916837bbfe5f6896deb744508d2cad487a9  $filter" | sha256sum -c -
 mkdir -p models/dpdfnet2 && cp "$filter" models/dpdfnet2/
+if [ $translation = 1 ]; then
+    asr=sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-320ms-int8-2026-06-11
+    fetch "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/$asr.tar.bz2" \
+          5f311142337a5c161e92d49f7a3009d8607d3836f39d610bff5307c74d1d2c53 "$asr"
+    rm -rf "models/$asr/test_wavs"
+    cp licenses/OpenMDW-1.1.txt "models/$asr/LICENSE"
+    mt=nowcaption-m2m100-418m-ct2-int8-v1
+    if [ -f "dist/$mt.tar.bz2" ]; then cp "dist/$mt.tar.bz2" .cache/; fi
+    fetch "https://github.com/Techlm77/NowCaption/releases/download/translation-models-v1/$mt.tar.bz2" \
+          7227c24af6a3666ee243e51562aa24153840f3bea5d1f41d413a1557b7ed1f2a "$mt"
+fi
 echo "Models are in ./models"

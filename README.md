@@ -16,8 +16,9 @@ for people who are deaf or hard of hearing.
   the delay you see also depends on audio capture, processor load and your desktop.
 - **Runs on the CPU.** No dedicated GPU is needed. After digital silence has flushed
   the final words, recognition waits for more audio.
-
-**English only for now.**
+- **Translates to English (optional).** Turn on **Translate to English** for
+  live English captions of speech in 33 other languages, also recognised and
+  translated on your computer ([below](#translate-to-english)).
 
 ## Install
 
@@ -77,6 +78,7 @@ Captions start straight away, from whatever your computer is playing.
 - **Right-click** them for a small menu:
   - Listen to desktop audio or the microphone
   - Filter out music (off by default, see below)
+  - Translate to English (off by default, see below)
   - Text size − / +, and background − / +
   - Reset position or size, or move to another screen if you have more than one
   - Copy, save or clear the transcript
@@ -95,6 +97,41 @@ speech, even with the filter ([benchmark](benchmark/#music-filter)).
 If the filter fails, NowCaption turns it off, explains the error, and continues
 captioning without it. Changing sources or turning the filter off drains its
 remaining audio first. Clear deliberately discards buffered speech.
+
+### Translate to English
+
+Turn on **Translate to English** in the menu to see English captions of speech in
+any of 33 languages: Arabic, Bulgarian, Chinese, Croatian, Czech, Danish, Dutch,
+Estonian, Finnish, French, German, Greek, Hebrew, Hindi, Hungarian, Italian,
+Japanese, Korean, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian,
+Russian, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian and
+Vietnamese. Turn it off again for English to English captions.
+
+You don't choose the language. NowCaption recognises the speech with a
+multilingual model (NVIDIA Nemotron 3.5), works out the language from the text,
+and translates each sentence with M2M100. The English follows the speaker live:
+the sentence being spoken is translated again about once a second, and settles
+when it is finished. After a pause the next speech is recognised afresh, so a
+change of language is picked up. The status row says which language is being
+translated. English speech is shown as it is.
+
+The transcript keeps each translated sentence with its original, for example
+`[12:00:01] The museum opens at nine. [es: El museo abre a las nueve.]`.
+
+How good is it? On FLEURS test sentences (40 per language), the translation kept
+the meaning well for Portuguese, German, French, Arabic, Hindi, Russian, Spanish,
+Italian and Turkish (chrF 50–60), and less well for Korean, Japanese and Chinese
+(chrF 39–44), where words are more often wrong ([benchmark](benchmark/#translation-to-english)).
+It is machine translation: good for following a conversation or a video, not
+for exact wording.
+
+Translation is off by default because it needs about 1.3 GB more memory and
+about one processor core while it is on. Its models load in a couple of seconds
+when you turn it on, while English captions continue, and they are released
+again when you turn it off. For English speech, leave it off: the English model
+is more accurate.
+
+### The transcript
 
 The transcript keeps everything said since NowCaption started, or since you
 last chose **Clear**, including the words still being spoken. So that a long
@@ -192,6 +229,8 @@ Then run:
 ```
 
 On the first run it downloads the models into `models/` and creates `.venv`.
+For **Translate to English**, also fetch its models (about 0.9 GB) once with
+`./tools/fetch-models.sh --translation`.
 Every start checks all three models and required Python imports. It repairs
 missing model files or broken packages, and recreates the Python environment
 when its interpreter changes. Requirements and interpreter stamps are written
@@ -215,10 +254,12 @@ PYTHONPATH=src .venv/bin/python tests/test_regressions.py   # the ten 1.0.3 fixe
 PYTHONPATH=src .venv/bin/python tests/test_fixes_112.py      # filter, recovery, warnings and setup fixes
 PYTHONPATH=src .venv/bin/python tests/test_fixes_113.py      # the 1.1.3 memory-leak fix
 PYTHONPATH=src .venv/bin/python tests/test_fixes_114.py      # the transcript file and bounded memory
+PYTHONPATH=src .venv/bin/python tests/test_translation.py   # translation to English, with fake models
 PYTHONPATH=src .venv/bin/python tests/test_app.py           # application logic with real GTK, no display
 xvfb-run -a env PYTHONPATH=src .venv/bin/python tests/test_window.py  # real GTK window and menu
 PYTHONPATH=src .venv/bin/python tests/test_live.py          # from source (run tools/run-dev.sh once first)
 PYTHONPATH=src .venv/bin/python tests/test_memory.py        # memory stays flat with the real models
+PYTHONPATH=src .venv/bin/python tests/test_translation_live.py  # Spanish and Japanese to English, real models
 ./tests/test_flatpak.sh                                     # inside the installed Flatpak
 ```
 
@@ -263,6 +304,13 @@ Two choices came from measurements:
 - **Long digital silence becomes idle.** Silence is fed briefly to flush pending
   words, then the model waits for non-silent audio.
 
+With **Translate to English**, a multilingual model recognises the speech instead,
+and its finished lines go to a second thread, so recognition never waits for
+translation. That thread joins lines into sentences, which translate much better
+than the pieces between pauses, identifies their language with langid.py, and
+translates them with M2M100 (CTranslate2, int8). Anything still being translated
+when you choose **Clear** is discarded, on screen and in the transcript.
+
 ## Models
 
 | Part | Model | License |
@@ -270,6 +318,8 @@ Two choices came from measurements:
 | Speech recognition | NVIDIA [`stt_en_fastconformer_hybrid_large_streaming_multi`](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi), exported to ONNX int8 with 80 ms lookahead | CC-BY-4.0 |
 | Punctuation and casing | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) CNN-BiLSTM, packaged by k2-fsa | Apache-2.0 |
 | Music filter (optional) | [DPDFNet2](https://github.com/ceva-ip/DPDFNet) streaming speech enhancement by Ceva, packaged by k2-fsa | Apache-2.0 |
+| Translation: speech recognition (optional) | NVIDIA [Nemotron 3.5 ASR Streaming 0.6B](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b), 320 ms chunks, int8 ONNX packaged by k2-fsa | OpenMDW-1.1 |
+| Translation: text to English (optional) | Meta [M2M100 418M](https://huggingface.co/facebook/m2m100_418M), converted to CTranslate2 int8 | MIT |
 
 [MODEL-LICENSES.md](MODEL-LICENSES.md) lists everything bundled in the Flatpak.
 
@@ -288,6 +338,10 @@ mkdir -p export && cd export
 This writes `encoder.int8.onnx`, `decoder.int8.onnx`, `joiner.int8.onnx` and
 `tokens.txt`. The release archive holds those four files and a README in a folder
 named `nowcaption-fastconformer-en-80ms-cc-by-v1`.
+
+The converted translation model is attached to the
+[`translation-models-v1` release](https://github.com/Techlm77/NowCaption/releases/tag/translation-models-v1).
+`tools/export-translation-model.sh` recreates it.
 
 ## License
 

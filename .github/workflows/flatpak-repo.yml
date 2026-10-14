@@ -61,6 +61,8 @@ jobs:
           retention-days: 7
 
   publish:
+    # Only release tags reach the repository; a manual run on a branch just builds the files.
+    if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -122,6 +124,7 @@ jobs:
           path: repo
 
   deploy:
+    if: startsWith(github.ref, 'refs/tags/')
     needs: publish
     runs-on: ubuntu-latest
     timeout-minutes: 15
