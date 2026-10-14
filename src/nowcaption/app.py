@@ -542,7 +542,7 @@ class NowCaption(Adw.Application):
         menu = Gio.Menu()
         menu.append_item(section(('Desktop audio', 'app.source::desktop', None),
                                  ('Microphone', 'app.source::mic', None)))
-        menu.append_item(section(('Filter out music', 'app.music-filter', None),
+        menu.append_item(section(('Background filter', 'app.music-filter', None),
                                  ('Translate to English', 'app.translate', None)))
         steppers = Gio.Menu()  # filled with button rows by CaptionWindow.update_menu
         for name in STEPPERS:
@@ -607,7 +607,7 @@ class NowCaption(Adw.Application):
             self.worker.restart()
 
     def on_music_filter(self, action, value):
-        """Optional voice filter for songs and speech over music. Off by default: it uses more
+        """Optional background filter for speech over music or noise. Off by default: it uses more
         processor time and slightly lowers accuracy on plain speech."""
         on = not action.get_state().get_boolean()
         action.set_state(GLib.Variant('b', on))
@@ -615,9 +615,9 @@ class NowCaption(Adw.Application):
         if self.worker:
             self.worker.set_music_filter(on)
         if on:
-            self.window.show_status('Music filter on: voices are picked out from music.', seconds=4)
+            self.window.show_status('Background filter on: voices are picked out from music and noise.', seconds=4)
         else:
-            self.window.show_status('Music filter off.', seconds=3)
+            self.window.show_status('Background filter off.', seconds=3)
 
     def on_translate(self, action, value):
         """Optional translation to English from 33 languages. Off by default: it needs about
@@ -930,7 +930,7 @@ class NowCaption(Adw.Application):
                                 'Exported to ONNX and quantized to int8 for NowCaption. '
                                 'https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi')
         about.add_legal_section('Punctuation model', 'Edge-Punct-Casing by frankyoujian', Gtk.License.APACHE_2_0, None)
-        about.add_legal_section('Music filter model', 'DPDFNet2 © Ceva', Gtk.License.APACHE_2_0, None)
+        about.add_legal_section('Background filter model', 'DPDFNet2 © Ceva', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('sherpa-onnx', '© k2-fsa', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('Translation speech model', 'Nemotron 3.5 ASR Streaming 0.6B © NVIDIA',
                                 Gtk.License.CUSTOM, 'OpenMDW License Agreement, version 1.1 (OpenMDW-1.1). '

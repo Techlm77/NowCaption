@@ -95,7 +95,7 @@ modules:
   # Speech model: NVIDIA stt_en_fastconformer_hybrid_large_streaming_multi (CC-BY-4.0),
   # exported to ONNX at 80 ms lookahead by tools/export-model.py and attached to a GitHub release.
   # Punctuation/casing model: Edge-Punct-Casing (Apache-2.0), packaged by k2-fsa.
-  # Optional music filter: DPDFNet2 speech enhancement by Ceva (Apache-2.0), packaged by k2-fsa.
+  # Optional background filter: DPDFNet2 speech enhancement by Ceva (Apache-2.0), packaged by k2-fsa.
   # Optional translation to English: NVIDIA Nemotron 3.5 ASR Streaming 0.6B (OpenMDW-1.1),
   # packaged by k2-fsa, and Meta's M2M100 418M (MIT), converted to CTranslate2 int8 by
   # tools/export-translation-model.sh and attached to a GitHub release.

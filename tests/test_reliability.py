@@ -268,7 +268,7 @@ class WorkerTests(unittest.TestCase):
 
 
 class FakeFilter:
-    """Stands in for the music filter: halves the audio and records how it was used."""
+    """Stands in for the background filter: halves the audio and records how it was used."""
 
     def __init__(self):
         self.runs, self.flushes, self.resets = 0, 0, 0

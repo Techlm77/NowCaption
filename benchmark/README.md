@@ -71,9 +71,9 @@ test-clean and 6.84% against 6.83% on test-other.
 `modified_beam_search` is not available: sherpa-onnx supports only greedy search
 for streaming NeMo transducers such as this model.
 
-## Music filter
+## Background filter
 
-**Filter out music** puts a streaming speech-enhancement model in front of the
+**Background filter** puts a streaming speech-enhancement model in front of the
 recognizer. Candidates were run through NowCaption's caption pipeline (40 ms
 blocks, punctuation, line splitting) on a 3 min 50 s pop song, scored against its
 244 sung words (backing vocals in brackets excluded). The song is not included here.
@@ -90,7 +90,7 @@ blocks, punctuation, line splitting) on a 3 min 50 s pop song, scored against it
 | UVR MDX-NET Voc_FT vocals | 163 | 52.5% | 1.24 | no: slower than real time |
 
 RNNoise and WebRTC are built for steady background noise and let most music
-through. The music filter is off by default because it costs accuracy on plain
+through. The background filter is off by default because it costs accuracy on plain
 speech (full pipeline, one run each):
 
 | WER | No filter | DPDFNet2 |
@@ -152,7 +152,7 @@ read it after every 40 ms block. Real sessions reached 1.9 GB after 2.5 hours an
 | | 1.1.2 | 1.1.3 |
 |---|---|---|
 | Caption pipeline, 30 min of looped speech, as fast as possible | 208 → 616 MB | 208 → 209 MB |
-| The same with the music filter | 224 → 631 MB | 227 → 228 MB |
+| The same with the background filter | 224 → 631 MB | 227 → 228 MB |
 | Whole app, 15 min of speech played in real time | +7.7 MB per minute | +0.08 MB per minute |
 
 Memory is anonymous resident memory after `malloc_trim`, from the end of the

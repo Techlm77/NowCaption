@@ -29,7 +29,7 @@ ASR_DIR = 'nowcaption-fastconformer-en-80ms-cc-by-v1'
 ASR_FILES = ('tokens.txt', 'encoder.int8.onnx', 'decoder.int8.onnx', 'joiner.int8.onnx')
 PUNCT_DIR = 'sherpa-onnx-online-punct-en-2024-08-06'
 PUNCT_FILES = ('model.int8.onnx', 'bpe.vocab')
-MUSIC_FILTER_DIR = 'dpdfnet2'  # streaming speech enhancement (Apache-2.0), used by the optional music filter
+MUSIC_FILTER_DIR = 'dpdfnet2'  # streaming speech enhancement (Apache-2.0), used by the optional background filter
 MUSIC_FILTER_FILE = 'dpdfnet2.onnx'
 # Optional translation to English: a multilingual streaming recognizer (OpenMDW-1.1) and a
 # translation model (M2M100 418M, MIT, converted to CTranslate2 int8).
@@ -336,12 +336,12 @@ class Captioner:
 
     def _filter_failed(self, error):
         """An optional enhancer must never take ordinary recognition down with it."""
-        LOG.exception('Music filter failed; continuing without it')
+        LOG.exception('Background filter failed; continuing without it')
         self.music_filter, self.filtering = None, False
         if self.on_filter_error:
             self.on_filter_error(error)
         elif self.on_warning:
-            self.on_warning(f'The music filter was turned off after an error: {error}')
+            self.on_warning(f'The background filter was turned off after an error: {error}')
 
     def _reset_filter(self):
         if self.music_filter is not None:
@@ -812,7 +812,7 @@ class RecognitionWorker(threading.Thread):
       ('load-error', message)    the models could not be loaded; a new source or restart() retries
       ('overload', seconds)      audio arrived faster than it could be recognised and was dropped
       ('recognition-ok', gen)    the new stream processed audio successfully
-      ('music-filter', on)       the music filter is now on or off (off if it could not load)
+      ('music-filter', on)       the background filter is now on or off (off if it could not load)
       ('translation', state)     translation to English is 'loading', True (on) or False (off)
       ('translation-error', message)  translation could not start, or stopped after an error
       ('translation-language', code)  the spoken language changed (a key of LANGUAGES)
@@ -905,7 +905,7 @@ class RecognitionWorker(threading.Thread):
             self.lock.notify()
 
     def set_music_filter(self, on):
-        """Turn the optional music filter on or off; it is loaded the first time it is needed."""
+        """Turn the optional background filter on or off; it is loaded the first time it is needed."""
         self._put('music-filter', bool(on))
 
     def set_translation(self, on):
@@ -1069,8 +1069,8 @@ class RecognitionWorker(threading.Thread):
                 try:
                     self.music_filter = self.load_filter()
                 except Exception as e:
-                    LOG.exception('Could not load the music filter')
-                    self.on_event('warning', f'The music filter could not be loaded: {e}')
+                    LOG.exception('Could not load the background filter')
+                    self.on_event('warning', f'The background filter could not be loaded: {e}')
                     value = False
             self.music_filter_on = value
             if self.captioner:
@@ -1105,7 +1105,7 @@ class RecognitionWorker(threading.Thread):
 
     def _filter_failed(self, error):
         self.music_filter, self.music_filter_on = None, False
-        self.on_event('warning', f'The music filter was turned off after an error: {error}')
+        self.on_event('warning', f'The background filter was turned off after an error: {error}')
         self.on_event('music-filter', False)
 
     def _safely(self, fn, *args):

@@ -6,7 +6,7 @@ NowCaption's own code is MIT licensed (see LICENSE). The Flatpak also contains:
 |---|---|---|---|
 | Speech model: `stt_en_fastconformer_hybrid_large_streaming_multi` (80 ms lookahead, int8 ONNX) | NVIDIA NeMo team; ONNX export by NowCaption with `tools/export-model.py`, adapted from the k2-fsa sherpa-onnx export script | CC-BY-4.0 | https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi |
 | Punctuation and casing model (CNN-BiLSTM) | frankyoujian, Edge-Punct-Casing | Apache-2.0 | https://github.com/frankyoujian/Edge-Punct-Casing |
-| Music filter model: DPDFNet2 (streaming speech enhancement, used only when Filter out music is on) | Ceva; ONNX packaging by k2-fsa | Apache-2.0 | https://github.com/ceva-ip/DPDFNet |
+| Background filter model: DPDFNet2 (streaming speech enhancement, used only when Background filter is on) | Ceva; ONNX packaging by k2-fsa | Apache-2.0 | https://github.com/ceva-ip/DPDFNet |
 | sherpa-onnx | k2-fsa | Apache-2.0 | https://github.com/k2-fsa/sherpa-onnx |
 | ONNX Runtime (inside the sherpa-onnx wheel) | Microsoft | MIT | https://github.com/microsoft/onnxruntime |
 | NumPy | NumPy developers | BSD-3-Clause | https://numpy.org |
