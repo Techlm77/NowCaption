@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Translation to English (1.2.0), without models or GTK: the Translator, the
+"""Translation to English, without models or GTK: the Translator, the
 TranslationWorker thread, the TranslatingCaptioner and switching it on and off.
 tests/test_translation_live.py checks the real models.
 """
@@ -20,28 +20,38 @@ class FakeModel:
     def __init__(self):
         self.calls = []
 
-    def translate_batch(self, batch, target_prefix, **options):
-        self.calls.append((batch, target_prefix))
-        return [NS(hypotheses=[['__en__'] + [t.upper() for t in tokens[1:-1]]]) for tokens in batch]
+    def translate_batch(self, batch, **options):
+        self.calls.append((batch, options))
+        return [NS(hypotheses=[[t.upper() for t in tokens]]) for tokens in batch]
 
 
 class FakePieces:
+    VOCAB = ['<unk>', '<s>', '\u2581the', 'é', '<0x41>', '<0xD8>', '\u2581\u0627\u0644', 'ο', '\u2581♪']
+
     def encode(self, text, out_type=str):
         return text.split()
 
-    def decode(self, pieces):
+    def get_piece_size(self):
+        return len(self.VOCAB)
+
+    def id_to_piece(self, i):
+        return self.VOCAB[i]
+
+    def decode_pieces(self, pieces):
         return ' '.join(pieces)
 
 
 class EchoTranslator:
     """Stands in for Translator in thread tests: SPANISH WORDS -> upper case."""
     SURE_CHARS = engine.Translator.SURE_CHARS
+    fixed = None
 
     def __init__(self, gate=None, fail=False):
-        self.calls, self.gate, self.fail = [], gate, fail
+        self.calls, self.gate, self.fail, self.prefixes = [], gate, fail, []
 
-    def translate(self, text, previous=None):
+    def translate(self, text, previous=None, prefix=''):
         self.calls.append(text)
+        self.prefixes.append(prefix)
         if self.gate is not None:
             self.gate.wait(5)
         if self.fail:
@@ -57,14 +67,50 @@ class TranslatorTests(unittest.TestCase):
             self.identified.append(text)
             return language
         self.model = FakeModel()
-        return engine.Translator(self.model, FakePieces(), identify)
+        return engine.Translator(self.model, FakePieces(), FakePieces(), identify)
 
-    def test_translates_from_the_identified_language_into_english(self):
+    def test_translates_into_english_and_names_the_language(self):
         english, lang = self.translator('es').translate('hola a todo el mundo')
         self.assertEqual((english, lang), ('HOLA A TODO EL MUNDO', 'es'))
-        (batch, prefix), = self.model.calls
-        self.assertEqual(batch, [['__es__', 'hola', 'a', 'todo', 'el', 'mundo', '</s>']])
-        self.assertEqual(prefix, [['__en__']])
+        (batch, options), = self.model.calls
+        self.assertEqual(batch, [['hola', 'a', 'todo', 'el', 'mundo']])  # no language tag
+        self.assertNotIn('target_prefix', options)
+
+    def test_too_little_text_is_not_guessed_at(self):
+        translator = self.translator('pt')
+        self.assertEqual(translator.translate('sí'), ('SÍ', None))  # translated, language unknown
+        self.assertEqual(translator.translate('sí', 'es'), ('SÍ', 'es'))  # the last one is kept
+        self.assertEqual(self.identified, [])
+
+    def test_a_named_language_is_used_without_guessing(self):
+        translator = self.translator('pt')
+        translator.fixed = 'es'
+        self.assertEqual(translator.translate('hola'), ('HOLA', 'es'))
+        self.assertEqual(self.identified, [])
+
+    def test_english_cannot_be_written_in_another_script_or_run_away(self):
+        translator = self.translator('ar')
+        # Arabic and Greek pieces and the bytes of non-ASCII characters are never written
+        self.assertEqual(translator.blocked, [['<0xD8>'], ['\u2581\u0627\u0644'], ['ο']])
+        translator.translate('مرحبا بكم')
+        (batch, options), = self.model.calls
+        self.assertEqual(options['suppress_sequences'], translator.blocked)
+        self.assertEqual(options['max_decoding_length'], 2 * 2 + 16)
+        self.assertEqual(options['no_repeat_ngram_size'], 4)
+
+    def test_repeated_letters_and_words_from_recognition_errors_become_one(self):
+        translator = self.translator('zh')
+        translator.translate('海地ออออออออออ T T T T T 研究所 cuesta 10000')
+        (batch, _), = self.model.calls
+        self.assertEqual(batch, [['海地อ', 'T', '研究所', 'cuesta', '10000']])
+
+    def test_a_wrong_language_guess_does_not_change_the_english(self):
+        self.assertEqual(self.translator('pt').translate('hola a todo el mundo')[0], 'HOLA A TODO EL MUNDO')
+
+    def test_very_long_text_is_cut_to_what_the_model_can_take(self):
+        self.translator('es').translate(' '.join(f'palabra{i}' for i in range(1000)))
+        (batch, _), = self.model.calls
+        self.assertEqual(len(batch[0]), engine.MT_MAX_PIECES)
 
     def test_english_passes_through_untouched(self):
         self.assertEqual(self.translator('en').translate('Hello there, everyone.'), ('Hello there, everyone.', 'en'))
@@ -126,6 +172,53 @@ class TranslationWorkerTests(WorkerFixture):
         self.until(lambda: self.captions and self.captions[-1][1] == 'LA GENTE SE FUE A CASA.')
         self.assertEqual(self.languages, ['es'])
 
+    def test_a_full_stop_finishes_a_sentence_before_the_speaker_pauses(self):
+        tw = self.start()
+        tw.partial_text('hola mundo. adiós')
+        self.until(lambda: self.store.count == 1)  # no pause yet: the full stop was enough
+        self.assertIn('HOLA MUNDO.', self.store.lines()[0])
+        tw.partial_text('hola mundo. adiós amigo')
+        tw.line(101.0, 'hola mundo. adiós amigo.')  # the pause commits the whole line
+        self.until(lambda: self.store.count == 2)
+        self.assertIn('ADIÓS AMIGO.', self.store.lines()[1])
+        self.assertNotIn('HOLA', self.store.lines()[1])  # translated once, not twice
+
+    def test_a_long_line_split_inside_finished_sentences_is_not_repeated(self):
+        tw = self.start()
+        tw.partial_text('uno dos. tres cuatro. cinco')
+        self.until(lambda: self.store.count == 1)
+        tw.line(100.0, 'uno dos.')  # MAX_LINE split inside what was already finished
+        tw.partial_text('tres cuatro. cinco seis')
+        tw.line(101.0, 'tres cuatro. cinco seis.')
+        self.until(lambda: self.store.count == 2)
+        english = [line.split('] ', 1)[1].split(' [')[0] for line in self.store.lines()]
+        self.assertEqual(english, ['UNO DOS. TRES CUATRO.', 'CINCO SEIS.'])
+
+    def test_sentence_breaks_ignore_numbers_and_wait_for_the_next_word(self):
+        self.assertEqual(engine.complete_sentences('cuesta 3.5 euros'), 0)
+        self.assertEqual(engine.complete_sentences('fin.'), 0)  # nothing follows it yet
+        self.assertEqual(engine.complete_sentences('hola. adiós'), len('hola. '))
+        self.assertEqual(engine.complete_sentences('今日は。明日'), len('今日は。'))
+
+    def test_live_english_is_continued_from_what_was_shown(self):
+        translator = EchoTranslator()
+        tw = self.start(translator)
+        tw.partial_text('uno dos tres cuatro')
+        self.until(lambda: self.captions and self.captions[-1][1] == 'UNO DOS TRES CUATRO')
+        tw.partial_text('uno dos tres cuatro cinco')
+        self.until(lambda: self.captions[-1][1] == 'UNO DOS TRES CUATRO CINCO')
+        # all but the last two words of the shown English are kept for the next translation
+        self.assertEqual(translator.prefixes[:2], ['', 'UNO DOS'])
+
+    def test_a_pause_shows_the_whole_english_of_an_unfinished_sentence(self):
+        tw = self.start()
+        tw.partial_text('la gente buena')
+        self.until(lambda: self.captions and self.captions[-1][1] == 'LA GENTE BUENA')
+        tw.partial_text('la gente buena se fue')  # the next translation only adds agreed words
+        tw.line(100.0, 'la gente buena se fue')  # a pause, no full stop: the sentence stays open
+        self.until(lambda: self.captions[-1][1] == 'LA GENTE BUENA SE FUE')
+        self.assertEqual(self.store.count, 0)
+
     def test_sentences_are_translated_in_order_and_never_dropped(self):
         tw = self.start()
         for i in range(30):
@@ -143,13 +236,20 @@ class TranslationWorkerTests(WorkerFixture):
         tw.partial_text('')
         self.until(lambda: self.store.count == 1 and self.captions[-1][1] == 'ESTAMOS HABLANDO AHORA MISMO.')
 
-    def test_too_little_text_is_not_guessed_at(self):
-        translator = EchoTranslator()
-        tw = self.start(translator)
-        tw.partial_text('sí')
-        time.sleep(0.1)
-        self.assertNotIn('sí', translator.calls)
-        self.assertEqual(tw.passage(), '')
+    def test_the_first_word_is_translated_at_once(self):
+        tw = self.start()
+        tw.partial_text('sí')  # too short to tell the language: the model is not told one anyway
+        self.until(lambda: tw.passage() == 'SÍ')
+
+    def test_unfinished_live_english_has_no_full_stop(self):
+        class Stopping(EchoTranslator):
+            def translate(self, text, previous=None, prefix=''):
+                english, lang = super().translate(text, previous, prefix)
+                return english + '.', lang  # as the model does with every fragment
+        tw = self.start(Stopping())
+        tw.partial_text('esto parece')
+        self.until(lambda: tw.passage() == 'ESTO PARECE')
+        self.assertEqual(engine.UNFINISHED_STOP.sub('', 'It seems...'), 'It seems...')  # not an ellipsis
 
     def test_a_pause_ends_a_sentence_without_punctuation(self):
         tw = self.start()
@@ -244,6 +344,16 @@ class TranslatingCaptionerTests(WorkerFixture):
             cap.feed(quiet)
         self.assertGreaterEqual(len(self.streams), 2)
 
+    def test_a_named_language_keeps_one_stream_through_pauses(self):
+        cap = self.captioner(['hola. '])
+        self.rec.language = 'es'  # nothing to detect, so a fresh stream would only lose words
+        cap.feed(SPEECH)
+        quiet = (SPEECH[:2] + b'\x01' * (len(SPEECH) - 2))
+        self.rec.script.clear()
+        for _ in range(int(cap.NEW_STREAM_QUIET_S / 0.1) + 12):
+            cap.feed(quiet)
+        self.assertEqual(len(self.streams), 1)
+
     def test_clear_forgets_what_was_waiting_for_translation(self):
         cap = self.captioner(['secreto ', 'privado. '])
         cap.feed(SPEECH)
@@ -278,6 +388,20 @@ class WorkerModeTests(unittest.TestCase):
 
     def translation(self, words=('hola ', 'mundo. '), translator=None):
         return lambda: (FakeRecognizer(list(words)), translator or EchoTranslator())
+
+    def test_naming_the_spoken_language(self):
+        translator = EchoTranslator()
+        worker, events = self.make(lambda: (FakeRecognizer(['hola ', 'mundo. ']), translator))
+        worker.set_spoken('es')
+        worker.set_translation(True)
+        self.assertIs(events.wait('translation', lambda v: v != 'loading'), True)
+        self.assertEqual((worker.translation[0].language, translator.fixed), ('es', 'es'))
+        stream = worker.captioner.stream
+        worker.set_spoken('auto')  # a change takes a new stream in the new language
+        worker.snapshot(None)  # answered after the change is handled
+        events.wait('snapshot')
+        self.assertEqual((worker.translation[0].language, translator.fixed), ('auto', None))
+        self.assertIsNot(worker.captioner.stream, stream)
 
     def test_turning_translation_on_and_off(self):
         worker, events = self.make(self.translation())
@@ -317,6 +441,19 @@ class WorkerModeTests(unittest.TestCase):
                 break
             time.sleep(0.02)
         self.assertEqual([ref() for ref in holder['refs']], [None, None])
+
+    def test_shutdown_waits_for_translation_threads_to_let_go_of_their_models(self):
+        worker, events = self.make(self.translation())
+        worker.set_translation(True)
+        events.wait('translation', lambda v: v is True)
+        first = worker.translation_worker
+        worker.set_translation(False)
+        events.wait('translation', lambda v: v is False)
+        self.assertIn(first, worker.retired)  # closed, maybe still freeing its model
+        worker.stop()
+        worker.join_all(3)
+        self.assertFalse(worker.is_alive())
+        self.assertFalse(first.is_alive())
 
     def test_translation_that_cannot_load_stays_off_and_says_why(self):
         def fail():

@@ -58,6 +58,7 @@ class FakeStream:
 
 class FakeRecognizer:
     """Appends the next scripted word for each block of speech."""
+    language = 'auto'  # the multilingual recognizer's spoken language
 
     def __init__(self, script=()):
         self.script, self.text = list(script), ''

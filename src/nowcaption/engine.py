@@ -1,5 +1,6 @@
 """Speech recognition: a sherpa-onnx streaming transducer plus a punctuation model, and
-optional translation to English (Nemotron 3.5 for 33 languages, then M2M100).
+optional translation to English (Nemotron 3.5 for 33 languages, then NowCaption's own
+translation model).
 
 The recognizer stream is never reset at pauses. Resetting drops the first words
 of the next phrase (it doubled the word error rate in testing), so pauses only
@@ -31,12 +32,22 @@ PUNCT_DIR = 'sherpa-onnx-online-punct-en-2024-08-06'
 PUNCT_FILES = ('model.int8.onnx', 'bpe.vocab')
 MUSIC_FILTER_DIR = 'dpdfnet2'  # streaming speech enhancement (Apache-2.0), used by the optional background filter
 MUSIC_FILTER_FILE = 'dpdfnet2.onnx'
-# Optional translation to English: a multilingual streaming recognizer (OpenMDW-1.1) and a
-# translation model (M2M100 418M, MIT, converted to CTranslate2 int8).
+# Optional translation to English: a multilingual streaming recognizer (OpenMDW-1.1) and
+# NowCaption's own 33-languages-to-English model (CTranslate2 int8, tools/translation-model).
 TRANSLATE_ASR_DIR = 'sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-320ms-int8-2026-06-11'
-MT_DIR = 'nowcaption-m2m100-418m-ct2-int8-v1'
-MT_FILES = ('model.bin', 'config.json', 'shared_vocabulary.json', 'sentencepiece.bpe.model')
-# The languages Nemotron 3.5 recognises, by the M2M100 code they are translated from.
+MT_DIR = 'nowcaption-translate-v1'
+MT_FILES = ('model.bin', 'config.json', 'source_vocabulary.json', 'target_vocabulary.json',
+            'source.spm', 'target.spm')
+MT_MAX_PIECES = 400  # the model's positions end at 512
+# Recognition errors can be runs of one letter or word ("ออออออออ", "T T T T"); the model would
+# copy them over and over, so they become one. Digits are left alone ("10000").
+REPEATED_CHAR = re.compile(r'([^\W\d])\1{3,}')
+REPEATED_WORD = re.compile(r'(?<!\S)(\S+)(?:\s+\1(?!\S)){2,}')
+# English output: Latin letters, punctuation and a few symbols. Anything else comes from the
+# English vocabulary's byte fallback (how it spells unknown characters), copying the source.
+ENGLISH_PIECE = re.compile(r'[\u2581\x20-\u024f\u2000-\u206f\u20ac♪♫→−]+')
+BYTE_PIECE = re.compile(r'<0x([0-9A-F]{2})>')
+# The languages Nemotron 3.5 recognises, by their ISO 639-1 code.
 LANGUAGES = {
     'ar': 'Arabic', 'bg': 'Bulgarian', 'cs': 'Czech', 'da': 'Danish', 'de': 'German', 'el': 'Greek',
     'en': 'English', 'es': 'Spanish', 'et': 'Estonian', 'fi': 'Finnish', 'fr': 'French', 'he': 'Hebrew',
@@ -45,7 +56,11 @@ LANGUAGES = {
     'pt': 'Portuguese', 'ro': 'Romanian', 'ru': 'Russian', 'sk': 'Slovak', 'sl': 'Slovenian',
     'sv': 'Swedish', 'th': 'Thai', 'tr': 'Turkish', 'uk': 'Ukrainian', 'vi': 'Vietnamese', 'zh': 'Chinese',
 }
-LANGID_CODES = {**{code: code for code in LANGUAGES}, 'nb': 'no', 'nn': 'no'}  # langid.py code -> M2M100
+# The languages the user can name as the spoken one, instead of letting Nemotron and langid.py
+# tell: English has its own captions, and Nemotron 3.5 does not transcribe Thai.
+SPOKEN = {code: name for code, name in LANGUAGES.items() if code not in ('en', 'th')}
+LANGUAGE_TAG = re.compile(r'\s*<[a-z]{2,3}(?:-[A-Za-z]{2,4})?>')
+LANGID_CODES = {**{code: code for code in LANGUAGES}, 'nb': 'no', 'nn': 'no'}  # langid.py code -> LANGUAGES
 
 
 def complete(folder, names):
@@ -111,9 +126,16 @@ def load_translation():
     """The multilingual recognizer and the Translator. About 1.3 GB in memory, so the app
     loads them only while translation is on."""
     class Multilingual(_recognizer_class()):
+        language = 'auto'  # or a key of SPOKEN; new streams use it
+
+        def get_result(self, s):
+            # With language "auto", Nemotron sometimes writes a tag such as <sl-SI> after a
+            # sentence; it is not speech, so it must not be shown or translated.
+            return LANGUAGE_TAG.sub('', super().get_result(s)).strip()
+
         def create_stream(self, *args, **kwargs):
             s = super().create_stream(*args, **kwargs)
-            s.set_option('language', 'auto')  # Nemotron identifies the spoken language itself
+            s.set_option('language', self.language)  # with "auto", Nemotron identifies it itself
             return s
 
     import ctranslate2
@@ -125,7 +147,8 @@ def load_translation():
     identifier = LanguageIdentifier.from_modelstring(langid_model)
     identifier.set_languages(sorted(LANGID_CODES))
     return rec, Translator(ctranslate2.Translator(str(mt), device='cpu', intra_threads=2, compute_type='int8'),
-                           sentencepiece.SentencePieceProcessor(model_file=str(mt / 'sentencepiece.bpe.model')),
+                           sentencepiece.SentencePieceProcessor(model_file=str(mt / 'source.spm')),
+                           sentencepiece.SentencePieceProcessor(model_file=str(mt / 'target.spm')),
                            lambda text: LANGID_CODES[identifier.classify(text)[0]])
 
 
@@ -543,32 +566,74 @@ class Captioner:
 
 
 class Translator:
-    """Text in any of LANGUAGES to English with M2M100, which needs to know the source
-    language: langid.py identifies it from the recognised text (478 of 480 FLEURS test
-    sentences right). English passes through unchanged."""
+    """Text in any of LANGUAGES to English with NowCaption's translation model, which does
+    not need to be told the source language, so a wrong guess cannot spoil the English.
+    langid.py still names the language for the status row (478 of 480 FLEURS test
+    sentences right), and English passes through unchanged. When the user names the spoken
+    language (fixed), it is used instead, from the first word."""
 
-    SURE_CHARS = 12  # shorter text keeps the language of the line before it
+    SURE_CHARS = 12  # shorter text is too short to tell its language
 
-    def __init__(self, model, pieces, identify):
-        self.model, self.pieces, self.identify = model, pieces, identify
+    def __init__(self, model, source, target, identify):
+        self.model, self.source, self.target, self.identify = model, source, target, identify
+        self.fixed = None
+        self.blocked = [[p] for p in map(target.id_to_piece, range(target.get_piece_size()))
+                        if self._foreign(p)]  # never written: English has no other scripts
 
-    def translate(self, text, previous=None):
-        """(English, language code)."""
+    @staticmethod
+    def _foreign(piece):
+        byte = BYTE_PIECE.fullmatch(piece)
+        if byte:
+            return int(byte.group(1), 16) >= 0x80  # part of a non-ASCII character
+        return not (piece.startswith('<') and piece.endswith('>')) and not ENGLISH_PIECE.fullmatch(piece)
+
+    def translate(self, text, previous=None, prefix=''):
+        """(English, language code). prefix: English already shown for the start of this text,
+        which the translation keeps and continues from."""
         text = text.strip()
         if not text:
             return '', previous
-        lang = previous if previous and len(text) < self.SURE_CHARS else self.identify(text)
+        if self.fixed:
+            lang = self.fixed
+        elif len(text) < self.SURE_CHARS:
+            lang = previous  # with none, it is translated anyway: English comes through unchanged
+        else:
+            lang = self.identify(text)
         if lang == 'en':
             return text, lang
-        tokens = [f'__{lang}__'] + self.pieces.encode(text, out_type=str) + ['</s>']
-        out = self.model.translate_batch([tokens], target_prefix=[['__en__']], beam_size=1,
-                                         max_decoding_length=256)
-        return self.pieces.decode(out[0].hypotheses[0][1:]).strip(), lang
+        source = REPEATED_WORD.sub(r'\1', REPEATED_CHAR.sub(r'\1', text))
+        pieces = self.source.encode(source, out_type=str)[:MT_MAX_PIECES]
+        # Guards against a runaway: English about as long as the source at most, no foreign
+        # letters, and no four words twice. Measured on 1,320 real transcripts: accuracy the
+        # same (48.66 chrF against 48.54), no loops or foreign letters (one before).
+        options = {'beam_size': 1, 'max_decoding_length': min(256, 2 * len(pieces) + 16),
+                   'suppress_sequences': self.blocked, 'no_repeat_ngram_size': 4}
+        if prefix:
+            options['target_prefix'] = [self.target.encode(prefix, out_type=str)]
+        out = self.model.translate_batch([pieces], **options)
+        return self.target.decode_pieces(out[0].hypotheses[0]).strip(), lang
 
 
 SENTENCE_END = '.?!。？！।؟…'
 CLOSERS = '"\'”’»)]」』'
 CJK = re.compile(r'[぀-ヿ㐀-鿿豈-﫿]')
+
+
+# A sentence-final mark that more words follow: the sentence before it is complete. Western
+# marks need a space after them (not "3.5"); Chinese and Japanese ones do not.
+SENTENCE_BREAK = re.compile('[.?!।؟…][' + re.escape(CLOSERS) + r']*\s+(?=\S)|[。？！][' + re.escape(CLOSERS) + r']*(?=\S)')
+
+
+UNFINISHED_STOP = re.compile(r'(?<!\.)\.$')  # a full stop, not an ellipsis, at the end
+
+
+def complete_sentences(text):
+    """How much of text is finished sentences: up to the last sentence-final mark that is
+    followed by more words (they have started the next sentence)."""
+    end = 0
+    for m in SENTENCE_BREAK.finditer(text):
+        end = m.end()
+    return end
 
 
 def ends_sentence(text):
@@ -590,13 +655,15 @@ class TranslationWorker(threading.Thread):
     than the pieces between pauses; a sentence ends at its final punctuation, after
     MAX_SENTENCE characters, or when the speaker stops (end_sentence). Sentences are
     translated in order and never dropped. While one is still being spoken, its newest
-    text is translated at most once per PARTIAL_EVERY_S, so the English follows the speaker
-    live. Each request carries the Clear generation it was made in; anything from before a
+    text is translated again as soon as the translator can keep up: after four times as long
+    as the last translation took, between PARTIAL_MIN_S and PARTIAL_EVERY_S, so the English
+    follows the speaker live without a slow translator using a whole core. Each request carries the Clear generation it was made in; anything from before a
     Clear is discarded, on screen and in the transcript. on_caption(text, gen) receives the
     English passage; the transcript gets each sentence as "English [language: original]".
     """
 
-    PARTIAL_EVERY_S = 1.0
+    PARTIAL_EVERY_S = 1.0   # the longest a live update waits (a slow translator)
+    PARTIAL_MIN_S = 0.25    # the shortest (a fast one): about four updates a second
     MAX_SENTENCE = 300
     DISPLAY_LINES = Captioner.DISPLAY_LINES
 
@@ -608,11 +675,14 @@ class TranslationWorker(threading.Thread):
         self.gen = gen
         self.sentence, self.sentence_at = '', None  # the sentence being spoken: finished lines so far
         self.words = ''  # the words still being spoken after them
+        self.taken = ''  # the start of those words already finished as sentences (at a full stop)
         self.waiting = deque()  # (gen, time, sentence) to translate
         self.live_text = self.live_done = ''  # the open sentence; the version last translated
         self.partial_at = 0.0
+        self.partial_gap = self.PARTIAL_EVERY_S  # adapts to the translator's speed
         self.english = deque(maxlen=self.DISPLAY_LINES)
-        self.live = ''  # English of the open sentence
+        self.live = ''  # English of the open sentence, as shown
+        self.pinned = ''  # the start of it that stays: later translations continue from it
         self.language = None
         self.closing = self.stopping = False
 
@@ -620,16 +690,39 @@ class TranslationWorker(threading.Thread):
 
     def line(self, ts, text):
         with self.lock:
-            if not self.sentence:
-                self.sentence_at = ts
-            self.sentence = join_text(self.sentence, text.strip())
-            if ends_sentence(self.sentence) or len(self.sentence) >= self.MAX_SENTENCE:
-                self._finish()
+            text = text.strip()
+            taken, self.taken = self.taken, ''
+            if taken and text.startswith(taken):
+                text = text[len(taken):].strip()  # its first sentences were finished already
+            elif taken and taken.startswith(text):
+                self.taken = taken[len(text):].strip()  # a long line split inside them: the rest goes on
+                text = ''
+            if text:
+                if not self.sentence:
+                    self.sentence_at = ts
+                self.sentence = join_text(self.sentence, text)
+                if ends_sentence(self.sentence) or len(self.sentence) >= self.MAX_SENTENCE:
+                    self._finish()
+            self.words = ''  # the line took them; the recognizer sends what follows it next
             self._update_live()
 
     def partial_text(self, text):
+        """The words being spoken. A sentence in them that a full stop ends is finished now,
+        not at the next pause, so that continuous speech is translated sentence by sentence."""
         with self.lock:
-            self.words = text.strip()
+            text = text.strip()
+            if not text.startswith(self.taken):
+                self.taken = ''  # a new line or stream: none of it is finished yet
+            rest = text[len(self.taken):]
+            end = complete_sentences(rest)
+            if end:
+                if not self.sentence:
+                    self.sentence_at = time.time()
+                self.sentence = join_text(self.sentence, rest[:end].strip())
+                self._finish()
+                self.taken = text[:len(self.taken) + end]
+                rest = rest[end:]
+            self.words = rest.strip()
             self._update_live()
 
     def end_sentence(self):
@@ -645,6 +738,7 @@ class TranslationWorker(threading.Thread):
             self.gen = gen
             self.waiting.clear()
             self.sentence, self.words, self.live_text, self.live_done, self.live = '', '', '', '', ''
+            self.taken = self.pinned = ''
             self.english.clear()
             self.lock.notify()
 
@@ -680,6 +774,16 @@ class TranslationWorker(threading.Thread):
         self.live_text = join_text(self.sentence, self.words)
         self.lock.notify()
 
+    UNSURE_WORDS = 2  # the last words of a live translation may still change as more is said
+
+    def _pin(self, english):  # with the lock held
+        """Keep all but the last UNSURE_WORDS of the open sentence's English: the next
+        translation continues from them, so the line only grows at its end and never rewords
+        what has been read."""
+        words = english.split()
+        keep = max(len(self.pinned.split()), len(words) - self.UNSURE_WORDS)
+        self.pinned = ' '.join(words[:keep])
+
     # --- the translation thread ---------------------------------------------------------------
 
     def run(self):
@@ -701,17 +805,22 @@ class TranslationWorker(threading.Thread):
                         job = 'sentence'
                         break
                     changed = self.live_text != self.live_done
-                    wait = self.partial_at + self.PARTIAL_EVERY_S - time.monotonic()
+                    wait = self.partial_at + self.partial_gap - time.monotonic()
                     if not self.closing and changed and wait <= 0:
                         gen, ts, text, job = self.gen, None, self.live_text, 'live'
                         break
                     self.lock.wait(max(wait, 0.01) if changed else None)
                 previous = self.language
+            started = time.monotonic()
             try:
-                if job == 'live' and len(text) < self.translator.SURE_CHARS:
-                    english, lang = '', None  # too short to tell the language (it may have changed)
-                else:
-                    english, lang = self.translator.translate(text, previous)
+                english, lang = self.translator.translate(text, previous, self.pinned)
+                best = english
+                if job == 'live' and not ends_sentence(text):
+                    english = UNFINISHED_STOP.sub('', english)  # the model ends everything with one
+                elif job == 'sentence' and self.pinned:
+                    # the screen keeps the pinned wording; the transcript gets the sentence
+                    # translated whole, which is better where early words were guessed
+                    best = self.translator.translate(text, previous)[0]
             except Exception as e:
                 LOG.exception('Translation failed')
                 if self.on_error:
@@ -726,9 +835,9 @@ class TranslationWorker(threading.Thread):
                     if english:
                         self.english.append(english)
                         label = '' if lang in (None, 'en') else f' [{lang}: {text}]'
-                        self.store.append(ts, english + label)
+                        self.store.append(ts, best + label)
                     if not self.waiting:
-                        self.live = ''
+                        self.live = self.pinned = ''
                         self.live_done = ''  # the open sentence, if any, is translated afresh
                     if lang and lang != self.language:
                         self.language = lang
@@ -736,7 +845,10 @@ class TranslationWorker(threading.Thread):
                             self.on_language(lang)
                 else:
                     self.live_done, self.partial_at = text, time.monotonic()
+                    took = self.partial_at - started
+                    self.partial_gap = min(self.PARTIAL_EVERY_S, max(self.PARTIAL_MIN_S, 4 * took))
                     self.live = english
+                    self._pin(english)
                 self.on_caption(self.passage(), gen)
 
 
@@ -746,9 +858,11 @@ class TranslatingCaptioner(Captioner):
     Recognition works as for English captions, but finished lines and the words still
     being spoken go to a TranslationWorker, which shows the English and writes the
     transcript; the spoken language is not shown. The recognizer writes punctuation itself.
-    The recognizer picks the spoken language when a stream starts, so after the speaker
-    stops (digital silence, or NEW_STREAM_QUIET_S without new words) the next speech gets
-    a fresh stream, in case it is in another language. gen() returns the Clear generation.
+    Unless the user named the spoken language, the recognizer picks it when a stream starts,
+    so after the speaker stops (digital silence, or NEW_STREAM_QUIET_S without new words) the
+    next speech gets a fresh stream, in case it is in another language. A fresh stream can
+    lose the first words, which is why naming the language helps. gen() returns the Clear
+    generation.
     """
 
     NEW_STREAM_QUIET_S = 3.0
@@ -769,13 +883,19 @@ class TranslatingCaptioner(Captioner):
 
     def _decode(self, samples, force=False):
         super()._decode(samples, force)
-        if self.done and not self.partial.strip() and self.quiet >= self.NEW_STREAM_QUIET_S:
+        if (self.done and not self.partial.strip() and self.quiet >= self.NEW_STREAM_QUIET_S
+                and self.rec.language == 'auto'):
             self._new_stream()
 
     def flush(self):
         super().flush()
         if self.done:
             self._new_stream()
+
+    def restart_stream(self):
+        """For a change of spoken language: the words so far are finished, then a new stream."""
+        self.commit_partial()
+        self._new_stream()
 
     def _new_stream(self):
         self.translation.end_sentence()
@@ -834,7 +954,9 @@ class RecognitionWorker(threading.Thread):
         self.music_filter, self.music_filter_on = None, False
         # translation: wanted, its models while loaded, loading in the background, its thread
         self.translate_on, self.translation, self.translation_loading = False, None, False
+        self.spoken = 'auto'  # or a key of SPOKEN
         self.translation_worker = None
+        self.retired = []  # translation threads that were closed and may still be letting go of their models
         self.inbox = deque()  # ordered commands and at most MAX_BACKLOG audio blocks
         self.lock = threading.Condition()
         self.backlog = self.dropped = 0
@@ -913,6 +1035,10 @@ class RecognitionWorker(threading.Thread):
         English captions carry on, and are released when it is turned off."""
         self._put('translate', bool(on))
 
+    def set_spoken(self, code):
+        """The spoken language for translation: 'auto' (detected) or a key of SPOKEN."""
+        self._put('spoken', code)
+
     def restart(self, recover_only=False, source_gen=None):
         """Manual restart, or a guarded automatic retry for a failed source generation."""
         self._put('recover' if recover_only else 'restart', source_gen)
@@ -925,6 +1051,16 @@ class RecognitionWorker(threading.Thread):
             self.lock.notify()
         if self.translation_worker:
             self.translation_worker.stop()
+
+    def join_all(self, timeout=5.0):
+        """Wait for this thread and every translation thread, after stop(). A translation thread
+        frees its CTranslate2 model when it ends; if the interpreter is already shutting down at
+        that moment, CTranslate2 cannot take the GIL back and the C++ runtime aborts the
+        process, so the models must be gone before the program exits."""
+        deadline = time.monotonic() + timeout
+        for thread in [self, self.translation_worker, *self.retired]:
+            if thread is not None and thread.is_alive() and thread is not threading.current_thread():
+                thread.join(max(0.0, deadline - time.monotonic()))
 
     # --- the worker thread ------------------------------------------------------------------
 
@@ -957,7 +1093,7 @@ class RecognitionWorker(threading.Thread):
                     self.on_event('overload', dropped)
             elif kind == 'clear':
                 self._safely(self._handle, kind, value)  # generations apply even when loading failed
-            elif kind in ('snapshot', 'music-filter', 'translate', 'translate-loaded', 'translate-failed'):
+            elif kind in ('snapshot', 'music-filter', 'translate', 'translate-loaded', 'translate-failed', 'spoken'):
                 self._safely(self._handle, kind, value)
             elif loaded:
                 if kind != 'source' or value == self.source_gen:
@@ -1021,12 +1157,19 @@ class RecognitionWorker(threading.Thread):
             self._new_captioner()
         if self.translation_worker:
             self.translation_worker.close()  # it finishes the lines still waiting, then lets go of the models
+            self.retired = [t for t in self.retired if t.is_alive()] + [self.translation_worker]
             self.translation_worker = None
         if self.translation:
             self.translation = None
             gc.collect()  # the replaced captioner refers to itself; free its 1 GB recognizer now
             release_free_memory()
         self.on_event('translation', False)
+
+    def _apply_spoken(self):
+        if self.translation:
+            recognizer, translator = self.translation
+            recognizer.language = self.spoken
+            translator.fixed = None if self.spoken == 'auto' else self.spoken
 
     def _load_translation(self):
         if self.translation_loading:
@@ -1083,9 +1226,15 @@ class RecognitionWorker(threading.Thread):
                 self._load_translation()
             elif self.captioner:
                 self._switch_translation()
+        elif kind == 'spoken':
+            self.spoken = value
+            self._apply_spoken()
+            if isinstance(self.captioner, TranslatingCaptioner):
+                self.captioner.restart_stream()
         elif kind == 'translate-loaded':
             self.translation_loading = False
             self.translation = value if self.translate_on else None
+            self._apply_spoken()
             if self.captioner:
                 self._switch_translation()
         elif kind == 'translate-failed':

@@ -310,9 +310,48 @@
     "chrf_rounded": 50
    },
    "_mean_chrf": 50.5
+  },
+  "NowCaption 1.3.0: nemotron-3.5-320ms -> NowCaption Translate v1 CTranslate2 int8": {
+   "es_419": {
+    "chrf": 52.86
+   },
+   "fr_fr": {
+    "chrf": 55.43
+   },
+   "de_de": {
+    "chrf": 59.23
+   },
+   "pt_br": {
+    "chrf": 62.37
+   },
+   "it_it": {
+    "chrf": 52.75
+   },
+   "ru_ru": {
+    "chrf": 53.51
+   },
+   "cmn_hans_cn": {
+    "chrf": 40.74
+   },
+   "ja_jp": {
+    "chrf": 43.19
+   },
+   "ko_kr": {
+    "chrf": 43.65
+   },
+   "hi_in": {
+    "chrf": 52.24
+   },
+   "ar_eg": {
+    "chrf": 54.7
+   },
+   "tr_tr": {
+    "chrf": 51.44
+   },
+   "_mean_chrf": 51.84
   }
  },
- "shipped_mean_chrf": 50.5,
+ "shipped_mean_chrf": 51.84,
  "langid_correct": "478 of 480 sentences",
  "speed": {
   "nemotron_cpu_seconds_per_audio_second_1_thread": 0.357,
@@ -322,6 +361,14 @@
   },
   "translation_mode_cores_real_time_speech": 0.84,
   "extra_memory_mb": 1300,
-  "load_seconds": 1.7
+  "load_seconds": 1.7,
+  "nowcaption_translate_v1_int8_ms_per_sentence_2_threads": {
+   "mean": 28,
+   "p95": 46,
+   "max": 66
+  },
+  "nowcaption_translate_v1_model_mb": 172,
+  "extra_memory_mb_1_3_0": 1146,
+  "load_seconds_translate_v1": 0.11
  }
 }

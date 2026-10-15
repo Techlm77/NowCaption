@@ -15,7 +15,7 @@ from nowcaption import engine
 
 HERE = Path(__file__).parent / 'fixtures'
 KEYWORDS = {'fleurs-es-419.wav': ('es', ['funeral', 'people']),
-            'fleurs-ja-jp.wav': ('ja', ['official language', 'catalon'])}
+            'fleurs-ja-jp.wav': ('ja', ['official language', 'catal'])}
 
 
 def main():
@@ -70,7 +70,7 @@ def main():
         return 0 if ok else 1
     finally:
         worker.stop()
-        worker.join(2)
+        worker.join_all(10)
 
 
 if __name__ == '__main__':

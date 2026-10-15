@@ -46,9 +46,9 @@ if [ $translation = 1 ]; then
           5f311142337a5c161e92d49f7a3009d8607d3836f39d610bff5307c74d1d2c53 "$asr"
     rm -rf "models/$asr/test_wavs"
     cp licenses/OpenMDW-1.1.txt "models/$asr/LICENSE"
-    mt=nowcaption-m2m100-418m-ct2-int8-v1
+    mt=nowcaption-translate-v1
     if [ -f "dist/$mt.tar.bz2" ]; then cp "dist/$mt.tar.bz2" .cache/; fi
-    fetch "https://github.com/Techlm77/NowCaption/releases/download/translation-models-v1/$mt.tar.bz2" \
-          7227c24af6a3666ee243e51562aa24153840f3bea5d1f41d413a1557b7ed1f2a "$mt"
+    fetch "https://github.com/Techlm77/NowCaption/releases/download/translation-models-v2/$mt.tar.bz2" \
+          c6458935b8ec6f3f15c62ba66096fb57e3105e1c2052af3880512f8ad643331d "$mt"
 fi
 echo "Models are in ./models"

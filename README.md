@@ -38,7 +38,8 @@ move, drag an edge to resize. **Right-click** for the menu:
   Hungarian, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Romanian,
   Russian, Slovak, Spanish, Swedish, Turkish, Ukrainian and Vietnamese, and less
   reliably Greek, Hebrew, Latvian, Lithuanian and Slovenian. The language is
-  detected for you. Off by default, as it needs about 1.3 GB more memory.
+  detected for you, or pick it under **Spoken language** for the quickest captions.
+  Off by default, as it needs about 1.1 GB more memory.
 - Text size, background, position
 - Copy, save or clear the transcript
 
@@ -77,7 +78,7 @@ the other files in [`tests/`](tests/) say what they cover.
 | Punctuation and casing | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) | Apache-2.0 |
 | Background filter | [DPDFNet2](https://github.com/ceva-ip/DPDFNet) by Ceva | Apache-2.0 |
 | Translation: speech | NVIDIA [Nemotron 3.5 ASR Streaming 0.6B](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b) | OpenMDW-1.1 |
-| Translation: text to English | Meta [M2M100 418M](https://huggingface.co/facebook/m2m100_418M), CTranslate2 int8 | MIT |
+| Translation: text to English | NowCaption Translate v1 by Techlm77, trained from scratch ([how](tools/translation-model)), CTranslate2 int8 | CC-BY-4.0 |
 
 Everything bundled is listed in [MODEL-LICENSES.md](MODEL-LICENSES.md). NowCaption's
 own code is MIT licensed.

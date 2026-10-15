@@ -1,8 +1,8 @@
-"""NowCaption's translation as shipped: Nemotron 3.5 transcripts (eval_nemotron.py) ->
+"""NowCaption 1.2.0's translation: Nemotron 3.5 transcripts (eval_nemotron.py) ->
 langid.py -> M2M100 418M CTranslate2 int8, scored with chrF; also how often langid.py
 picks the right language, and what a wrong source-language tag costs.
 Usage: eval_shipped.py <nemotron-asr.json> <m2m100-ct2-int8-dir>   (the dir must hold
-sentencepiece.bpe.model; see tools/export-translation-model.sh)
+sentencepiece.bpe.model, as in the translation-models-v1 release)
 """
 import collections, json, sys
 import ctranslate2, langid, sacrebleu

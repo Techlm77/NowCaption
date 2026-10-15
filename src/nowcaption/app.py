@@ -38,10 +38,10 @@ STEPPERS = {
                    ('More solid', 'app.darker', 'value-increase-symbolic')),
 }
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
-            'width': -1, 'rows': ROWS, 'music_filter': 0, 'translate': 0}
+            'width': -1, 'rows': ROWS, 'music_filter': 0, 'translate': 0, 'spoken': 'auto'}
 LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'music_filter': (0, 1),
           'translate': (0, 1)}
-CHOICES = {'source': ('desktop', 'mic')}
+CHOICES = {'source': ('desktop', 'mic'), 'spoken': ('auto', *engine.SPOKEN)}
 
 
 class Settings:
@@ -542,8 +542,15 @@ class NowCaption(Adw.Application):
         menu = Gio.Menu()
         menu.append_item(section(('Desktop audio', 'app.source::desktop', None),
                                  ('Microphone', 'app.source::mic', None)))
-        menu.append_item(section(('Background filter', 'app.music-filter', None),
-                                 ('Translate to English', 'app.translate', None)))
+        spoken = Gio.Menu()  # naming the language saves detecting it, which can miss the first words
+        spoken.append('Detect automatically', 'app.spoken::auto')
+        for code, name in sorted(engine.SPOKEN.items(), key=lambda kv: kv[1]):
+            spoken.append(name, f'app.spoken::{code}')
+        options = Gio.Menu()
+        options.append('Background filter', 'app.music-filter')
+        options.append('Translate to English', 'app.translate')
+        options.append_submenu('Spoken language', spoken)
+        menu.append_section(None, options)
         steppers = Gio.Menu()  # filled with button rows by CaptionWindow.update_menu
         for name in STEPPERS:
             item = Gio.MenuItem.new(None, None)
@@ -580,6 +587,10 @@ class NowCaption(Adw.Application):
         translate = Gio.SimpleAction.new_stateful('translate', None, GLib.Variant('b', False))
         translate.connect('activate', self.on_translate)  # turned on once the speech models are loaded
         self.add_action(translate)
+        spoken = Gio.SimpleAction.new_stateful('spoken', GLib.VariantType.new('s'),
+                                               GLib.Variant('s', self.settings.get('spoken')))
+        spoken.connect('activate', self.on_spoken)
+        self.add_action(spoken)
         act('larger', lambda: self.resize(+1), ['<Control>plus', '<Control>equal'])
         act('smaller', lambda: self.resize(-1), ['<Control>minus'])
         act('lighter', lambda: self.opacity(-0.15))
@@ -635,6 +646,21 @@ class NowCaption(Adw.Application):
         if not on:
             self.window.show_status('Translation off.', seconds=3)
 
+    def on_spoken(self, action, value):
+        """The language being spoken, for translation. Named, it is known from the first word;
+        detected, the start of each new speaker can be missed while Nemotron finds it."""
+        code = value.get_string()
+        action.set_state(value)
+        self.settings.set('spoken', code)
+        if self.worker:
+            self.worker.set_spoken(code)
+        if not self.lookup_action('translate').get_state().get_boolean():
+            self.activate_action('translate', None)  # naming a spoken language asks for translation
+        elif code == 'auto':
+            self.window.show_status('Detecting the spoken language.', seconds=3)
+        else:
+            self.window.show_status(f'Translating from {engine.SPOKEN[code]}.', seconds=3)
+
     def resize(self, step):
         size = self.settings.get('size')
         i = min(range(len(SIZES)), key=lambda k: abs(SIZES[k] - size))
@@ -660,6 +686,7 @@ class NowCaption(Adw.Application):
         self.worker.start()
         if self.settings.get('music_filter'):
             self.worker.set_music_filter(True)
+        self.worker.set_spoken(self.settings.get('spoken'))
         if self.settings.get('translate') and not engine.translation_missing():
             self.lookup_action('translate').set_state(GLib.Variant('b', True))
             self.worker.set_translation(True)
@@ -935,8 +962,10 @@ class NowCaption(Adw.Application):
         about.add_legal_section('Translation speech model', 'Nemotron 3.5 ASR Streaming 0.6B © NVIDIA',
                                 Gtk.License.CUSTOM, 'OpenMDW License Agreement, version 1.1 (OpenMDW-1.1). '
                                 'https://openmdw.ai/license/1-1/')
-        about.add_legal_section('Translation model', 'M2M100 418M © Facebook, Inc. and its affiliates. '
-                                'Converted to CTranslate2 int8 for NowCaption.', Gtk.License.MIT_X11, None)
+        about.add_legal_section('Translation model', 'NowCaption Translate v1 © Techlm77', Gtk.License.CUSTOM,
+                                'Creative Commons Attribution 4.0 International (CC-BY-4.0). Trained from scratch '
+                                'for NowCaption on OPUS parallel text. '
+                                'https://github.com/Techlm77/NowCaption/releases/tag/translation-models-v2')
         about.add_legal_section('CTranslate2', '© OpenNMT', Gtk.License.MIT_X11, None)
         about.add_legal_section('SentencePiece', '© Google', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('langid.py', '© Marco Lui', Gtk.License.BSD, None)
@@ -953,4 +982,8 @@ def main():
               f'GTK {gtk[0]}.{gtk[1]} and libadwaita {adw[0]}.{adw[1]}. The Flatpak includes both.',
               file=sys.stderr)
         return 1
-    return NowCaption().run(sys.argv)
+    app = NowCaption()
+    status = app.run(sys.argv)
+    if app.worker:  # the window is gone: let the native models go before the interpreter exits
+        app.worker.join_all(5)
+    return status
