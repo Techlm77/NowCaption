@@ -311,47 +311,47 @@
    },
    "_mean_chrf": 50.5
   },
-  "NowCaption 1.3.0: nemotron-3.5-320ms -> NowCaption Translate v1 CTranslate2 int8": {
+  "NowCaption 1.3.0: nemotron-3.5-320ms -> NowCaption Translate v1 CTranslate2 int8, as shown live": {
    "es_419": {
-    "chrf": 52.86
+    "chrf": 52.6
    },
    "fr_fr": {
-    "chrf": 55.43
+    "chrf": 55.21
    },
    "de_de": {
-    "chrf": 59.23
+    "chrf": 58.91
    },
    "pt_br": {
     "chrf": 62.37
    },
    "it_it": {
-    "chrf": 52.75
+    "chrf": 52.73
    },
    "ru_ru": {
-    "chrf": 53.51
+    "chrf": 53.17
    },
    "cmn_hans_cn": {
-    "chrf": 40.74
+    "chrf": 43.39
    },
    "ja_jp": {
-    "chrf": 43.19
+    "chrf": 43.08
    },
    "ko_kr": {
-    "chrf": 43.65
+    "chrf": 44.23
    },
    "hi_in": {
-    "chrf": 52.24
+    "chrf": 50.61
    },
    "ar_eg": {
-    "chrf": 54.7
+    "chrf": 55.18
    },
    "tr_tr": {
-    "chrf": 51.44
+    "chrf": 51.29
    },
-   "_mean_chrf": 51.84
+   "_mean_chrf": 51.9
   }
  },
- "shipped_mean_chrf": 51.84,
+ "shipped_mean_chrf": 51.9,
  "langid_correct": "478 of 480 sentences",
  "speed": {
   "nemotron_cpu_seconds_per_audio_second_1_thread": 0.357,

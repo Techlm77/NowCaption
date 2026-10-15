@@ -16,13 +16,13 @@
     </p>
     <p>
       Speech is recognised on your own computer. Audio never leaves it, no account is needed,
-      and it works offline. Captions are in English, and speech in 33 other languages can be
+      and it works offline. Captions are in English, and speech in 32 other languages can be
       translated to English, also on your computer.
     </p>
     <ul>
       <li>Punctuation and capital letters, written as people speak</li>
       <li>Streaming captions that update as people speak</li>
-      <li>Optional live translation to English from 33 languages, such as Spanish, French,
+      <li>Optional live translation to English from 32 languages, such as Spanish, French,
         German, Japanese, Chinese, Korean, Hindi and Arabic</li>
       <li>Light on the processor, and idle while everything is quiet</li>
       <li>Floats above other windows on KDE Plasma, Hyprland and Sway</li>
@@ -64,16 +64,19 @@
       <description>
         <p>
           Translate to English now uses NowCaption's own translation model, trained from
-          scratch for live captions. It is more accurate than before in 31 of 33 languages,
-          about 19 times faster, and uses about 400 MB less memory.
+          scratch for live captions. It is more accurate than before, about 19 times faster,
+          and uses about 400 MB less memory.
         </p>
         <ul>
           <li>Pick the spoken language under Spoken language for the quickest captions;
             detecting it automatically is still the default</li>
-          <li>Translated captions follow the speaker sooner and no longer reword
-            themselves while you read</li>
+          <li>Translated captions follow the speaker sooner, and words already shown stay
+            put until the sentence is finished</li>
+          <li>Long stretches of speech without punctuation are translated in full</li>
           <li>Fixed: when speech was misheard, translated captions could fill with
             repeated or foreign letters</li>
+          <li>Fixed: turning translation on or off could lose the last word, and a
+            failure to start translation could stop English captions</li>
           <li>Fixed: NowCaption could crash on quitting while translation was on</li>
         </ul>
       </description>

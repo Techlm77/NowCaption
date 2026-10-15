@@ -1,7 +1,7 @@
 """FLEURS dev/test text for the 33 languages: unique sentence ids with the source
 transcription and the en_us transcription of the same id as reference.
 -> data/eval/fleurs_<split>.json {lang: [{id, source, english}]}"""
-import csv, io, json, urllib.request
+import csv, io, json, os, urllib.request
 csv.field_size_limit(10 ** 7)
 BASE = 'https://huggingface.co/datasets/google/fleurs/resolve/main/data'
 FLEURS = {'ar': 'ar_eg', 'bg': 'bg_bg', 'cs': 'cs_cz', 'da': 'da_dk', 'de': 'de_de', 'el': 'el_gr', 'es': 'es_419',
@@ -30,4 +30,5 @@ if __name__ == '__main__':
                     items.append({'id': row[0], 'source': row[2], 'english': english[row[0]]})
             out[lang] = items
             print(split, lang, len(items), flush=True)
+        os.makedirs('data/eval', exist_ok=True)
         json.dump(out, open(f'data/eval/fleurs_{split}.json', 'w'), ensure_ascii=False, indent=0)

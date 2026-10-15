@@ -19,9 +19,9 @@ for lang in langs:
     src = [s for s in open(f'data/kd_src/{lang}.txt').read().split('\n') if s]
     part = out + '.part'
     done = sum(1 for _ in open(part)) // CHUNK * CHUNK if os.path.exists(part) else 0
-    if done:  # keep whole chunks only
+    if os.path.exists(part):  # keep whole chunks only; with none, the file starts again
         lines = open(part).read().split('\n')[:done]
-        open(part, 'w').write('\n'.join(lines) + '\n')
+        open(part, 'w').write(''.join(line + '\n' for line in lines))
     t_lang = time.time()
     with open(part, 'a') as f:
         for i in range(done, len(src), CHUNK):

@@ -66,13 +66,27 @@ def vary(x, r):
     return x
 
 
+def cache_key(folder, lang):
+    """What an encoded file depends on: its pairs, both tokenizers, the settings and this
+    script. A file made from anything else is encoded again, never silently reused."""
+    def stamp(path):
+        st = os.stat(path)
+        return f'{st.st_size}:{st.st_mtime_ns}'
+    return json.dumps([stamp(f'{D}/{folder}/{lang}.tsv'), stamp(f'{D}/spm/source.model'),
+                       stamp(f'{D}/spm/target.model'), stamp(__file__), MAX_TOK,
+                       1 if folder == 'clean' else KD_REPEATS, sorted(SKIP_CORPORA)])
+
+
 def encode_lang(job):
     folder, lang = job if isinstance(job, tuple) else ('clean', job)
     name = lang if folder == 'clean' else f'kd-{lang}'
+    key = cache_key(folder, lang)
     if os.path.exists(f'{D}/bin/{name}.npz'):
         z = np.load(f'{D}/bin/{name}.npz')
-        print(name, 'already encoded', flush=True)
-        return name, len(z['src_len']), int(z['src_len'].sum()), int(z['tgt_len'].sum())
+        if 'key' in z and str(z['key']) == key:
+            print(name, 'already encoded', flush=True)
+            return name, len(z['src_len']), int(z['src_len'].sum()), int(z['tgt_len'].sum())
+        print(name, 'changed since it was encoded: encoding again', flush=True)
     import sentencepiece as spm
     s = spm.SentencePieceProcessor(model_file=f'{D}/spm/source.model')
     t = spm.SentencePieceProcessor(model_file=f'{D}/spm/target.model')
@@ -103,7 +117,7 @@ def encode_lang(job):
     if srcs:
         flush(srcs, tgts)
     arrays = {k: np.concatenate(v) for k, v in parts.items()}
-    np.savez(f'{D}/bin/{name}.npz', **arrays)
+    np.savez(f'{D}/bin/{name}.npz', key=np.array(key), **arrays)
     n, ntok = len(arrays['src_len']), int(arrays['tgt_len'].sum())
     print(name, n, 'pairs', ntok, 'target tokens', flush=True)
     return name, n, int(arrays['src_len'].sum()), ntok

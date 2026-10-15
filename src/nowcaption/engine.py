@@ -10,6 +10,7 @@ import ctypes
 import gc
 import importlib.util
 import logging
+import math
 import os
 from collections import deque
 import re
@@ -39,10 +40,19 @@ MT_DIR = 'nowcaption-translate-v1'
 MT_FILES = ('model.bin', 'config.json', 'source_vocabulary.json', 'target_vocabulary.json',
             'source.spm', 'target.spm')
 MT_MAX_PIECES = 400  # the model's positions end at 512
-# Recognition errors can be runs of one letter or word ("ออออออออ", "T T T T"); the model would
-# copy them over and over, so they become one. Digits are left alone ("10000").
-REPEATED_CHAR = re.compile(r'([^\W\d])\1{3,}')
-REPEATED_WORD = re.compile(r'(?<!\S)(\S+)(?:\s+\1(?!\S)){2,}')
+# Longer text is translated in sections of about this many pieces. Recognition can leave a
+# long stretch unpunctuated (often in Japanese), and given all of it at once the model drops
+# parts or loops (FLEURS dev, three sentences run together without punctuation: chrF 54.3
+# whole, 56.4 in sections of 64 pieces; Japanese, Chinese, Korean and Thai 46.7 -> 50.4;
+# ordinary sentences the same, 48.8 on 1,320 transcripts). Live captions finish a sentence
+# at about this length for the same reason (Translator.cut).
+MT_SECTION_PIECES = 64
+# Recognition errors can be long runs of one letter or word ("ออออออออ", "T T T T T T"); the
+# model would copy them over and over. Runs of five or more become three, so repetition people
+# really say ("no no no", "jajaja") is kept. Digits are left alone ("100000").
+REPEATED_CHAR = re.compile(r'([^\W\d])\1{4,}')
+REPEATED_WORD = re.compile(r'(?<!\S)(\S+)(?:\s+\1(?!\S)){4,}')
+CLAUSE_END = tuple('.,;:!?。、，；：！？…')  # where a text too long for the model is divided
 # English output: Latin letters, punctuation and a few symbols. Anything else comes from the
 # English vocabulary's byte fallback (how it spells unknown characters), copying the source.
 ENGLISH_PIECE = re.compile(r'[\u2581\x20-\u024f\u2000-\u206f\u20ac♪♫→−]+')
@@ -59,6 +69,8 @@ LANGUAGES = {
 # The languages the user can name as the spoken one, instead of letting Nemotron and langid.py
 # tell: English has its own captions, and Nemotron 3.5 does not transcribe Thai.
 SPOKEN = {code: name for code, name in LANGUAGES.items() if code not in ('en', 'th')}
+# NVIDIA lists these as needing adaptation rather than as supported: recognition is weaker.
+LESS_RELIABLE = ('el', 'he', 'lt', 'lv', 'sl')
 LANGUAGE_TAG = re.compile(r'\s*<[a-z]{2,3}(?:-[A-Za-z]{2,4})?>')
 LANGID_CODES = {**{code: code for code in LANGUAGES}, 'nb': 'no', 'nn': 'no'}  # langid.py code -> LANGUAGES
 
@@ -587,32 +599,105 @@ class Translator:
             return int(byte.group(1), 16) >= 0x80  # part of a non-ASCII character
         return not (piece.startswith('<') and piece.endswith('>')) and not ENGLISH_PIECE.fullmatch(piece)
 
+    def language(self, text, previous=None):
+        """The language of text: the one the user named, or langid.py's guess. Text too short
+        to tell keeps the previous language, unless that was English: then it is None and the
+        text is translated anyway, as English comes through the model unchanged."""
+        if self.fixed:
+            return self.fixed
+        if len(text) < self.SURE_CHARS:
+            return previous if previous != 'en' else None
+        return self.identify(text)
+
     def translate(self, text, previous=None, prefix=''):
         """(English, language code). prefix: English already shown for the start of this text,
         which the translation keeps and continues from."""
-        text = text.strip()
-        if not text:
-            return '', previous
-        if self.fixed:
-            lang = self.fixed
-        elif len(text) < self.SURE_CHARS:
-            lang = previous  # with none, it is translated anyway: English comes through unchanged
-        else:
-            lang = self.identify(text)
-        if lang == 'en':
-            return text, lang
-        source = REPEATED_WORD.sub(r'\1', REPEATED_CHAR.sub(r'\1', text))
-        pieces = self.source.encode(source, out_type=str)[:MT_MAX_PIECES]
-        # Guards against a runaway: English about as long as the source at most, no foreign
-        # letters, and no four words twice. Measured on 1,320 real transcripts: accuracy the
-        # same (48.66 chrF against 48.54), no loops or foreign letters (one before).
-        options = {'beam_size': 1, 'max_decoding_length': min(256, 2 * len(pieces) + 16),
-                   'suppress_sequences': self.blocked, 'no_repeat_ngram_size': 4}
-        if prefix:
-            options['target_prefix'] = [self.target.encode(prefix, out_type=str)]
-        out = self.model.translate_batch([pieces], **options)
-        return self.target.decode_pieces(out[0].hypotheses[0]).strip(), lang
+        return self.translate_many([(text, prefix)], previous)[0]
 
+    def translate_many(self, items, previous=None):
+        """[(text, prefix)] -> [(English, language code)], in one batch: much cheaper than one
+        at a time, which is how a backlog of sentences is caught up."""
+        langs, batch, prefixes, owners = [], [], [], []
+        for k, (text, prefix) in enumerate(items):
+            text = text.strip()
+            lang = self.language(text, previous) if text else previous
+            previous = lang or previous
+            langs.append(lang)
+            if not text or lang == 'en':
+                continue
+            source = REPEATED_WORD.sub(r'\1 \1 \1', REPEATED_CHAR.sub(r'\1\1\1', text))
+            pieces = self.source.encode(source, out_type=str)
+            # a live line is kept short (cut) and continues its prefix: it is translated in one go
+            for j, section in enumerate(self._sections(pieces) if not prefix else [pieces[:MT_MAX_PIECES]]):
+                batch.append(section)
+                prefixes.append(self.target.encode(prefix, out_type=str) if prefix and j == 0 else None)
+                owners.append(k)
+        english = [text.strip() if lang == 'en' else '' for (text, _), lang in zip(items, langs)]
+        if batch:
+            # Guards against a runaway: English about as long as the source at most, and no
+            # foreign letters (the English vocabulary's byte pieces copy the source's script).
+            options = {'beam_size': 1, 'max_decoding_length': min(256, 2 * max(map(len, batch)) + 16),
+                       'suppress_sequences': self.blocked}
+            if any(prefixes):
+                options['target_prefix'] = prefixes
+            for k, out in zip(owners, self.model.translate_batch(batch, **options)):
+                english[k] = join_text(english[k], self.target.decode_pieces(out.hypotheses[0]).strip())
+        return [(trim_loops(e), lang) for e, lang in zip(english, langs)]
+
+    def cut(self, text):
+        """Where a sentence that has grown past MT_SECTION_PIECES should end, so that it is
+        translated well: at a clause end near that length, else at a space, else there.
+        0 when it is not that long."""
+        def fits(n):
+            return len(self.source.encode(text[:n])) <= MT_SECTION_PIECES
+        if fits(len(text)):
+            return 0
+        lo, hi = 1, len(text)
+        while lo < hi:  # the longest start that fits
+            mid = (lo + hi + 1) // 2
+            lo, hi = (mid, hi) if fits(mid) else (lo, mid - 1)
+        for i in range(lo, lo * 2 // 3, -1):
+            if text[i - 1] in CLAUSE_END:
+                return i
+        space = text.rfind(' ', lo * 2 // 3, lo)
+        return space + 1 if space > 0 else lo
+
+    @staticmethod
+    def _sections(pieces):
+        """Text longer than MT_SECTION_PIECES is divided into sections of about equal length,
+        each cut at a clause end where there is one near it, and each section translated."""
+        out = []
+        while len(pieces) > MT_SECTION_PIECES:
+            size = math.ceil(len(pieces) / math.ceil(len(pieces) / MT_SECTION_PIECES))
+            near = range(size * 2 // 3, min(len(pieces) - 1, MT_SECTION_PIECES))
+            cut = max((i + 1 for i in near if pieces[i].endswith(CLAUSE_END)), default=size)
+            out.append(pieces[:cut])
+            pieces = pieces[cut:]
+        return out + [pieces]
+
+
+def trim_loops(text, keep=3):
+    """A phrase of up to six words repeated more than keep times in a row is a runaway, not
+    speech: keep times are kept. People repeat themselves, but not four times over."""
+    words = text.split()
+    norm = [w.strip('.,;:!?…"\'').lower() for w in words]
+    out, i = [], 0
+    while i < len(words):
+        for n in range(1, 7):
+            times = 1
+            while norm[i + times * n:i + (times + 1) * n] == norm[i:i + n] and i + (times + 1) * n <= len(words):
+                times += 1
+            if times > keep:
+                out += words[i:i + keep * n]
+                i += times * n
+                break
+        else:
+            out.append(words[i])
+            i += 1
+    if out and out[-1] != words[-1]:  # the sentence's end was trimmed: keep its final mark
+        end = words[-1][len(words[-1].rstrip('.!?…')):]
+        out[-1] = out[-1].rstrip(',;:') + end
+    return ' '.join(out)
 
 SENTENCE_END = '.?!。？！।؟…'
 CLOSERS = '"\'”’»)]」』'
@@ -620,11 +705,26 @@ CJK = re.compile(r'[぀-ヿ㐀-鿿豈-﫿]')
 
 
 # A sentence-final mark that more words follow: the sentence before it is complete. Western
-# marks need a space after them (not "3.5"); Chinese and Japanese ones do not.
-SENTENCE_BREAK = re.compile('[.?!।؟…][' + re.escape(CLOSERS) + r']*\s+(?=\S)|[。？！][' + re.escape(CLOSERS) + r']*(?=\S)')
+# marks need a space after them (not "3.5"); Chinese and Japanese ones may have one or not.
+SENTENCE_BREAK = re.compile('[.?!।؟…][' + re.escape(CLOSERS) + r']*\s+(?=\S)|[。？！][' + re.escape(CLOSERS) + r']*\s*(?=\S)')
 
 
 UNFINISHED_STOP = re.compile(r'(?<!\.)\.$')  # a full stop, not an ellipsis, at the end
+
+
+def abbreviation(text, at):
+    """Whether the full stop at text[at] belongs to a word rather than ending a sentence: after
+    an initial (J.), after a short capitalised word inside a sentence (el Sr. García, en EE.),
+    or followed by a word in lower case. A short word that is a sentence by itself ("No.",
+    "Sí.", "Oui.") still ends it. Language-neutral, so no list of abbreviations per language."""
+    if text[at] != '.':
+        return False
+    before = text[:at].split()
+    word = before[-1] if before else ''
+    starts = len(before) < 2 or before[-2][-1:] in SENTENCE_END  # the word begins its sentence
+    if word.isalpha() and (len(word) == 1 or (word[0].isupper() and len(word) <= 3 and not starts)):
+        return True
+    return text[at + 1:].lstrip(CLOSERS).lstrip()[:1].islower()
 
 
 def complete_sentences(text):
@@ -632,13 +732,14 @@ def complete_sentences(text):
     followed by more words (they have started the next sentence)."""
     end = 0
     for m in SENTENCE_BREAK.finditer(text):
-        end = m.end()
+        if not abbreviation(text, m.start()):
+            end = m.end()
     return end
 
 
 def ends_sentence(text):
     text = text.rstrip().rstrip(CLOSERS)
-    return bool(text) and text[-1] in SENTENCE_END
+    return bool(text) and text[-1] in SENTENCE_END and not abbreviation(text, len(text) - 1)
 
 
 def join_text(a, b):
@@ -676,13 +777,18 @@ class TranslationWorker(threading.Thread):
         self.sentence, self.sentence_at = '', None  # the sentence being spoken: finished lines so far
         self.words = ''  # the words still being spoken after them
         self.taken = ''  # the start of those words already finished as sentences (at a full stop)
-        self.waiting = deque()  # (gen, time, sentence) to translate
+        self.waiting = deque()  # (gen, time, sentence, its live English as shown) to translate
         self.live_text = self.live_done = ''  # the open sentence; the version last translated
         self.partial_at = 0.0
         self.partial_gap = self.PARTIAL_EVERY_S  # adapts to the translator's speed
         self.english = deque(maxlen=self.DISPLAY_LINES)
         self.live = ''  # English of the open sentence, as shown
         self.pinned = ''  # the start of it that stays: later translations continue from it
+        self.last_live = ''  # the English of the open sentence before its latest translation
+        self.pinned_at = None  # when the English shown for the open sentence last grew
+        self.live_turn = False  # after catching up on sentences, the live line goes next
+        self.paused = False  # the speaker paused inside a sentence: its words are final for now
+        self.opened = 0  # counts sentences, so a late live translation of a finished one is dropped
         self.language = None
         self.closing = self.stopping = False
 
@@ -701,9 +807,12 @@ class TranslationWorker(threading.Thread):
                 if not self.sentence:
                     self.sentence_at = ts
                 self.sentence = join_text(self.sentence, text)
-                if ends_sentence(self.sentence) or len(self.sentence) >= self.MAX_SENTENCE:
+                if (ends_sentence(self.sentence) or len(self.sentence) >= self.MAX_SENTENCE
+                        or self.translator.cut(self.sentence)):
                     self._finish()
             self.words = ''  # the line took them; the recognizer sends what follows it next
+            if self.sentence:  # a pause inside a sentence: show all of its English now
+                self.paused, self.live_done = True, ''
             self._update_live()
 
     def partial_text(self, text):
@@ -714,6 +823,8 @@ class TranslationWorker(threading.Thread):
             if not text.startswith(self.taken):
                 self.taken = ''  # a new line or stream: none of it is finished yet
             rest = text[len(self.taken):]
+            if rest.strip():
+                self.paused = False  # more words: the last English words are uncertain again
             end = complete_sentences(rest)
             if end:
                 if not self.sentence:
@@ -722,6 +833,17 @@ class TranslationWorker(threading.Thread):
                 self._finish()
                 self.taken = text[:len(self.taken) + end]
                 rest = rest[end:]
+            # A long stretch without punctuation is finished in parts, each short enough to
+            # translate well, so that the live line stays short too.
+            if self.sentence and self.translator.cut(join_text(self.sentence, rest.strip())):
+                self._finish()
+            while rest.strip() and (cut := self.translator.cut(rest)):
+                if not self.sentence:
+                    self.sentence_at = time.time()
+                self.sentence = rest[:cut].strip()
+                self._finish()
+                self.taken = text[:len(self.taken) + cut]
+                rest = rest[cut:]
             self.words = rest.strip()
             self._update_live()
 
@@ -738,19 +860,25 @@ class TranslationWorker(threading.Thread):
             self.gen = gen
             self.waiting.clear()
             self.sentence, self.words, self.live_text, self.live_done, self.live = '', '', '', '', ''
-            self.taken = self.pinned = ''
+            self.taken = self.pinned = self.last_live = ''
+            self.pinned_at = None
+            self.paused = False
+            self.opened += 1
             self.english.clear()
             self.lock.notify()
 
     def pending(self):
         """(time, text) of what is not translated yet, as spoken."""
         with self.lock:
-            out = [(ts, text) for gen, ts, text in self.waiting if gen == self.gen]
+            out = [(ts, text) for gen, ts, text, _ in self.waiting if gen == self.gen]
             return out + ([(self.sentence_at, self.sentence)] if self.sentence else [])
 
     def passage(self):
+        """Finished sentences in English, then those still being translated as they were shown
+        live, then the open sentence."""
         with self.lock:
-            return ' '.join(list(self.english) + ([self.live] if self.live else []))
+            waiting = [shown for gen, _, _, shown in self.waiting if gen == self.gen and shown]
+            return ' '.join(list(self.english) + waiting + ([self.live] if self.live else []))
 
     def close(self):
         """Translate what was said, then stop (without blocking the caller)."""
@@ -766,23 +894,43 @@ class TranslationWorker(threading.Thread):
             self.lock.notify()
 
     def _finish(self):  # with the lock held
-        self.waiting.append((self.gen, self.sentence_at, self.sentence))
+        """Queue the open sentence, to be translated whole (its live English stays on screen
+        meanwhile); the next sentence starts afresh, so no English of this one carries over."""
+        self.waiting.append((self.gen, self.sentence_at, self.sentence, self.live))
         self.sentence, self.sentence_at = '', None
+        self.live = self.pinned = self.last_live = ''
+        self.pinned_at = None
+        self.paused = False
+        self.opened += 1
         self.lock.notify()
 
     def _update_live(self):  # with the lock held
         self.live_text = join_text(self.sentence, self.words)
         self.lock.notify()
 
-    UNSURE_WORDS = 2  # the last words of a live translation may still change as more is said
+    FORCE_S = 1.0  # the longest the English shown waits for two translations to agree
 
     def _pin(self, english):  # with the lock held
-        """Keep all but the last UNSURE_WORDS of the open sentence's English: the next
-        translation continues from them, so the line only grows at its end and never rewords
-        what has been read."""
-        words = english.split()
-        keep = max(len(self.pinned.split()), len(words) - self.UNSURE_WORDS)
-        self.pinned = ' '.join(words[:keep])
+        """Keep the English words that this translation and the one before it agree on (never
+        the last word, whose source may be half said): later translations continue from them.
+        Only these words are shown, so English on the screen never changes while a sentence is
+        spoken; a guess that the next translation does not repeat is never shown. The rest
+        follows at a pause, and the finished sentence is shown as translated whole."""
+        words, before, shown = english.split(), self.last_live.split(), len(self.pinned.split())
+        agreed = 0
+        for a, b in zip(words, before):
+            if a != b:
+                break
+            agreed += 1
+        now = time.monotonic()
+        if self.pinned_at is None:
+            self.pinned_at = now
+        keep = min(agreed, len(words) - 1)
+        if keep <= shown and now - self.pinned_at >= self.FORCE_S:
+            keep = len(words) - 1  # translations keep disagreeing: show what there is, but its last word
+        if keep > shown:
+            self.pinned, self.pinned_at = ' '.join(words[:keep]), now
+        self.last_live = english
 
     # --- the translation thread ---------------------------------------------------------------
 
@@ -793,63 +941,76 @@ class TranslationWorker(threading.Thread):
             self.translator = None  # let go of the translation model as soon as this thread ends
             release_free_memory()
 
+    BATCH = 16  # sentences translated together when they have queued up
+
     def _run(self):
         while True:
             with self.lock:
                 while True:
                     if self.stopping or (self.closing and not self.waiting):
                         return
-                    if self.waiting:
-                        item = self.waiting[0]
-                        gen, ts, text = item
-                        job = 'sentence'
-                        break
                     changed = self.live_text != self.live_done
                     wait = self.partial_at + self.partial_gap - time.monotonic()
-                    if not self.closing and changed and wait <= 0:
-                        gen, ts, text, job = self.gen, None, self.live_text, 'live'
+                    live_due = not self.closing and changed and wait <= 0
+                    if self.waiting and not (self.live_turn and live_due):
+                        items, job = list(self.waiting)[:self.BATCH], 'sentence'
+                        break
+                    if live_due:
+                        gen, text, job = self.gen, self.live_text, 'live'
+                        pause, opened, pinned = self.paused, self.opened, self.pinned
                         break
                     self.lock.wait(max(wait, 0.01) if changed else None)
                 previous = self.language
             started = time.monotonic()
             try:
-                english, lang = self.translator.translate(text, previous, self.pinned)
-                best = english
-                if job == 'live' and not ends_sentence(text):
-                    english = UNFINISHED_STOP.sub('', english)  # the model ends everything with one
-                elif job == 'sentence' and self.pinned:
-                    # the screen keeps the pinned wording; the transcript gets the sentence
-                    # translated whole, which is better where early words were guessed
-                    best = self.translator.translate(text, previous)[0]
+                if job == 'live':
+                    english, lang = self.translator.translate(text, previous, pinned)
+                    if not ends_sentence(text):
+                        english = UNFINISHED_STOP.sub('', english)  # the model ends everything with one
+                else:
+                    # A sentence's live line was translated as it grew, its first words guessed
+                    # before the rest was said (in Japanese, before the verb): the finished
+                    # sentence is shown and kept as translated whole. Every sentence waiting
+                    # is translated in one batch, so a backlog is caught up at once.
+                    results = self.translator.translate_many([(text, '') for _, _, text, _ in items], previous)
             except Exception as e:
                 LOG.exception('Translation failed')
                 if self.on_error:
                     self.on_error(e)
                 return
             with self.lock:
-                if job == 'sentence' and self.waiting and self.waiting[0] is item:
-                    self.waiting.popleft()
-                if gen != self.gen:
-                    continue  # translated before a Clear: never shown, never kept
                 if job == 'sentence':
-                    if english:
+                    for item, (english, lang) in zip(items, results):
+                        if self.waiting and self.waiting[0] is item:
+                            self.waiting.popleft()
+                        gen, ts, text, _ = item
+                        if gen != self.gen or not english:
+                            continue  # translated before a Clear: never shown, never kept
                         self.english.append(english)
                         label = '' if lang in (None, 'en') else f' [{lang}: {text}]'
-                        self.store.append(ts, best + label)
-                    if not self.waiting:
-                        self.live = self.pinned = ''
-                        self.live_done = ''  # the open sentence, if any, is translated afresh
-                    if lang and lang != self.language:
-                        self.language = lang
-                        if self.on_language:
-                            self.on_language(lang)
+                        self.store.append(ts, english + label)
+                        if lang and lang != self.language:
+                            self.language = lang
+                            if self.on_language and not self.closing:
+                                self.on_language(lang)
+                    self.live_turn = True  # the speaker is still talking: show that next
+                    gen = self.gen
+                elif gen != self.gen or opened != self.opened:
+                    continue  # its sentence was finished or cleared meanwhile
                 else:
-                    self.live_done, self.partial_at = text, time.monotonic()
-                    took = self.partial_at - started
+                    # the next live translation starts 4 times as long after this one started as
+                    # it took: the translator uses at most a quarter of its threads' time
+                    self.live_done, self.partial_at = text, started
+                    took = time.monotonic() - started
                     self.partial_gap = min(self.PARTIAL_EVERY_S, max(self.PARTIAL_MIN_S, 4 * took))
-                    self.live = english
-                    self._pin(english)
-                self.on_caption(self.passage(), gen)
+                    self.live_turn = False
+                    if pause or (self.paused and text == self.live_text):  # a pause, maybe during it
+                        self.pinned = self.last_live = english  # nothing more is being said: it is all final
+                    else:
+                        self._pin(english)
+                    self.live = self.pinned
+                if not self.closing:  # once translation is off, the screen belongs to English captions
+                    self.on_caption(self.passage(), gen)
 
 
 class TranslatingCaptioner(Captioner):
@@ -889,11 +1050,15 @@ class TranslatingCaptioner(Captioner):
 
     def flush(self):
         super().flush()
-        if self.done:
+        if self.rec.language != 'auto':
+            self.translation.end_sentence()  # a named language keeps its stream, as English captions do
+        elif self.done:
             self._new_stream()
 
     def restart_stream(self):
-        """For a change of spoken language: the words so far are finished, then a new stream."""
+        """For a change of spoken language: the words so far, including those the recognizer
+        still holds, are finished, then a new stream."""
+        Captioner.flush(self)
         self.commit_partial()
         self._new_stream()
 
@@ -911,10 +1076,13 @@ class TranslatingCaptioner(Captioner):
             super().clear()
 
     def transcript(self):
-        """Translated sentences, then what is still being translated or spoken, as spoken."""
-        out = self.store.lines() + [stamp(ts) + text for ts, text in self.translation.pending()]
-        if self.partial.strip():
-            out.append(stamp(self.partial_since or time.time()) + self.partial.strip())
+        """Translated sentences, then what is still being translated or spoken, as spoken. Read
+        under the translation lock: a sentence is in the store or waiting, never both or neither."""
+        with self.translation.lock:
+            out = self.store.lines() + [stamp(ts) + text for ts, text in self.translation.pending()]
+            words = self.translation.words  # the partial without what was finished at a full stop
+        if words:
+            out.append(stamp(self.partial_since or time.time()) + words)
         return '\n'.join(out)
 
 
@@ -957,6 +1125,7 @@ class RecognitionWorker(threading.Thread):
         self.spoken = 'auto'  # or a key of SPOKEN
         self.translation_worker = None
         self.retired = []  # translation threads that were closed and may still be letting go of their models
+        self.translation_loader = None  # the thread loading translation's models, if any
         self.inbox = deque()  # ordered commands and at most MAX_BACKLOG audio blocks
         self.lock = threading.Condition()
         self.backlog = self.dropped = 0
@@ -1049,8 +1218,9 @@ class RecognitionWorker(threading.Thread):
             self.inbox.clear()
             self.backlog = 0
             self.lock.notify()
-        if self.translation_worker:
-            self.translation_worker.stop()
+        for worker in [self.translation_worker, *self.retired]:
+            if worker:
+                worker.stop()  # quitting: what a replaced thread was still finishing is not needed
 
     def join_all(self, timeout=5.0):
         """Wait for this thread and every translation thread, after stop(). A translation thread
@@ -1058,7 +1228,7 @@ class RecognitionWorker(threading.Thread):
         that moment, CTranslate2 cannot take the GIL back and the C++ runtime aborts the
         process, so the models must be gone before the program exits."""
         deadline = time.monotonic() + timeout
-        for thread in [self, self.translation_worker, *self.retired]:
+        for thread in [self, self.translation_worker, *self.retired, self.translation_loader]:
             if thread is not None and thread.is_alive() and thread is not threading.current_thread():
                 thread.join(max(0.0, deadline - time.monotonic()))
 
@@ -1122,13 +1292,14 @@ class RecognitionWorker(threading.Thread):
                       store=old.store if old else None, keep_raw=self.on_trace is not None)
         if self.translate_on and self.translation:
             if self.translation_worker is None:
-                self.translation_worker = TranslationWorker(
+                tw = self.translation_worker = TranslationWorker(
                     self.translation[1], common['store'] or TranscriptStore(),
                     on_caption=lambda text, gen: self.on_event('caption', (gen, text)),
                     on_language=lambda lang: self.on_event('translation-language', lang),
-                    on_error=lambda e: self._put('translate-failed', f'Translation stopped after an error: {e}'),
                     gen=self.ui_gen)
-                self.translation_worker.start()
+                # which thread failed: one that was replaced must not turn off its replacement
+                tw.on_error = lambda e: self._put('translate-failed', (tw, f'Translation stopped after an error: {e}'))
+                tw.start()
             common['store'] = self.translation_worker.store
             new = TranslatingCaptioner(self.translation[0], self.translation_worker, lambda: self.ui_gen, **common)
         else:
@@ -1136,6 +1307,10 @@ class RecognitionWorker(threading.Thread):
         if old and type(old) is type(new):  # keep the session transcript when recovering from an error
             new.continue_from(old)
         elif old:  # switching translation on or off: the transcript carries on, the screen starts afresh
+            try:
+                old.flush()  # what the old recognizer still holds is decoded, not lost
+            except Exception:
+                LOG.exception('Could not flush the old recognizer')
             old.commit_partial()
         new.set_music_filter(self.music_filter if self.music_filter_on else None)
         self.captioner = new
@@ -1146,11 +1321,26 @@ class RecognitionWorker(threading.Thread):
         elif old:
             self._caption(new.caption_text())
 
+    def _translation_failed(self, message):
+        """Translation is optional: when it cannot start or stops, it is turned off and the
+        English captions carry on."""
+        self.translate_on = False
+        self.on_event('translation-error', message)
+        if self.captioner:
+            self._switch_translation()
+        else:
+            self.on_event('translation', False)
+
     def _switch_translation(self):
         """Use the captioner the current setting asks for, and release translation when it is off."""
         if self.translate_on and self.translation:
             if not isinstance(self.captioner, TranslatingCaptioner):
-                self._new_captioner()
+                try:
+                    self._new_captioner()
+                except Exception as e:  # the English captioner is untouched: it is only replaced on success
+                    LOG.exception('Could not start translation')
+                    self._translation_failed(f'Translation could not start: {e}')
+                    return
             self.on_event('translation', True)
             return
         if isinstance(self.captioner, TranslatingCaptioner):
@@ -1181,10 +1371,11 @@ class RecognitionWorker(threading.Thread):
                 models = self.load_translation()
             except Exception as e:
                 LOG.exception('Could not load translation')
-                self._put('translate-failed', f'Translation could not be loaded: {e}')
+                self._put('translate-failed', (None, f'Translation could not be loaded: {e}'))
             else:
                 self._put('translate-loaded', models)
-        threading.Thread(target=load, name='nowcaption-translation-load', daemon=True).start()
+        self.translation_loader = threading.Thread(target=load, name='nowcaption-translation-load', daemon=True)
+        self.translation_loader.start()
 
     def _handle(self, kind, value):
         if kind == 'source':
@@ -1196,6 +1387,8 @@ class RecognitionWorker(threading.Thread):
                     self._safely(self._new_captioner)  # a new sound source is an acoustic boundary
         elif kind == 'clear':
             self.ui_gen = value
+            for retired in self.retired:  # still translating what was said before it was turned off
+                retired.reset(value)
             if self.captioner:
                 self._safely(self.captioner.clear)
         elif kind == 'snapshot':
@@ -1238,13 +1431,13 @@ class RecognitionWorker(threading.Thread):
             if self.captioner:
                 self._switch_translation()
         elif kind == 'translate-failed':
-            self.translation_loading = False
-            self.translate_on = False
-            self.on_event('translation-error', value)
-            if self.captioner:
-                self._switch_translation()
-            else:
-                self.on_event('translation', False)
+            source, message = value
+            if source is not None and source is not self.translation_worker:
+                LOG.warning('A replaced translation thread failed: %s', message)  # it was finishing old lines
+                return
+            if source is None:
+                self.translation_loading = False
+            self._translation_failed(message)
         elif kind == 'restart':
             self._safely(self._new_captioner)
         elif kind == 'recover' and self.broken and (value is None or value == self.source_gen):

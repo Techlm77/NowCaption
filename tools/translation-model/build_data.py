@@ -120,7 +120,7 @@ def run(lang):
     if os.path.exists(out_path):
         print(lang, 'exists, skipped', flush=True)
         return
-    seen, rows, rng = set(), [], random.Random(sum(map(ord, lang)))
+    seen, rows, rng, failed = set(), [], random.Random(sum(map(ord, lang))), []
     for corpus, mode, cap in COMMON + EXTRA.get(lang, []):
         url, total = url_for(lang, corpus)
         if not url:
@@ -147,10 +147,14 @@ def run(lang):
                     break
         except Exception as ex:
             print(lang, corpus, 'FAILED', repr(ex)[:200], flush=True)
+            failed.append(corpus)
         if len(bucket) > cap:
             bucket = rng.sample(bucket, cap)
         rows += [(x, e, corpus) for x, e in bucket]
         print(f'{lang} {corpus}: read {read} kept {len(bucket)} in {time.time() - t:.0f}s', flush=True)
+    if failed:  # an existing file counts as finished, so a partial one is never written
+        print(lang, 'NOT SAVED:', ', '.join(failed), 'failed; run again to retry', flush=True)
+        return
     rng.shuffle(rows)
     tmp = out_path + '.part'
     with open(tmp, 'w') as f:

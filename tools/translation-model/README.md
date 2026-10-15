@@ -38,3 +38,10 @@ $T/pack.sh nowcaption-translate-v1          # dist/nowcaption-translate-v1.tar.b
 v1 added the teacher data in four rounds at checkpoints between 25,000 and 55,000 steps,
 as the teacher finished each round on a second GPU. Results are in `model-README.md`,
 which `pack.sh` puts in the release as the model's README.
+
+Known limitation of v1: it learned from whole sentences, but live captions translate
+sentences while they are still being spoken. NowCaption shows only the English two
+translations agree on and translates each finished sentence again whole, but the model
+itself has not learned to translate an unfinished sentence without guessing its end. The
+next version should also train on cut-off pairs: a sentence's start with the teacher's
+translation of just that start.

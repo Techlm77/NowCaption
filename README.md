@@ -33,13 +33,12 @@ move, drag an edge to resize. **Right-click** for the menu:
 - **Desktop audio** or **Microphone**
 - **Background filter**: picks voices out of music and noise. Off by default, as it
   uses a little more CPU and slightly lowers accuracy on plain speech.
-- **Translate to English**: English captions for speech in Arabic, Bulgarian,
-  Chinese, Croatian, Czech, Danish, Dutch, Estonian, Finnish, French, German, Hindi,
-  Hungarian, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Romanian,
-  Russian, Slovak, Spanish, Swedish, Turkish, Ukrainian and Vietnamese, and less
-  reliably Greek, Hebrew, Latvian, Lithuanian and Slovenian. The language is
-  detected for you, or pick it under **Spoken language** for the quickest captions.
-  Off by default, as it needs about 1.1 GB more memory.
+- **Translate to English**: English captions for speech in 32 languages, about a
+  second behind the speaker. Best for Portuguese, German, French, Arabic, Bulgarian,
+  Norwegian, Swedish and Ukrainian; roughest for Chinese, Japanese, Korean and the five
+  marked "less reliable" ([quality and delay per language](benchmark/#per-language)).
+  The language is detected for you, or pick it under **Spoken language**. Off by
+  default, as it needs about 1.1 GB more memory.
 - Text size, background, position
 - Copy, save or clear the transcript
 

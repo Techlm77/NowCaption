@@ -187,8 +187,8 @@ correct paraphrase still scores below 100).
 
 | Approach | Mean chrF | Live | Notes |
 |---|---|---|---|
-| **Nemotron 3.5 streaming → NowCaption Translate v1 int8 (1.3.0)** | **51.8** | **yes** | 33 languages |
-| Nemotron 3.5 streaming → langid.py → M2M100 418M int8 (1.2.0) | 50.5 | yes | 33 languages |
+| **Nemotron 3.5 streaming → NowCaption Translate v1 int8 (1.3.0, as shown live)** | **51.9** | **yes** | 32 languages |
+| Nemotron 3.5 streaming → langid.py → M2M100 418M int8 (1.2.0) | 50.5 | yes | 32 languages |
 | Whisper small, translate task | 45.3 | no, per phrase | weak on Chinese, Japanese, Korean, Hindi and Arabic |
 | Whisper medium, translate task | 52.2 | no, per phrase | 5–9 s per sentence on 4 threads, 900 MB |
 | Nemotron 3.5 → Opus-MT mul-en | 41.3 | yes | fails on Korean |
@@ -202,14 +202,14 @@ Per language, with NowCaption 1.3.0 and 1.2.0 and the two Whisper models:
 | German | **59** | 57 | 54 | 60 |
 | French | **55** | 56 | 52 | 58 |
 | Arabic | **55** | 54 | 38 | 52 |
-| Hindi | **52** | 52 | 39 | 45 |
-| Russian | **54** | 52 | 51 | 53 |
+| Hindi | **51** | 52 | 39 | 45 |
+| Russian | **53** | 52 | 51 | 53 |
 | Spanish | **53** | 51 | 51 | 54 |
 | Italian | **53** | 51 | 49 | 54 |
 | Turkish | **51** | 50 | 46 | 53 |
 | Korean | **44** | 44 | 38 | 45 |
 | Japanese | **43** | 41 | 35 | 44 |
-| Chinese | **41** | 39 | 32 | 45 |
+| Chinese | **43** | 39 | 32 | 45 |
 
 NowCaption Translate v1 is NowCaption's own model, trained from scratch for live
 captions (`tools/translation-model`). It does not need to be told the source
@@ -225,6 +225,65 @@ language, so a wrong guess cannot spoil the English. Against M2M100 418M, which
 
 With perfect transcripts the translator averages 57.3 on these 12 languages, so most
 of the remaining loss is speech recognition, especially in Chinese and Japanese.
+
+### Per language
+
+Every language Translate to English accepts, measured through NowCaption's own live code
+(`translation/live_languages.py`), so the scores are of the English you actually read:
+
+- **From speech**: the first 40 FLEURS test recordings, recognised by Nemotron with the
+  language detected and translated live; the English finally shown, chrF against the
+  FLEURS English. Quality: very good 55 and up, good 50–55, fair 45–50, rough below 45.
+- **From text**: the translation model alone on the FLEURS test text (perfect transcripts,
+  10,908 sentences in all). The gap to "from speech" is what speech recognition loses.
+- **First English**: seconds from when the speaker starts to the first English on screen.
+  **Complete**: seconds from when the speaker stops until the English of what they said is
+  complete. Medians of 10 recordings played in real time, on a Ryzen 9 7900X.
+
+| Language | Quality | From speech | From text | First English | Complete |
+|---|---|---|---|---|---|
+| Portuguese | very good | 62.4 | 67.5 | 1.1 s | 2.3 s |
+| German | very good | 58.9 | 62.6 | 1.0 s | 2.0 s |
+| Bulgarian | very good | 55.9 | 63.0 | 1.0 s | 2.1 s |
+| Norwegian | very good | 55.5 | 63.5 | 1.2 s | 1.8 s |
+| Swedish | very good | 55.2 | 66.2 | 1.4 s | 2.0 s |
+| French | very good | 55.2 | 62.8 | 1.0 s | 1.9 s |
+| Arabic | very good | 55.2 | 58.3 | 1.0 s | 2.2 s |
+| Ukrainian | very good | 55.0 | 59.5 | 1.3 s | 2.4 s |
+| Romanian | good | 53.8 | 63.8 | 1.2 s | 1.8 s |
+| Russian | good | 53.2 | 56.9 | 1.8 s | 1.9 s |
+| Italian | good | 52.7 | 57.8 | 1.2 s | 2.5 s |
+| Czech | good | 52.7 | 61.2 | 1.2 s | 1.9 s |
+| Spanish | good | 52.6 | 56.1 | 0.8 s | 1.9 s |
+| Turkish | good | 51.3 | 56.8 | 2.1 s | 1.5 s |
+| Finnish | good | 51.0 | 55.9 | 1.2 s | 2.1 s |
+| Hindi | good | 50.6 | 57.3 | 1.3 s | 2.0 s |
+| Danish | good | 50.1 | 67.1 | 1.3 s | 2.8 s |
+| Slovak | fair | 49.7 | 60.9 | 0.9 s | 1.9 s |
+| Dutch | fair | 47.0 | 57.0 | 0.9 s | 2.0 s |
+| Polish | fair | 46.3 | 53.9 | 1.1 s | 2.1 s |
+| Estonian | fair | 45.4 | 58.7 | 1.6 s | 2.2 s |
+| Vietnamese | fair | 45.1 | 54.1 | 1.2 s | 2.1 s |
+| Korean | rough | 44.2 | 50.8 | 1.4 s | 1.3 s |
+| Chinese | rough | 43.4 | 50.9 | 0.8 s | 2.8 s |
+| Japanese | rough | 43.1 | 50.0 | 1.3 s | 1.7 s |
+| Croatian | rough | 43.1 | 59.4 | 1.4 s | 2.0 s |
+| Hungarian | rough | 42.4 | 56.8 | 1.7 s | 1.5 s |
+| Latvian ¹ | rough | 41.0 | 58.2 | 1.2 s | 1.9 s |
+| Greek ¹ | rough | 40.9 | 55.4 | 1.3 s | 2.0 s |
+| Hebrew ¹ | rough | 37.3 | 59.6 | 1.1 s | 1.7 s |
+| Lithuanian ¹ | rough | 36.7 | 55.1 | 1.1 s | 2.0 s |
+| Slovenian ¹ | rough | 36.3 | 57.4 | 1.5 s | 1.8 s |
+| Thai | not available: Nemotron 3.5 does not transcribe Thai | — | 51.7 | — | — |
+
+¹ NVIDIA lists these as needing adaptation for Nemotron 3.5; the app marks them "less
+reliable". Their text scores are fine: it is the speech recognition that is weak.
+
+Across the 32 languages: 48.9 chrF from speech, first English
+1.2 s after the speaker starts, complete 2.0 s after they stop.
+A few recordings took 4–6 s before their first English, when the start of the speech was
+recognised slowly. `results/translation-live-languages.json` has every number, including
+each recording's timings.
 
 Cost on the Ryzen 7 7800X3D: Nemotron uses 0.36 CPU seconds per second of audio
 on one thread. Translation adds about 1.1 GB of memory, which is returned when it

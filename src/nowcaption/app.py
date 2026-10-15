@@ -545,7 +545,8 @@ class NowCaption(Adw.Application):
         spoken = Gio.Menu()  # naming the language saves detecting it, which can miss the first words
         spoken.append('Detect automatically', 'app.spoken::auto')
         for code, name in sorted(engine.SPOKEN.items(), key=lambda kv: kv[1]):
-            spoken.append(name, f'app.spoken::{code}')
+            label = f'{name} (less reliable)' if code in engine.LESS_RELIABLE else name
+            spoken.append(label, f'app.spoken::{code}')
         options = Gio.Menu()
         options.append('Background filter', 'app.music-filter')
         options.append('Translate to English', 'app.translate')
@@ -631,7 +632,7 @@ class NowCaption(Adw.Application):
             self.window.show_status('Background filter off.', seconds=3)
 
     def on_translate(self, action, value):
-        """Optional translation to English from 33 languages. Off by default: it needs about
+        """Optional translation to English from 32 languages. Off by default: it needs about
         1.3 GB more memory and a core of processor time, and is less accurate on English."""
         on = not action.get_state().get_boolean()
         if on:
@@ -784,7 +785,7 @@ class NowCaption(Adw.Application):
                     action.set_state(GLib.Variant('b', value))
                     self.settings.set('translate', int(value))
                 if value:
-                    self.window.show_status('Translating to English from 33 languages.', seconds=5)
+                    self.window.show_status('Translating to English from 32 languages.', seconds=5)
         elif kind == 'translation-error':
             self.window.show_status(value, seconds=8)
         elif kind == 'translation-language':
