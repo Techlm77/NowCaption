@@ -63,7 +63,7 @@ sudo apt install python3-gi python3-gi-cairo python3-venv gir1.2-gtk-4.0 gir1.2-
 sudo dnf install python3-gobject python3-cairo gtk4 libadwaita gstreamer1-plugins-base gstreamer1-plugins-good
 
 ./tools/run-dev.sh                        # downloads the models on first run
-./tools/fetch-models.sh --translation     # optional: models for Translate to English
+./tools/fetch-models.sh --translation     # optional: models for Translate to English (1.3.0 or later)
 ./tools/build-flatpak.sh                  # or build the Flatpak
 ```
 

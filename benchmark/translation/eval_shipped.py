@@ -2,7 +2,7 @@
 langid.py -> M2M100 418M CTranslate2 int8, scored with chrF; also how often langid.py
 picks the right language, and what a wrong source-language tag costs.
 Usage: eval_shipped.py <nemotron-asr.json> <m2m100-ct2-int8-dir>   (the dir must hold
-sentencepiece.bpe.model, as in the translation-models-v1 release)
+sentencepiece.bpe.model, as NowCaption 1.2.0's tools/export-translation-model.sh made it)
 """
 import collections, json, sys
 import ctranslate2, langid, sacrebleu
