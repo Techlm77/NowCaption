@@ -33,29 +33,12 @@ modules:
         tag: v1.3.0
         commit: 1c963c51514581c41b9bdae08cdf69171265cdda
 
-  # sherpa-onnx (Apache-2.0, bundles ONNX Runtime, MIT) and numpy, as upstream wheels; for the
-  # optional translation to English, CTranslate2 (MIT) and SentencePiece (Apache-2.0).
+  # sherpa-onnx (Apache-2.0, bundles ONNX Runtime, MIT) and numpy, as upstream wheels.
   - name: python3-deps
     buildsystem: simple
     build-commands:
-      - pip3 install --no-index --no-deps --find-links=. --prefix=/app sherpa-onnx sherpa-onnx-core numpy ctranslate2 sentencepiece
+      - pip3 install --no-index --no-deps --find-links=. --prefix=/app sherpa-onnx sherpa-onnx-core numpy
     sources:
-      - type: file
-        only-arches: [x86_64]
-        url: https://files.pythonhosted.org/packages/b2/97/db80101f993f6febd1fbf91249cd900fc38af927cd90e04952400296ab45/ctranslate2-4.8.3-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
-        sha256: 7039b9b9f0520a891108b795c7bd960413cd54df9db319f9afc4c164d28336dc
-      - type: file
-        only-arches: [aarch64]
-        url: https://files.pythonhosted.org/packages/eb/4a/735687d9bb5141e2a5ac6531482a4b1de2b06d7320c6f500590bb834b3bf/ctranslate2-4.8.3-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
-        sha256: 9f90e240ccb0b29d1296e435be2b73a915cf5770bf13b12d21d61470d9ce80c0
-      - type: file
-        only-arches: [x86_64]
-        url: https://files.pythonhosted.org/packages/24/b3/718847349da7b25c8220ed86d85b89080af94740b2d87a59198104ae5c51/sentencepiece-0.2.2-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
-        sha256: 8d44b20234905ff022b7d535f79d1f823ad7670c9851cc4f03cdc34787cdb3ab
-      - type: file
-        only-arches: [aarch64]
-        url: https://files.pythonhosted.org/packages/10/ca/1b6c251321901cbf8a2d2e48b8b70eb82a449011b766af52a228d0a90b6b/sentencepiece-0.2.2-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
-        sha256: 1402d8ee36f0d851cea8eee4dbb85fea14643b7503cf4d00d102eec0fe3ca719
       - type: file
         only-arches: [x86_64]
         url: https://files.pythonhosted.org/packages/2d/e2/b1af63c1f6a9e0025cbc9aa3b1814ba97ede63db0ad9f297bb9f268fdfc2/sherpa_onnx-1.13.8-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
@@ -81,32 +64,16 @@ modules:
         url: https://files.pythonhosted.org/packages/63/d6/34b0a2b0741386a63025a65a2c09caaaaaad6d0ca95b66cd65c30dd7fcb5/numpy-2.5.4-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
         sha256: 4054173604cd8658796053f1f3bc0befb68ec1c0762c57fdad61e199256a8617
 
-  # langid.py (BSD-2-Clause) identifies the spoken language from the recognised text, so that
-  # translation knows what it is translating from. Only its two source files are needed.
-  - name: langid
-    buildsystem: simple
-    build-commands:
-      - install -Dm644 -t "$(python3 -c 'import sysconfig; print(sysconfig.get_path("purelib", vars={"base":"/app"}))')/langid" langid/__init__.py langid/langid.py
-    sources:
-      - type: archive
-        url: https://files.pythonhosted.org/packages/ea/4c/0fb7d900d3b0b9c8703be316fbddffecdab23c64e1b46c7a83561d78bd43/langid-1.1.6.tar.gz
-        sha256: 044bcae1912dab85c33d8e98f2811b8f4ff1213e5e9a9e9510137b84da2cb293
-
   # Speech model: NVIDIA stt_en_fastconformer_hybrid_large_streaming_multi (CC-BY-4.0),
   # exported to ONNX at 80 ms lookahead by tools/export-model.py and attached to a GitHub release.
   # Punctuation/casing model: Edge-Punct-Casing (Apache-2.0), packaged by k2-fsa.
   # Optional background filter: DPDFNet2 speech enhancement by Ceva (Apache-2.0), packaged by k2-fsa.
-  # Optional translation to English: NVIDIA Nemotron 3.5 ASR Streaming 0.6B (OpenMDW-1.1),
-  # packaged by k2-fsa, and NowCaption Translate v1 by Techlm77 (CC-BY-4.0), trained from scratch
-  # with tools/translation-model and attached to a GitHub release.
   - name: models
     buildsystem: simple
     build-commands:
       - install -Dm644 -t /app/share/nowcaption/models/nowcaption-fastconformer-en-80ms-cc-by-v1 asr/tokens.txt asr/encoder.int8.onnx asr/decoder.int8.onnx asr/joiner.int8.onnx asr/README.md
       - install -Dm644 -t /app/share/nowcaption/models/sherpa-onnx-online-punct-en-2024-08-06 punct/model.int8.onnx punct/bpe.vocab punct/README.md
       - install -Dm644 -t /app/share/nowcaption/models/dpdfnet2 filter/dpdfnet2.onnx
-      - install -Dm644 -t /app/share/nowcaption/models/sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-320ms-int8-2026-06-11 translate-asr/tokens.txt translate-asr/encoder.int8.onnx translate-asr/decoder.int8.onnx translate-asr/joiner.int8.onnx translate-asr/README.md
-      - install -Dm644 -t /app/share/nowcaption/models/nowcaption-translate-v1 mt/model.bin mt/config.json mt/source_vocabulary.json mt/target_vocabulary.json mt/source.spm mt/target.spm mt/LICENSE mt/README.md
     sources:
       - type: archive
         url: https://github.com/Techlm77/NowCaption/releases/download/models-v1/nowcaption-fastconformer-en-80ms-cc-by-v1.tar.bz2
@@ -121,14 +88,6 @@ modules:
         url: https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/dpdfnet2.onnx
         sha256: ce35d6025fc71df0ef10d1540e1b7916837bbfe5f6896deb744508d2cad487a9
         dest: filter
-      - type: archive
-        url: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-320ms-int8-2026-06-11.tar.bz2
-        sha256: 5f311142337a5c161e92d49f7a3009d8607d3836f39d610bff5307c74d1d2c53
-        dest: translate-asr
-      - type: archive
-        url: https://github.com/Techlm77/NowCaption/releases/download/translation-models-v2/nowcaption-translate-v1.tar.bz2
-        sha256: c6458935b8ec6f3f15c62ba66096fb57e3105e1c2052af3880512f8ad643331d
-        dest: mt
 
   - name: nowcaption
     buildsystem: simple
@@ -141,8 +100,6 @@ modules:
       - install -Dm644 data/icons/io.github.Techlm77.NowCaption.svg -t /app/share/icons/hicolor/scalable/apps
       - install -Dm644 LICENSE -t /app/share/licenses/io.github.Techlm77.NowCaption
       - install -Dm644 MODEL-LICENSES.md -t /app/share/licenses/io.github.Techlm77.NowCaption
-      - install -Dm644 licenses/OpenMDW-1.1.txt -t /app/share/licenses/io.github.Techlm77.NowCaption
-      - install -Dm644 licenses/OpenMDW-1.1.txt /app/share/nowcaption/models/sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-320ms-int8-2026-06-11/LICENSE
     sources:
       # This checkout: the release workflow builds each tagged version from it.
       - type: dir

@@ -38,10 +38,9 @@ STEPPERS = {
                    ('More solid', 'app.darker', 'value-increase-symbolic')),
 }
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
-            'width': -1, 'rows': ROWS, 'music_filter': 0, 'translate': 0, 'spoken': 'auto'}
-LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'music_filter': (0, 1),
-          'translate': (0, 1)}
-CHOICES = {'source': ('desktop', 'mic'), 'spoken': ('auto', *engine.SPOKEN)}
+            'width': -1, 'rows': ROWS, 'music_filter': 0}
+LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'music_filter': (0, 1)}
+CHOICES = {'source': ('desktop', 'mic')}
 
 
 class Settings:
@@ -519,6 +518,7 @@ class NowCaption(Adw.Application):
         self.recognition_retry_id = None
         self.recognition_retry_token = 0
         self.pending_saves = 0
+        self.save_queues = {}  # destination URI -> accepted writes, in snapshot order
         self.quit_requested = False
         self.capture = audio.Capture(
             on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
@@ -542,16 +542,7 @@ class NowCaption(Adw.Application):
         menu = Gio.Menu()
         menu.append_item(section(('Desktop audio', 'app.source::desktop', None),
                                  ('Microphone', 'app.source::mic', None)))
-        spoken = Gio.Menu()  # naming the language saves detecting it, which can miss the first words
-        spoken.append('Detect automatically', 'app.spoken::auto')
-        for code, name in sorted(engine.SPOKEN.items(), key=lambda kv: kv[1]):
-            label = f'{name} (less reliable)' if code in engine.LESS_RELIABLE else name
-            spoken.append(label, f'app.spoken::{code}')
-        options = Gio.Menu()
-        options.append('Background filter', 'app.music-filter')
-        options.append('Translate to English', 'app.translate')
-        options.append_submenu('Spoken language', spoken)
-        menu.append_section(None, options)
+        menu.append_item(section(('Background filter', 'app.music-filter', None)))
         steppers = Gio.Menu()  # filled with button rows by CaptionWindow.update_menu
         for name in STEPPERS:
             item = Gio.MenuItem.new(None, None)
@@ -585,13 +576,6 @@ class NowCaption(Adw.Application):
                                               GLib.Variant('b', bool(self.settings.get('music_filter'))))
         music.connect('activate', self.on_music_filter)
         self.add_action(music)
-        translate = Gio.SimpleAction.new_stateful('translate', None, GLib.Variant('b', False))
-        translate.connect('activate', self.on_translate)  # turned on once the speech models are loaded
-        self.add_action(translate)
-        spoken = Gio.SimpleAction.new_stateful('spoken', GLib.VariantType.new('s'),
-                                               GLib.Variant('s', self.settings.get('spoken')))
-        spoken.connect('activate', self.on_spoken)
-        self.add_action(spoken)
         act('larger', lambda: self.resize(+1), ['<Control>plus', '<Control>equal'])
         act('smaller', lambda: self.resize(-1), ['<Control>minus'])
         act('lighter', lambda: self.opacity(-0.15))
@@ -631,37 +615,6 @@ class NowCaption(Adw.Application):
         else:
             self.window.show_status('Background filter off.', seconds=3)
 
-    def on_translate(self, action, value):
-        """Optional translation to English from 32 languages. Off by default: it needs about
-        1.3 GB more memory and a core of processor time, and is less accurate on English."""
-        on = not action.get_state().get_boolean()
-        if on:
-            missing = engine.translation_missing()
-            if missing:
-                self.window.show_status(missing, seconds=10)
-                return
-        action.set_state(GLib.Variant('b', on))
-        self.settings.set('translate', int(on))
-        if self.worker:
-            self.worker.set_translation(on)
-        if not on:
-            self.window.show_status('Translation off.', seconds=3)
-
-    def on_spoken(self, action, value):
-        """The language being spoken, for translation. Named, it is known from the first word;
-        detected, the start of each new speaker can be missed while Nemotron finds it."""
-        code = value.get_string()
-        action.set_state(value)
-        self.settings.set('spoken', code)
-        if self.worker:
-            self.worker.set_spoken(code)
-        if not self.lookup_action('translate').get_state().get_boolean():
-            self.activate_action('translate', None)  # naming a spoken language asks for translation
-        elif code == 'auto':
-            self.window.show_status('Detecting the spoken language.', seconds=3)
-        else:
-            self.window.show_status(f'Translating from {engine.SPOKEN[code]}.', seconds=3)
-
     def resize(self, step):
         size = self.settings.get('size')
         i = min(range(len(SIZES)), key=lambda k: abs(SIZES[k] - size))
@@ -687,10 +640,6 @@ class NowCaption(Adw.Application):
         self.worker.start()
         if self.settings.get('music_filter'):
             self.worker.set_music_filter(True)
-        self.worker.set_spoken(self.settings.get('spoken'))
-        if self.settings.get('translate') and not engine.translation_missing():
-            self.lookup_action('translate').set_state(GLib.Variant('b', True))
-            self.worker.set_translation(True)
         GLib.timeout_add_seconds(60, self.release_memory)
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
         if shot:
@@ -776,42 +725,26 @@ class NowCaption(Adw.Application):
             if action and action.get_state().get_boolean() != value:  # it could not be loaded
                 action.set_state(GLib.Variant('b', value))
                 self.settings.set('music_filter', int(value))
-        elif kind == 'translation':
-            if value == 'loading':
-                self.window.show_status('Loading translation…', sticky=True)
-            else:
-                action = self.lookup_action('translate')
-                if action and action.get_state().get_boolean() != value:
-                    action.set_state(GLib.Variant('b', value))
-                    self.settings.set('translate', int(value))
-                if value:
-                    self.window.show_status('Translating to English from 32 languages.', seconds=5)
-        elif kind == 'translation-error':
-            self.window.show_status(value, seconds=8)
-        elif kind == 'translation-language':
-            spoken = self.settings.get('spoken')
-            if spoken != 'auto' and value != spoken:
-                return False  # a queued event must not replace a newer language selection
-            name = engine.LANGUAGES.get(value, value)
-            self.window.show_status('English speech detected.' if value == 'en'
-                                    else f'Translating from {name}.', seconds=3)
         elif kind == 'overload':
             self.window.show_status(f'Falling behind: skipped {value:.1f} s of audio', seconds=4)
         elif kind == 'load-error':
             self.ready = False
             self.window.show_failure('model', f'{value} Right-click and choose a sound source to try again.')
         elif kind == 'error':
-            if not getattr(self.worker, 'broken', True):
-                return False  # a source change already recovered this queued error
+            source_gen, stream_gen, message = value
+            if (source_gen != self.source_gen or
+                    stream_gen != getattr(self.worker, 'stream_gen', stream_gen) or
+                    not getattr(self.worker, 'broken', True)):
+                return False  # an obsolete source/stream cannot spend the current retry budget
             self.cancel_recognition_retry()
             self.recognition_failures += 1
             if self.recognition_failures <= 3:
                 delay = 2 ** self.recognition_failures
-                self.window.show_failure('recognition', f'{value}. Restarting in {delay} s…')
+                self.window.show_failure('recognition', f'{message}. Restarting in {delay} s…')
                 self.recognition_retry_id = GLib.timeout_add_seconds(
                     delay, self.retry_recognition, self.recognition_retry_token, self.source_gen)
             else:
-                self.window.show_failure('recognition', f'{value}. Right-click and choose a sound source to try again.')
+                self.window.show_failure('recognition', f'{message}. Right-click and choose a sound source to try again.')
         return False
 
     # --- capture ----------------------------------------------------------------------------
@@ -924,15 +857,32 @@ class NowCaption(Adw.Application):
             self.quit()
 
     def write_transcript(self, f, text, tracked=False):
-        """Write asynchronously (a slow or network destination never stalls the window) and say
-        whether it worked."""
+        """Queue saves to each destination so an older write cannot replace newer text."""
         if not tracked:
             self.begin_save()
+        key = f.get_uri()
+        queue = self.save_queues.setdefault(key, [])
+        queue.append((f, text))
+        if len(queue) == 1:
+            self.start_save(key)
+
+    def start_save(self, key):
+        """Write one queued snapshot asynchronously; other destinations can proceed in parallel."""
+        queue = self.save_queues[key]
+        f, text = queue[0]
+
+        def finished(success):
+            queue.pop(0)
+            if not queue:
+                del self.save_queues[key]
+            self.finish_save(success)
+            if queue:
+                self.start_save(key)
 
         def failed(error):
             LOG.warning('Saving the transcript failed: %s', error)
             self.window.show_status(f'Could not save the transcript: {error}', seconds=8)
-            self.finish_save(False)
+            finished(False)
 
         def written(f, result):
             try:
@@ -941,7 +891,7 @@ class NowCaption(Adw.Application):
                 failed(e.message)
                 return
             self.window.show_status(f'Transcript saved to {f.get_basename()}.', seconds=4)
-            self.finish_save(True)
+            finished(True)
         try:
             f.replace_contents_bytes_async(GLib.Bytes.new((text + '\n').encode()), None, False,
                                            Gio.FileCreateFlags.REPLACE_DESTINATION, None, written)
@@ -963,16 +913,6 @@ class NowCaption(Adw.Application):
         about.add_legal_section('Punctuation model', 'Edge-Punct-Casing by frankyoujian', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('Background filter model', 'DPDFNet2 © Ceva', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('sherpa-onnx', '© k2-fsa', Gtk.License.APACHE_2_0, None)
-        about.add_legal_section('Translation speech model', 'Nemotron 3.5 ASR Streaming 0.6B © NVIDIA',
-                                Gtk.License.CUSTOM, 'OpenMDW License Agreement, version 1.1 (OpenMDW-1.1). '
-                                'https://openmdw.ai/license/1-1/')
-        about.add_legal_section('Translation model', 'NowCaption Translate v1 © Techlm77', Gtk.License.CUSTOM,
-                                'Creative Commons Attribution 4.0 International (CC-BY-4.0). Trained from scratch '
-                                'for NowCaption on OPUS parallel text. '
-                                'https://github.com/Techlm77/NowCaption/releases/tag/translation-models-v2')
-        about.add_legal_section('CTranslate2', '© OpenNMT', Gtk.License.MIT_X11, None)
-        about.add_legal_section('SentencePiece', '© Google', Gtk.License.APACHE_2_0, None)
-        about.add_legal_section('langid.py', '© Marco Lui', Gtk.License.BSD, None)
         about.present(None)  # its own window, not squeezed into the caption box
 
 
@@ -986,8 +926,4 @@ def main():
               f'GTK {gtk[0]}.{gtk[1]} and libadwaita {adw[0]}.{adw[1]}. The Flatpak includes both.',
               file=sys.stderr)
         return 1
-    app = NowCaption()
-    status = app.run(sys.argv)
-    if app.worker:  # the window is gone: let the native models go before the interpreter exits
-        app.worker.join_all(5)
-    return status
+    return NowCaption().run(sys.argv)

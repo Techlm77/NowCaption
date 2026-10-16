@@ -27,11 +27,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def load_app_methods():
     tree = ast.parse((ROOT / 'src/nowcaption/app.py').read_text())
-    wanted = {'on_source', 'start_capture', 'on_worker', 'clear_transcript', 'on_shutdown', 'on_translate',
+    wanted = {'on_source', 'start_capture', 'on_worker', 'clear_transcript', 'on_shutdown',
               'capture_ended', 'capture_started', 'retry_capture', 'width_for', 'watch_monitor', 'use_monitor',
               'on_monitor_geometry', 'disconnect_monitors', 'on_monitors_changed',
               'cancel_recognition_retry', 'retry_recognition', 'request_quit', 'on_window_close',
-              'save_transcript', 'write_transcript', 'begin_save', 'finish_save',
+              'save_transcript', 'write_transcript', 'start_save', 'begin_save', 'finish_save',
               'show_text', 'show_status', 'show_failure', 'clear_failure', 'end_status',
               'render', 'caption_height', 'box_height'}
     classes = []
@@ -40,10 +40,8 @@ def load_app_methods():
             node.bases, node.keywords, node.decorator_list = [], [], []
             node.body = [m for m in node.body if isinstance(m, ast.FunctionDef) and m.name in wanted]
             classes.append(node)
-    context = {'os': __import__('os'), 'audio': audio, 'engine': engine,
-               'LOG': __import__('logging').getLogger('nowcaption'),
-               'GLib': NS(timeout_add_seconds=lambda *a: 1, source_remove=lambda *a: None,
-                          Variant=lambda kind, value: NS(unpack=lambda: value)),
+    context = {'os': __import__('os'), 'audio': audio, 'LOG': __import__('logging').getLogger('nowcaption'),
+               'GLib': NS(timeout_add_seconds=lambda *a: 1, source_remove=lambda *a: None),
                'LayerShell': NS(set_monitor=lambda *a: None),
                'ROWS': 2, 'PAD_Y': 12, 'last_rows': lambda layout, text, rows: text}
     exec(compile(ast.fix_missing_locations(ast.Module(body=classes, type_ignores=[])),
@@ -69,6 +67,7 @@ def app_with_fakes():
     a.recognition_retry_id = None
     a.recognition_retry_token = 0
     a.pending_saves = 0
+    a.save_queues = {}
     a.quit_requested = False
     a.capture = NS(starts=[], start=lambda device, gen: a.capture.starts.append((device, gen)), stop=lambda: None)
     return a

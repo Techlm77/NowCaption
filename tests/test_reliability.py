@@ -58,7 +58,6 @@ class FakeStream:
 
 class FakeRecognizer:
     """Appends the next scripted word for each block of speech."""
-    language = 'auto'  # the multilingual recognizer's spoken language
 
     def __init__(self, script=()):
         self.script, self.text = list(script), ''
@@ -172,7 +171,7 @@ class WorkerTests(unittest.TestCase):
         events.wait('caption', lambda v: 'Hello' in v[1])
         rec.fail = True
         self.worker.feed(1, SPEECH)
-        self.assertIn('injected recognizer failure', events.wait('error'))
+        self.assertIn('injected recognizer failure', events.wait('error')[2])
         self.assertTrue(self.worker.is_alive())
         rec.fail = False
         self.worker.restart()

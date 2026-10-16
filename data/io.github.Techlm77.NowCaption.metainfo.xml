@@ -16,14 +16,11 @@
     </p>
     <p>
       Speech is recognised on your own computer. Audio never leaves it, no account is needed,
-      and it works offline. Captions are in English, and speech in 32 other languages can be
-      translated to English, also on your computer.
+      and it works offline. NowCaption currently understands English only.
     </p>
     <ul>
       <li>Punctuation and capital letters, written as people speak</li>
       <li>Streaming captions that update as people speak</li>
-      <li>Optional live translation to English from 32 languages, such as Spanish, French,
-        German, Japanese, Chinese, Korean, Hindi and Arabic</li>
       <li>Light on the processor, and idle while everything is quiet</li>
       <li>Floats above other windows on KDE Plasma, Hyprland and Sway</li>
       <li>Adjustable text size and background, and a transcript you can copy or save</li>
@@ -60,55 +57,19 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
-    <release version="1.3.1" date="2026-10-16">
+    <release version="1.1.5" date="2026-10-16">
       <description>
         <p>
-          Fixes for Translate to English.
+          NowCaption is English-only again: Translate to English has been removed. Copied and
+          saved transcripts now keep the same punctuation as the captions on screen, including
+          lines that have scrolled away.
         </p>
         <ul>
-          <li>Speech that was mistaken for English is now translated instead of shown as it is</li>
-          <li>Translated captions no longer stop short when the speaker pauses: the newest
-            words appear without waiting for more speech</li>
-          <li>Guessed sentence endings no longer stay on screen after the speaker carries on</li>
-          <li>Changing the spoken language or the sound source no longer loses words, merges
-            two sentences or relabels what was already said</li>
-          <li>Turning translation off no longer briefly brings back old English captions</li>
-          <li>Copied and saved transcripts keep sentences in the order they were spoken, even
-            when a translation finishes late</li>
+          <li>Saving to the same file twice in quick succession always keeps the newer
+            transcript</li>
+          <li>A late error from a previous sound source can no longer interrupt recovery of
+            the current one</li>
         </ul>
-      </description>
-    </release>
-    <release version="1.3.0" date="2026-10-15">
-      <description>
-        <p>
-          Translate to English now uses NowCaption's own translation model, trained from
-          scratch for live captions. It is more accurate than before, about 19 times faster,
-          and uses about 400 MB less memory.
-        </p>
-        <ul>
-          <li>Pick the spoken language under Spoken language for the quickest captions;
-            detecting it automatically is still the default</li>
-          <li>Translated captions follow the speaker sooner, and words already shown stay
-            put until the sentence is finished</li>
-          <li>Long stretches of speech without punctuation are translated in full</li>
-          <li>Fixed: when speech was misheard, translated captions could fill with
-            repeated or foreign letters</li>
-          <li>Fixed: turning translation on or off could lose the last word, and a
-            failure to start translation could stop English captions</li>
-          <li>Fixed: NowCaption could crash on quitting while translation was on</li>
-        </ul>
-      </description>
-    </release>
-    <release version="1.2.0" date="2026-10-14">
-      <description>
-        <p>
-          New: Translate to English. Turn it on in the right-click menu to see English captions
-          of speech in 33 other languages, including Spanish, French, German, Portuguese,
-          Italian, Russian, Chinese, Japanese, Korean, Hindi, Arabic and Turkish. The language
-          is recognised automatically, and the English follows the speaker live. Translation
-          runs on your computer like everything else. It is off by default: it needs about
-          1.3 GB more memory and about one processor core while it is on.
-        </p>
       </description>
     </release>
     <release version="1.1.4" date="2026-10-13">

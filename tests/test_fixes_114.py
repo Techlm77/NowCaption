@@ -79,37 +79,6 @@ class TranscriptStoreTests(unittest.TestCase):
         self.assertEqual(store.lines(), [engine.stamp(TS) + w for w in ('one', 'two', 'three')])
         self.assertEqual(store.count, 3)
 
-    def test_late_translation_keeps_its_speech_order_across_days_and_clock_changes(self):
-        store = engine.TranscriptStore(self.folder)
-        token = store.reserve(TS, 'older source')
-        store.append(TS + 86401, 'newer English')
-        store.resolve(token, 'older translation')
-        self.assertEqual([line.split('] ', 1)[1] for line in store.lines()],
-                         ['older translation', 'newer English'])
-        store.append(TS - 1, 'speech after the clock moved back')
-        self.assertTrue(store.lines()[-1].endswith('speech after the clock moved back'))
-
-    def test_pending_source_is_replaced_once_without_changing_speech_order(self):
-        store = engine.TranscriptStore(self.folder)
-        token = store.reserve(TS, 'palabras anteriores')
-        store.append(TS + 2, 'new English')
-        self.assertEqual([line.split('] ', 1)[1] for line in store.lines()],
-                         ['palabras anteriores', 'new English'])
-        store.resolve(token, 'earlier words [es: palabras anteriores]')
-        store.resolve(token, 'duplicate result')
-        self.assertEqual([line.split('] ', 1)[1] for line in store.lines()],
-                         ['earlier words [es: palabras anteriores]', 'new English'])
-        self.assertEqual(store.count, 2)
-        self.assertFalse(store.pending)
-        self.assertIsNone(store.memory)
-
-    def test_clear_discards_pending_source_and_late_results(self):
-        store = engine.TranscriptStore(self.folder)
-        token = store.reserve(TS, 'private source')
-        store.clear()
-        store.resolve(token, 'late private translation')
-        self.assertEqual((store.lines(), store.count), ([], 0))
-
 
 def talk(cap, words):
     """Speak some words, then pause long enough to finish the line."""

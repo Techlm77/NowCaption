@@ -166,11 +166,11 @@ class RecoveryTests(unittest.TestCase):
     def test_clear_and_shutdown_cancel_pending_recognition_timers(self):
         self.app.worker = NS(clear=lambda gen: None, set_source=lambda gen: None,
                              stop=lambda: None, restart=lambda **kwargs: None)
-        self.app.on_worker('error', 'failure')
+        self.app.on_worker('error', (self.app.source_gen, 0, 'failure'))
         old = self.app.recognition_retry_id
         self.app.clear_transcript()
         self.assertNotIn(old, self.timers.pending)
-        self.app.on_worker('error', 'another failure')
+        self.app.on_worker('error', (self.app.source_gen, 0, 'another failure'))
         old = self.app.recognition_retry_id
         self.app.on_shutdown(None)
         self.assertNotIn(old, self.timers.pending)
@@ -182,7 +182,7 @@ class RecoveryTests(unittest.TestCase):
 
     def test_queued_error_is_ignored_after_source_recovery_has_already_succeeded(self):
         self.app.worker = NS(broken=False)
-        self.app.on_worker('error', 'an error from before the source change')
+        self.app.on_worker('error', (self.app.source_gen, 0, 'an error from before the source change'))
         self.assertEqual(self.app.recognition_failures, 0)
         self.assertEqual(self.timers.pending, {})
 
@@ -325,6 +325,7 @@ class SaveTests(unittest.TestCase):
                 raise self.glib.Error('disk full')
         file.replace_contents_bytes_async, file.replace_contents_finish = write, finish
         file.get_basename = lambda: 'captions.txt'
+        file.get_uri = lambda: f'file:///test/{id(file)}/captions.txt'
         return file
 
     def accept_destination(self, file):

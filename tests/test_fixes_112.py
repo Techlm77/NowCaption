@@ -140,7 +140,7 @@ class WorkerTests(unittest.TestCase):
             handle(kind, value)
         with patch.object(worker, '_handle', side_effect=fail):
             worker.set_music_filter(True)
-            self.assertIn('command failed', events.wait('error'))
+            self.assertIn('command failed', events.wait('error')[2])
         self.assertTrue(worker.is_alive())
         worker.restart()
         worker.feed(0, fixtures.SPEECH)
@@ -262,7 +262,7 @@ class StatusTests(unittest.TestCase):
 
     def test_recognition_success_cannot_clear_an_unrelated_capture_failure(self):
         self.app.capture_ended(0, 'device disappeared')
-        self.app.on_worker('error', 'inference failed')
+        self.app.on_worker('error', (self.app.source_gen, 0, 'inference failed'))
         self.app.on_worker('caption', (0, 'Replayed old words'))
         self.assertIn('inference failed', self.window.status)
         self.app.on_worker('recognition-ok', 0)
@@ -287,7 +287,7 @@ class StatusTests(unittest.TestCase):
 
     def test_stale_recognition_success_does_not_clear_the_current_failure(self):
         self.app.source_gen = 2
-        self.app.on_worker('error', 'current inference failed')
+        self.app.on_worker('error', (self.app.source_gen, 0, 'current inference failed'))
         self.app.on_worker('recognition-ok', 1)
         self.assertIn('recognition', self.window.failures)
         self.assertIn('current inference failed', self.window.status)
