@@ -11,6 +11,7 @@ import hashlib, json, os, random, re, sys, time, unicodedata
 sys.path.insert(0, os.path.dirname(__file__))
 import fasttext
 import opus_stream
+from data_manifest import LANGS, manifest_path, write_manifest
 
 ROOT = os.getcwd()  # the work folder: data/ and runs/ live here
 CAT = json.load(open(f'{ROOT}/data/catalog.json'))
@@ -117,9 +118,9 @@ def run(lang):
     LID = fasttext.load_model(f'{ROOT}/data/lid.176.ftz')
     banned = fleurs_english()
     out_path = f'{ROOT}/data/clean/{lang}.tsv'
-    if os.path.exists(out_path):
+    if os.path.exists(out_path) and os.path.getsize(out_path):
         print(lang, 'exists, skipped', flush=True)
-        return
+        return True
     seen, rows, rng, failed = set(), [], random.Random(sum(map(ord, lang))), []
     for corpus, mode, cap in COMMON + EXTRA.get(lang, []):
         url, total = url_for(lang, corpus)
@@ -152,9 +153,10 @@ def run(lang):
             bucket = rng.sample(bucket, cap)
         rows += [(x, e, corpus) for x, e in bucket]
         print(f'{lang} {corpus}: read {read} kept {len(bucket)} in {time.time() - t:.0f}s', flush=True)
-    if failed:  # an existing file counts as finished, so a partial one is never written
-        print(lang, 'NOT SAVED:', ', '.join(failed), 'failed; run again to retry', flush=True)
-        return
+    if failed or not rows:  # an existing file counts as finished, so a partial one is never written
+        print(lang, 'NOT SAVED:', ', '.join(failed) if failed else 'no usable pairs',
+              '; run again to retry', flush=True)
+        return False
     rng.shuffle(rows)
     tmp = out_path + '.part'
     with open(tmp, 'w') as f:
@@ -162,12 +164,36 @@ def run(lang):
             f.write(f'{x.replace(chr(9), " ")}\t{e.replace(chr(9), " ")}\t{c}\n')
     os.rename(tmp, out_path)
     print(lang, 'TOTAL', len(rows), flush=True)
+    return True
+
+
+def main(langs):
+    langs = sorted(set(langs))
+    if not langs or not set(langs) <= set(LANGS):
+        raise ValueError('Pass one or more supported language codes to build_data.py')
+    os.makedirs(f'{ROOT}/data/clean', exist_ok=True)
+    path = manifest_path(f'{ROOT}/data')
+    expected = set(langs)
+    if path.exists():
+        expected.update(json.loads(path.read_text())['languages'])
+    # Retrying one language must not forget earlier requested languages or existing data.
+    from pathlib import Path
+    expected.update(p.stem for p in Path(f'{ROOT}/data/clean').glob('*.tsv'))
+    write_manifest(f'{ROOT}/data', expected, complete=False)
+    fleurs_english()
+    from multiprocessing import Pool
+    with Pool(int(os.environ.get('JOBS', 8))) as pool:
+        results = pool.map(run, langs, chunksize=1)
+    failed = [lang for lang, ok in zip(langs, results) if not ok]
+    missing = [lang for lang in sorted(expected)
+               if not os.path.isfile(f'{ROOT}/data/clean/{lang}.tsv')
+               or not os.path.getsize(f'{ROOT}/data/clean/{lang}.tsv')]
+    complete = not failed and not missing
+    write_manifest(f'{ROOT}/data', expected, complete)
+    if not complete:
+        print('INCOMPLETE: retry', ' '.join(sorted(set(failed + missing))), file=sys.stderr, flush=True)
+    return 0 if complete else 1
 
 
 if __name__ == '__main__':
-    os.makedirs(f'{ROOT}/data/clean', exist_ok=True)
-    fleurs_english()
-    from multiprocessing import Pool
-    langs = sys.argv[1:]
-    with Pool(int(os.environ.get('JOBS', 8))) as pool:
-        pool.map(run, langs, chunksize=1)
+    sys.exit(main(sys.argv[1:]))

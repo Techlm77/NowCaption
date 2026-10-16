@@ -236,54 +236,62 @@ Every language Translate to English accepts, measured through NowCaption's own l
   FLEURS English. Quality: very good 55 and up, good 50–55, fair 45–50, rough below 45.
 - **From text**: the translation model alone on the FLEURS test text (perfect transcripts,
   10,908 sentences in all). The gap to "from speech" is what speech recognition loses.
-- **First English**: seconds from when the speaker starts to the first English on screen.
-  **Complete**: seconds from when the speaker stops until the English of what they said is
-  complete. Medians of 10 recordings played in real time, on a Ryzen 9 7900X.
 
-| Language | Quality | From speech | From text | First English | Complete |
-|---|---|---|---|---|---|
-| Portuguese | very good | 62.4 | 67.5 | 1.1 s | 2.3 s |
-| German | very good | 58.9 | 62.6 | 1.0 s | 2.0 s |
-| Bulgarian | very good | 55.9 | 63.0 | 1.0 s | 2.1 s |
-| Norwegian | very good | 55.5 | 63.5 | 1.2 s | 1.8 s |
-| Swedish | very good | 55.2 | 66.2 | 1.4 s | 2.0 s |
-| French | very good | 55.2 | 62.8 | 1.0 s | 1.9 s |
-| Arabic | very good | 55.2 | 58.3 | 1.0 s | 2.2 s |
-| Ukrainian | very good | 55.0 | 59.5 | 1.3 s | 2.4 s |
-| Romanian | good | 53.8 | 63.8 | 1.2 s | 1.8 s |
-| Russian | good | 53.2 | 56.9 | 1.8 s | 1.9 s |
-| Italian | good | 52.7 | 57.8 | 1.2 s | 2.5 s |
-| Czech | good | 52.7 | 61.2 | 1.2 s | 1.9 s |
-| Spanish | good | 52.6 | 56.1 | 0.8 s | 1.9 s |
-| Turkish | good | 51.3 | 56.8 | 2.1 s | 1.5 s |
-| Finnish | good | 51.0 | 55.9 | 1.2 s | 2.1 s |
-| Hindi | good | 50.6 | 57.3 | 1.3 s | 2.0 s |
-| Danish | good | 50.1 | 67.1 | 1.3 s | 2.8 s |
-| Slovak | fair | 49.7 | 60.9 | 0.9 s | 1.9 s |
-| Dutch | fair | 47.0 | 57.0 | 0.9 s | 2.0 s |
-| Polish | fair | 46.3 | 53.9 | 1.1 s | 2.1 s |
-| Estonian | fair | 45.4 | 58.7 | 1.6 s | 2.2 s |
-| Vietnamese | fair | 45.1 | 54.1 | 1.2 s | 2.1 s |
-| Korean | rough | 44.2 | 50.8 | 1.4 s | 1.3 s |
-| Chinese | rough | 43.4 | 50.9 | 0.8 s | 2.8 s |
-| Japanese | rough | 43.1 | 50.0 | 1.3 s | 1.7 s |
-| Croatian | rough | 43.1 | 59.4 | 1.4 s | 2.0 s |
-| Hungarian | rough | 42.4 | 56.8 | 1.7 s | 1.5 s |
-| Latvian ¹ | rough | 41.0 | 58.2 | 1.2 s | 1.9 s |
-| Greek ¹ | rough | 40.9 | 55.4 | 1.3 s | 2.0 s |
-| Hebrew ¹ | rough | 37.3 | 59.6 | 1.1 s | 1.7 s |
-| Lithuanian ¹ | rough | 36.7 | 55.1 | 1.1 s | 2.0 s |
-| Slovenian ¹ | rough | 36.3 | 57.4 | 1.5 s | 1.8 s |
-| Thai | not available: Nemotron 3.5 does not transcribe Thai | — | 51.7 | — | — |
+Latency needs a new run with scorer version 2. The previous scorer counted repeated caption
+events as later completion, did not verify that translation had finished, and omitted clips
+without output. Its timings are retained only under `legacy_latency` in the JSON report and
+are not presented as validated latency figures here.
+
+Scorer version 2 isolates clips with Clear, ignores consecutive duplicate and empty passages,
+and waits for recognition to flush and all final translations to drain. It reports every
+attempted clip, completed and failed counts, and a reason for unfinished or missing output.
+`first_s` measures the first changed English passage after speech starts; `final_s` measures
+the last changed passage after speech ends, only for verified completed clips. These are
+worker-event times; GTK delivery and rendering are outside the measurement. Four seconds
+of silence follow each recording, with a bounded wait for any remaining translation work.
+
+| Language | Quality | From speech | From text |
+| --- | --- | --- | --- |
+| Portuguese | very good | 62.4 | 67.5 |
+| German | very good | 58.9 | 62.6 |
+| Bulgarian | very good | 55.9 | 63.0 |
+| Norwegian | very good | 55.5 | 63.5 |
+| Swedish | very good | 55.2 | 66.2 |
+| French | very good | 55.2 | 62.8 |
+| Arabic | very good | 55.2 | 58.3 |
+| Ukrainian | very good | 55.0 | 59.5 |
+| Romanian | good | 53.8 | 63.8 |
+| Russian | good | 53.2 | 56.9 |
+| Italian | good | 52.7 | 57.8 |
+| Czech | good | 52.7 | 61.2 |
+| Spanish | good | 52.6 | 56.1 |
+| Turkish | good | 51.3 | 56.8 |
+| Finnish | good | 51.0 | 55.9 |
+| Hindi | good | 50.6 | 57.3 |
+| Danish | good | 50.1 | 67.1 |
+| Slovak | fair | 49.7 | 60.9 |
+| Dutch | fair | 47.0 | 57.0 |
+| Polish | fair | 46.3 | 53.9 |
+| Estonian | fair | 45.4 | 58.7 |
+| Vietnamese | fair | 45.1 | 54.1 |
+| Korean | rough | 44.2 | 50.8 |
+| Chinese | rough | 43.4 | 50.9 |
+| Japanese | rough | 43.1 | 50.0 |
+| Croatian | rough | 43.1 | 59.4 |
+| Hungarian | rough | 42.4 | 56.8 |
+| Latvian ¹ | rough | 41.0 | 58.2 |
+| Greek ¹ | rough | 40.9 | 55.4 |
+| Hebrew ¹ | rough | 37.3 | 59.6 |
+| Lithuanian ¹ | rough | 36.7 | 55.1 |
+| Slovenian ¹ | rough | 36.3 | 57.4 |
+| Thai | not available: Nemotron 3.5 does not transcribe Thai | — | 51.7 |
 
 ¹ NVIDIA lists these as needing adaptation for Nemotron 3.5; the app marks them "less
 reliable". Their text scores are fine: it is the speech recognition that is weak.
 
-Across the 32 languages: 48.9 chrF from speech, first English
-1.2 s after the speaker starts, complete 2.0 s after they stop.
-A few recordings took 4–6 s before their first English, when the start of the speech was
-recognised slowly. `results/translation-live-languages.json` has every number, including
-each recording's timings.
+Across the 32 languages: 48.9 chrF from speech.
+`results/translation-live-languages.json` contains the accuracy scores and the historical
+latency data; no scorer version 2 latency run is included yet.
 
 Cost on the Ryzen 7 7800X3D: Nemotron uses 0.36 CPU seconds per second of audio
 on one thread. Translation adds about 1.1 GB of memory, which is returned when it

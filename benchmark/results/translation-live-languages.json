@@ -2,1077 +2,1151 @@
  "what": "NowCaption 1.3.0 Translate to English, per language, through the app's own live code (benchmark/translation/live_languages.py)",
  "speech_chrf": "FLEURS test, first 40 clips per language: Nemotron 3.5 streaming (language detected) and NowCaption's live translation; the English finally shown, sacrebleu chrF against the FLEURS English",
  "text_chrf": "the translation model alone on the FLEURS test text (all sentences, perfect transcripts)",
- "latency": "first 10 clips per language played in real time with translation on, language detected; medians. first_s: from the start of speech to the first English shown; final_s: from the end of speech to the clip's English being complete (4 s of digital silence follow each clip). Ryzen 9 7900X, six sessions in parallel on its 12 cores",
  "mean_speech_chrf_32": 48.85,
- "median_first_s": 1.22,
- "median_final_s": 2.0,
  "languages": [
   {
    "lang": "pt",
    "name": "Portuguese",
    "speech_chrf": 62.37,
    "text_chrf": 67.5,
-   "first_s": 1.05,
-   "final_s": 2.26,
-   "first_all": [
-    1.16,
-    1.02,
-    1.27,
-    0.9,
-    0.82,
-    1.3,
-    1.06,
-    1.04,
-    0.95,
-    2.49
-   ],
-   "final_all": [
-    2.24,
-    2.29,
-    3.62,
-    2.07,
-    2.08,
-    2.31,
-    2.13,
-    2.02,
-    2.73,
-    2.98
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.05,
+    "final_s": 2.26,
+    "first_all": [
+     1.16,
+     1.02,
+     1.27,
+     0.9,
+     0.82,
+     1.3,
+     1.06,
+     1.04,
+     0.95,
+     2.49
+    ],
+    "final_all": [
+     2.24,
+     2.29,
+     3.62,
+     2.07,
+     2.08,
+     2.31,
+     2.13,
+     2.02,
+     2.73,
+     2.98
+    ]
+   }
   },
   {
    "lang": "de",
    "name": "German",
    "speech_chrf": 58.91,
    "text_chrf": 62.6,
-   "first_s": 1.01,
-   "final_s": 2.0,
-   "first_all": [
-    0.7,
-    0.87,
-    1.01,
-    1.44,
-    0.53,
-    0.94,
-    1.76,
-    1.27,
-    1.2,
-    1.02
-   ],
-   "final_all": [
-    1.78,
-    3.59,
-    2.06,
-    1.94,
-    1.73,
-    1.67,
-    1.94,
-    3.44,
-    2.86,
-    3.29
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.01,
+    "final_s": 2.0,
+    "first_all": [
+     0.7,
+     0.87,
+     1.01,
+     1.44,
+     0.53,
+     0.94,
+     1.76,
+     1.27,
+     1.2,
+     1.02
+    ],
+    "final_all": [
+     1.78,
+     3.59,
+     2.06,
+     1.94,
+     1.73,
+     1.67,
+     1.94,
+     3.44,
+     2.86,
+     3.29
+    ]
+   }
   },
   {
    "lang": "bg",
    "name": "Bulgarian",
    "speech_chrf": 55.91,
    "text_chrf": 63.0,
-   "first_s": 1.0,
-   "final_s": 2.06,
-   "first_all": [
-    1.81,
-    0.8,
-    0.91,
-    1.49,
-    1.35,
-    1.22,
-    0.66,
-    0.83,
-    0.88,
-    1.1
-   ],
-   "final_all": [
-    2.41,
-    2.1,
-    2.28,
-    1.87,
-    1.48,
-    2.03,
-    1.81,
-    3.12,
-    2.41,
-    1.66
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.0,
+    "final_s": 2.06,
+    "first_all": [
+     1.81,
+     0.8,
+     0.91,
+     1.49,
+     1.35,
+     1.22,
+     0.66,
+     0.83,
+     0.88,
+     1.1
+    ],
+    "final_all": [
+     2.41,
+     2.1,
+     2.28,
+     1.87,
+     1.48,
+     2.03,
+     1.81,
+     3.12,
+     2.41,
+     1.66
+    ]
+   }
   },
   {
    "lang": "no",
    "name": "Norwegian",
    "speech_chrf": 55.51,
    "text_chrf": 63.5,
-   "first_s": 1.21,
-   "final_s": 1.78,
-   "first_all": [
-    1.03,
-    0.82,
-    1.69,
-    1.22,
-    0.97,
-    0.74,
-    1.8,
-    1.43,
-    1.2,
-    2.13
-   ],
-   "final_all": [
-    1.44,
-    3.22,
-    1.79,
-    3.73,
-    1.54,
-    1.65,
-    2.19,
-    1.77,
-    2.34,
-    1.38
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.21,
+    "final_s": 1.78,
+    "first_all": [
+     1.03,
+     0.82,
+     1.69,
+     1.22,
+     0.97,
+     0.74,
+     1.8,
+     1.43,
+     1.2,
+     2.13
+    ],
+    "final_all": [
+     1.44,
+     3.22,
+     1.79,
+     3.73,
+     1.54,
+     1.65,
+     2.19,
+     1.77,
+     2.34,
+     1.38
+    ]
+   }
   },
   {
    "lang": "sv",
    "name": "Swedish",
    "speech_chrf": 55.25,
    "text_chrf": 66.2,
-   "first_s": 1.43,
-   "final_s": 2.05,
-   "first_all": [
-    1.36,
-    1.02,
-    1.72,
-    1.49,
-    2.53,
-    1.9,
-    0.69,
-    1.27,
-    1.16,
-    2.19
-   ],
-   "final_all": [
-    2.16,
-    2.14,
-    2.38,
-    0.58,
-    1.81,
-    3.39,
-    1.9,
-    3.44,
-    1.79,
-    1.95
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.43,
+    "final_s": 2.05,
+    "first_all": [
+     1.36,
+     1.02,
+     1.72,
+     1.49,
+     2.53,
+     1.9,
+     0.69,
+     1.27,
+     1.16,
+     2.19
+    ],
+    "final_all": [
+     2.16,
+     2.14,
+     2.38,
+     0.58,
+     1.81,
+     3.39,
+     1.9,
+     3.44,
+     1.79,
+     1.95
+    ]
+   }
   },
   {
    "lang": "fr",
    "name": "French",
    "speech_chrf": 55.21,
    "text_chrf": 62.8,
-   "first_s": 1.03,
-   "final_s": 1.91,
-   "first_all": [
-    0.82,
-    0.99,
-    0.88,
-    1.6,
-    1.68,
-    1.87,
-    1.04,
-    1.58,
-    0.71,
-    1.01
-   ],
-   "final_all": [
-    2.86,
-    0.98,
-    1.97,
-    1.84,
-    1.49,
-    2.08,
-    1.95,
-    3.31,
-    1.66,
-    1.87
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.03,
+    "final_s": 1.91,
+    "first_all": [
+     0.82,
+     0.99,
+     0.88,
+     1.6,
+     1.68,
+     1.87,
+     1.04,
+     1.58,
+     0.71,
+     1.01
+    ],
+    "final_all": [
+     2.86,
+     0.98,
+     1.97,
+     1.84,
+     1.49,
+     2.08,
+     1.95,
+     3.31,
+     1.66,
+     1.87
+    ]
+   }
   },
   {
    "lang": "ar",
    "name": "Arabic",
    "speech_chrf": 55.18,
    "text_chrf": 58.3,
-   "first_s": 1.0,
-   "final_s": 2.23,
-   "first_all": [
-    1.34,
-    0.87,
-    0.83,
-    0.97,
-    1.03,
-    1.13,
-    1.39,
-    1.03,
-    0.88,
-    0.69
-   ],
-   "final_all": [
-    2.09,
-    2.05,
-    3.14,
-    2.12,
-    2.54,
-    2.34,
-    2.41,
-    2.62,
-    1.94,
-    1.84
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.0,
+    "final_s": 2.23,
+    "first_all": [
+     1.34,
+     0.87,
+     0.83,
+     0.97,
+     1.03,
+     1.13,
+     1.39,
+     1.03,
+     0.88,
+     0.69
+    ],
+    "final_all": [
+     2.09,
+     2.05,
+     3.14,
+     2.12,
+     2.54,
+     2.34,
+     2.41,
+     2.62,
+     1.94,
+     1.84
+    ]
+   }
   },
   {
    "lang": "uk",
    "name": "Ukrainian",
    "speech_chrf": 55.02,
    "text_chrf": 59.5,
-   "first_s": 1.27,
-   "final_s": 2.38,
-   "first_all": [
-    1.36,
-    0.94,
-    1.23,
-    0.81,
-    1.16,
-    1.34,
-    1.41,
-    0.78,
-    1.35,
-    1.31
-   ],
-   "final_all": [
-    2.45,
-    3.02,
-    2.55,
-    2.16,
-    1.79,
-    1.87,
-    2.61,
-    1.82,
-    2.55,
-    2.3
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.27,
+    "final_s": 2.38,
+    "first_all": [
+     1.36,
+     0.94,
+     1.23,
+     0.81,
+     1.16,
+     1.34,
+     1.41,
+     0.78,
+     1.35,
+     1.31
+    ],
+    "final_all": [
+     2.45,
+     3.02,
+     2.55,
+     2.16,
+     1.79,
+     1.87,
+     2.61,
+     1.82,
+     2.55,
+     2.3
+    ]
+   }
   },
   {
    "lang": "ro",
    "name": "Romanian",
    "speech_chrf": 53.76,
    "text_chrf": 63.8,
-   "first_s": 1.23,
-   "final_s": 1.79,
-   "first_all": [
-    2.77,
-    1.49,
-    1.08,
-    2.45,
-    0.93,
-    1.16,
-    1.75,
-    1.16,
-    1.29,
-    1.09
-   ],
-   "final_all": [
-    1.25,
-    2.0,
-    2.51,
-    1.8,
-    1.78,
-    1.08,
-    0.85,
-    2.0,
-    2.02,
-    1.3
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.23,
+    "final_s": 1.79,
+    "first_all": [
+     2.77,
+     1.49,
+     1.08,
+     2.45,
+     0.93,
+     1.16,
+     1.75,
+     1.16,
+     1.29,
+     1.09
+    ],
+    "final_all": [
+     1.25,
+     2.0,
+     2.51,
+     1.8,
+     1.78,
+     1.08,
+     0.85,
+     2.0,
+     2.02,
+     1.3
+    ]
+   }
   },
   {
    "lang": "ru",
    "name": "Russian",
    "speech_chrf": 53.17,
    "text_chrf": 56.9,
-   "first_s": 1.84,
-   "final_s": 1.95,
-   "first_all": [
-    3.21,
-    4.17,
-    2.89,
-    0.81,
-    2.57,
-    1.07,
-    0.81,
-    3.21,
-    1.11,
-    1.04
-   ],
-   "final_all": [
-    2.26,
-    3.81,
-    1.5,
-    2.06,
-    1.97,
-    1.91,
-    2.66,
-    1.87,
-    1.93,
-    1.74
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.84,
+    "final_s": 1.95,
+    "first_all": [
+     3.21,
+     4.17,
+     2.89,
+     0.81,
+     2.57,
+     1.07,
+     0.81,
+     3.21,
+     1.11,
+     1.04
+    ],
+    "final_all": [
+     2.26,
+     3.81,
+     1.5,
+     2.06,
+     1.97,
+     1.91,
+     2.66,
+     1.87,
+     1.93,
+     1.74
+    ]
+   }
   },
   {
    "lang": "it",
    "name": "Italian",
    "speech_chrf": 52.73,
    "text_chrf": 57.8,
-   "first_s": 1.19,
-   "final_s": 2.5,
-   "first_all": [
-    1.2,
-    0.82,
-    0.82,
-    1.25,
-    0.91,
-    3.71,
-    0.83,
-    1.21,
-    2.74,
-    1.18
-   ],
-   "final_all": [
-    2.18,
-    3.22,
-    2.31,
-    1.97,
-    2.12,
-    3.29,
-    3.55,
-    2.69,
-    3.81,
-    2.27
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.19,
+    "final_s": 2.5,
+    "first_all": [
+     1.2,
+     0.82,
+     0.82,
+     1.25,
+     0.91,
+     3.71,
+     0.83,
+     1.21,
+     2.74,
+     1.18
+    ],
+    "final_all": [
+     2.18,
+     3.22,
+     2.31,
+     1.97,
+     2.12,
+     3.29,
+     3.55,
+     2.69,
+     3.81,
+     2.27
+    ]
+   }
   },
   {
    "lang": "cs",
    "name": "Czech",
    "speech_chrf": 52.68,
    "text_chrf": 61.2,
-   "first_s": 1.22,
-   "final_s": 1.94,
-   "first_all": [
-    1.85,
-    0.77,
-    1.48,
-    1.31,
-    4.33,
-    1.61,
-    0.74,
-    0.9,
-    1.13,
-    0.99
-   ],
-   "final_all": [
-    1.88,
-    2.01,
-    1.34,
-    2.04,
-    2.15,
-    2.39,
-    1.81,
-    1.81,
-    4.13,
-    1.61
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.22,
+    "final_s": 1.94,
+    "first_all": [
+     1.85,
+     0.77,
+     1.48,
+     1.31,
+     4.33,
+     1.61,
+     0.74,
+     0.9,
+     1.13,
+     0.99
+    ],
+    "final_all": [
+     1.88,
+     2.01,
+     1.34,
+     2.04,
+     2.15,
+     2.39,
+     1.81,
+     1.81,
+     4.13,
+     1.61
+    ]
+   }
   },
   {
    "lang": "es",
    "name": "Spanish",
    "speech_chrf": 52.6,
    "text_chrf": 56.1,
-   "first_s": 0.82,
-   "final_s": 1.93,
-   "first_all": [
-    0.81,
-    0.69,
-    0.76,
-    0.82,
-    1.37,
-    0.91,
-    1.11,
-    1.23,
-    0.54,
-    0.73
-   ],
-   "final_all": [
-    1.9,
-    1.07,
-    2.21,
-    1.41,
-    3.46,
-    2.5,
-    2.63,
-    1.96,
-    1.88,
-    1.58
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 0.82,
+    "final_s": 1.93,
+    "first_all": [
+     0.81,
+     0.69,
+     0.76,
+     0.82,
+     1.37,
+     0.91,
+     1.11,
+     1.23,
+     0.54,
+     0.73
+    ],
+    "final_all": [
+     1.9,
+     1.07,
+     2.21,
+     1.41,
+     3.46,
+     2.5,
+     2.63,
+     1.96,
+     1.88,
+     1.58
+    ]
+   }
   },
   {
    "lang": "tr",
    "name": "Turkish",
    "speech_chrf": 51.29,
    "text_chrf": 56.8,
-   "first_s": 2.08,
-   "final_s": 1.48,
-   "first_all": [
-    3.73,
-    1.7,
-    3.56,
-    2.45,
-    1.33,
-    0.97,
-    3.09,
-    1.57,
-    0.75,
-    2.76
-   ],
-   "final_all": [
-    1.58,
-    1.36,
-    1.58,
-    1.45,
-    1.13,
-    1.55,
-    1.42,
-    1.87,
-    1.5,
-    1.18
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 2.08,
+    "final_s": 1.48,
+    "first_all": [
+     3.73,
+     1.7,
+     3.56,
+     2.45,
+     1.33,
+     0.97,
+     3.09,
+     1.57,
+     0.75,
+     2.76
+    ],
+    "final_all": [
+     1.58,
+     1.36,
+     1.58,
+     1.45,
+     1.13,
+     1.55,
+     1.42,
+     1.87,
+     1.5,
+     1.18
+    ]
+   }
   },
   {
    "lang": "fi",
    "name": "Finnish",
    "speech_chrf": 51.03,
    "text_chrf": 55.9,
-   "first_s": 1.25,
-   "final_s": 2.11,
-   "first_all": [
-    0.89,
-    1.32,
-    1.21,
-    1.06,
-    2.19,
-    0.69,
-    1.2,
-    2.23,
-    1.3,
-    1.61
-   ],
-   "final_all": [
-    1.89,
-    3.23,
-    3.02,
-    3.47,
-    2.13,
-    0.61,
-    2.09,
-    1.83,
-    3.51,
-    1.42
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.25,
+    "final_s": 2.11,
+    "first_all": [
+     0.89,
+     1.32,
+     1.21,
+     1.06,
+     2.19,
+     0.69,
+     1.2,
+     2.23,
+     1.3,
+     1.61
+    ],
+    "final_all": [
+     1.89,
+     3.23,
+     3.02,
+     3.47,
+     2.13,
+     0.61,
+     2.09,
+     1.83,
+     3.51,
+     1.42
+    ]
+   }
   },
   {
    "lang": "hi",
    "name": "Hindi",
    "speech_chrf": 50.61,
    "text_chrf": 57.3,
-   "first_s": 1.26,
-   "final_s": 1.99,
-   "first_all": [
-    1.68,
-    1.24,
-    3.43,
-    1.15,
-    2.81,
-    1.48,
-    1.28,
-    0.5,
-    0.86,
-    0.78
-   ],
-   "final_all": [
-    1.62,
-    2.3,
-    2.22,
-    1.81,
-    1.88,
-    1.56,
-    1.32,
-    2.09,
-    2.43,
-    2.16
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.26,
+    "final_s": 1.99,
+    "first_all": [
+     1.68,
+     1.24,
+     3.43,
+     1.15,
+     2.81,
+     1.48,
+     1.28,
+     0.5,
+     0.86,
+     0.78
+    ],
+    "final_all": [
+     1.62,
+     2.3,
+     2.22,
+     1.81,
+     1.88,
+     1.56,
+     1.32,
+     2.09,
+     2.43,
+     2.16
+    ]
+   }
   },
   {
    "lang": "da",
    "name": "Danish",
    "speech_chrf": 50.14,
    "text_chrf": 67.1,
-   "first_s": 1.3,
-   "final_s": 2.77,
-   "first_all": [
-    0.87,
-    0.72,
-    2.07,
-    1.16,
-    1.49,
-    1.21,
-    1.1,
-    1.61,
-    1.38,
-    1.49
-   ],
-   "final_all": [
-    2.73,
-    1.47,
-    2.46,
-    2.8,
-    3.69,
-    1.83,
-    3.78,
-    2.93,
-    2.32,
-    2.88
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.3,
+    "final_s": 2.77,
+    "first_all": [
+     0.87,
+     0.72,
+     2.07,
+     1.16,
+     1.49,
+     1.21,
+     1.1,
+     1.61,
+     1.38,
+     1.49
+    ],
+    "final_all": [
+     2.73,
+     1.47,
+     2.46,
+     2.8,
+     3.69,
+     1.83,
+     3.78,
+     2.93,
+     2.32,
+     2.88
+    ]
+   }
   },
   {
    "lang": "sk",
    "name": "Slovak",
    "speech_chrf": 49.73,
    "text_chrf": 60.9,
-   "first_s": 0.93,
-   "final_s": 1.93,
-   "first_all": [
-    1.67,
-    0.89,
-    0.93,
-    1.42,
-    0.85,
-    0.81,
-    0.92,
-    1.4,
-    1.03,
-    0.77
-   ],
-   "final_all": [
-    2.32,
-    1.89,
-    1.85,
-    1.78,
-    1.96,
-    2.19,
-    2.0,
-    2.3,
-    1.84,
-    1.88
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 0.93,
+    "final_s": 1.93,
+    "first_all": [
+     1.67,
+     0.89,
+     0.93,
+     1.42,
+     0.85,
+     0.81,
+     0.92,
+     1.4,
+     1.03,
+     0.77
+    ],
+    "final_all": [
+     2.32,
+     1.89,
+     1.85,
+     1.78,
+     1.96,
+     2.19,
+     2.0,
+     2.3,
+     1.84,
+     1.88
+    ]
+   }
   },
   {
    "lang": "nl",
    "name": "Dutch",
    "speech_chrf": 47.02,
    "text_chrf": 57.0,
-   "first_s": 0.95,
-   "final_s": 2.05,
-   "first_all": [
-    0.66,
-    1.04,
-    0.88,
-    1.71,
-    1.01,
-    6.13,
-    2.28,
-    0.73,
-    0.7,
-    0.58
-   ],
-   "final_all": [
-    2.25,
-    1.95,
-    2.08,
-    2.53,
-    1.84,
-    -0.14,
-    1.64,
-    2.01,
-    2.34,
-    2.31
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 0.95,
+    "final_s": 2.05,
+    "first_all": [
+     0.66,
+     1.04,
+     0.88,
+     1.71,
+     1.01,
+     6.13,
+     2.28,
+     0.73,
+     0.7,
+     0.58
+    ],
+    "final_all": [
+     2.25,
+     1.95,
+     2.08,
+     2.53,
+     1.84,
+     -0.14,
+     1.64,
+     2.01,
+     2.34,
+     2.31
+    ]
+   }
   },
   {
    "lang": "pl",
    "name": "Polish",
    "speech_chrf": 46.33,
    "text_chrf": 53.9,
-   "first_s": 1.13,
-   "final_s": 2.06,
-   "first_all": [
-    1.09,
-    1.09,
-    1.16,
-    1.16,
-    1.03,
-    1.81,
-    0.81,
-    0.81,
-    1.17,
-    1.23
-   ],
-   "final_all": [
-    2.63,
-    1.86,
-    2.56,
-    2.18,
-    2.36,
-    1.9,
-    1.96,
-    1.66,
-    2.15,
-    1.93
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.13,
+    "final_s": 2.06,
+    "first_all": [
+     1.09,
+     1.09,
+     1.16,
+     1.16,
+     1.03,
+     1.81,
+     0.81,
+     0.81,
+     1.17,
+     1.23
+    ],
+    "final_all": [
+     2.63,
+     1.86,
+     2.56,
+     2.18,
+     2.36,
+     1.9,
+     1.96,
+     1.66,
+     2.15,
+     1.93
+    ]
+   }
   },
   {
    "lang": "et",
    "name": "Estonian",
    "speech_chrf": 45.42,
    "text_chrf": 58.7,
-   "first_s": 1.58,
-   "final_s": 2.2,
-   "first_all": [
-    1.95,
-    1.59,
-    1.4,
-    0.73,
-    0.57,
-    2.08,
-    0.82,
-    1.57,
-    1.83,
-    2.16
-   ],
-   "final_all": [
-    2.6,
-    2.13,
-    1.35,
-    1.62,
-    1.81,
-    2.5,
-    2.28,
-    1.37,
-    2.64,
-    2.45
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.58,
+    "final_s": 2.2,
+    "first_all": [
+     1.95,
+     1.59,
+     1.4,
+     0.73,
+     0.57,
+     2.08,
+     0.82,
+     1.57,
+     1.83,
+     2.16
+    ],
+    "final_all": [
+     2.6,
+     2.13,
+     1.35,
+     1.62,
+     1.81,
+     2.5,
+     2.28,
+     1.37,
+     2.64,
+     2.45
+    ]
+   }
   },
   {
    "lang": "vi",
    "name": "Vietnamese",
    "speech_chrf": 45.1,
    "text_chrf": 54.1,
-   "first_s": 1.22,
-   "final_s": 2.11,
-   "first_all": [
-    0.89,
-    1.62,
-    0.95,
-    0.74,
-    0.68,
-    1.49,
-    2.96,
-    0.95,
-    2.13,
-    1.49
-   ],
-   "final_all": [
-    2.74,
-    2.21,
-    2.76,
-    2.01,
-    2.83,
-    1.32,
-    1.07,
-    2.71,
-    1.36,
-    1.92
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.22,
+    "final_s": 2.11,
+    "first_all": [
+     0.89,
+     1.62,
+     0.95,
+     0.74,
+     0.68,
+     1.49,
+     2.96,
+     0.95,
+     2.13,
+     1.49
+    ],
+    "final_all": [
+     2.74,
+     2.21,
+     2.76,
+     2.01,
+     2.83,
+     1.32,
+     1.07,
+     2.71,
+     1.36,
+     1.92
+    ]
+   }
   },
   {
    "lang": "ko",
    "name": "Korean",
    "speech_chrf": 44.23,
    "text_chrf": 50.8,
-   "first_s": 1.41,
-   "final_s": 1.26,
-   "first_all": [
-    0.89,
-    2.0,
-    0.6,
-    1.41,
-    0.85,
-    1.41,
-    0.99,
-    1.69,
-    1.64,
-    1.8
-   ],
-   "final_all": [
-    1.3,
-    1.25,
-    0.78,
-    1.27,
-    1.34,
-    3.45,
-    3.28,
-    1.08,
-    1.06,
-    1.14
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.41,
+    "final_s": 1.26,
+    "first_all": [
+     0.89,
+     2.0,
+     0.6,
+     1.41,
+     0.85,
+     1.41,
+     0.99,
+     1.69,
+     1.64,
+     1.8
+    ],
+    "final_all": [
+     1.3,
+     1.25,
+     0.78,
+     1.27,
+     1.34,
+     3.45,
+     3.28,
+     1.08,
+     1.06,
+     1.14
+    ]
+   }
   },
   {
    "lang": "zh",
    "name": "Chinese",
    "speech_chrf": 43.39,
    "text_chrf": 50.9,
-   "first_s": 0.82,
-   "final_s": 2.83,
-   "first_all": [
-    0.47,
-    0.86,
-    0.63,
-    0.61,
-    1.68,
-    2.25,
-    0.77,
-    1.11,
-    1.56,
-    0.59
-   ],
-   "final_all": [
-    3.26,
-    3.2,
-    1.77,
-    2.17,
-    3.49,
-    3.51,
-    3.59,
-    2.45,
-    2.23,
-    2.15
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 0.82,
+    "final_s": 2.83,
+    "first_all": [
+     0.47,
+     0.86,
+     0.63,
+     0.61,
+     1.68,
+     2.25,
+     0.77,
+     1.11,
+     1.56,
+     0.59
+    ],
+    "final_all": [
+     3.26,
+     3.2,
+     1.77,
+     2.17,
+     3.49,
+     3.51,
+     3.59,
+     2.45,
+     2.23,
+     2.15
+    ]
+   }
   },
   {
    "lang": "ja",
    "name": "Japanese",
    "speech_chrf": 43.08,
    "text_chrf": 50.0,
-   "first_s": 1.29,
-   "final_s": 1.72,
-   "first_all": [
-    2.95,
-    1.16,
-    0.84,
-    0.58,
-    1.0,
-    1.7,
-    2.9,
-    1.3,
-    2.66,
-    1.29
-   ],
-   "final_all": [
-    1.22,
-    1.55,
-    3.51,
-    3.21,
-    1.35,
-    1.9,
-    0.98,
-    3.28,
-    1.31,
-    2.55
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.29,
+    "final_s": 1.72,
+    "first_all": [
+     2.95,
+     1.16,
+     0.84,
+     0.58,
+     1.0,
+     1.7,
+     2.9,
+     1.3,
+     2.66,
+     1.29
+    ],
+    "final_all": [
+     1.22,
+     1.55,
+     3.51,
+     3.21,
+     1.35,
+     1.9,
+     0.98,
+     3.28,
+     1.31,
+     2.55
+    ]
+   }
   },
   {
    "lang": "hr",
    "name": "Croatian",
    "speech_chrf": 43.07,
    "text_chrf": 59.4,
-   "first_s": 1.36,
-   "final_s": 1.98,
-   "first_all": [
-    1.02,
-    2.13,
-    1.16,
-    1.23,
-    1.23,
-    1.18,
-    1.8,
-    2.45,
-    1.49,
-    1.71
-   ],
-   "final_all": [
-    2.74,
-    2.21,
-    2.29,
-    1.73,
-    2.11,
-    0.7,
-    1.75,
-    1.85,
-    2.18,
-    1.75
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.36,
+    "final_s": 1.98,
+    "first_all": [
+     1.02,
+     2.13,
+     1.16,
+     1.23,
+     1.23,
+     1.18,
+     1.8,
+     2.45,
+     1.49,
+     1.71
+    ],
+    "final_all": [
+     2.74,
+     2.21,
+     2.29,
+     1.73,
+     2.11,
+     0.7,
+     1.75,
+     1.85,
+     2.18,
+     1.75
+    ]
+   }
   },
   {
    "lang": "hu",
    "name": "Hungarian",
    "speech_chrf": 42.4,
    "text_chrf": 56.8,
-   "first_s": 1.73,
-   "final_s": 1.54,
-   "first_all": [
-    2.05,
-    0.86,
-    1.09,
-    2.4,
-    2.74,
-    0.87,
-    1.41,
-    5.49,
-    2.12,
-    1.33
-   ],
-   "final_all": [
-    1.41,
-    0.44,
-    1.72,
-    1.15,
-    1.94,
-    0.88,
-    1.67,
-    1.99,
-    1.1,
-    3.13
-   ],
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": 1.73,
+    "final_s": 1.54,
+    "first_all": [
+     2.05,
+     0.86,
+     1.09,
+     2.4,
+     2.74,
+     0.87,
+     1.41,
+     5.49,
+     2.12,
+     1.33
+    ],
+    "final_all": [
+     1.41,
+     0.44,
+     1.72,
+     1.15,
+     1.94,
+     0.88,
+     1.67,
+     1.99,
+     1.1,
+     3.13
+    ]
+   }
   },
   {
    "lang": "lv",
    "name": "Latvian",
    "speech_chrf": 40.97,
    "text_chrf": 58.2,
-   "first_s": 1.21,
-   "final_s": 1.91,
-   "first_all": [
-    1.16,
-    1.68,
-    1.89,
-    1.04,
-    1.3,
-    1.26,
-    1.12,
-    1.26,
-    0.99,
-    0.86
-   ],
-   "final_all": [
-    2.32,
-    2.26,
-    1.53,
-    2.83,
-    2.03,
-    1.3,
-    1.79,
-    1.72,
-    2.56,
-    1.59
-   ],
-   "less_reliable": true
+   "less_reliable": true,
+   "legacy_latency": {
+    "first_s": 1.21,
+    "final_s": 1.91,
+    "first_all": [
+     1.16,
+     1.68,
+     1.89,
+     1.04,
+     1.3,
+     1.26,
+     1.12,
+     1.26,
+     0.99,
+     0.86
+    ],
+    "final_all": [
+     2.32,
+     2.26,
+     1.53,
+     2.83,
+     2.03,
+     1.3,
+     1.79,
+     1.72,
+     2.56,
+     1.59
+    ]
+   }
   },
   {
    "lang": "el",
    "name": "Greek",
    "speech_chrf": 40.88,
    "text_chrf": 55.4,
-   "first_s": 1.27,
-   "final_s": 2.0,
-   "first_all": [
-    1.94,
-    0.99,
-    1.63,
-    0.7,
-    1.06,
-    0.67,
-    1.04,
-    1.48,
-    1.62,
-    2.25
-   ],
-   "final_all": [
-    2.15,
-    1.71,
-    1.99,
-    2.23,
-    1.96,
-    2.4,
-    1.91,
-    1.37,
-    2.02,
-    2.16
-   ],
-   "less_reliable": true
+   "less_reliable": true,
+   "legacy_latency": {
+    "first_s": 1.27,
+    "final_s": 2.0,
+    "first_all": [
+     1.94,
+     0.99,
+     1.63,
+     0.7,
+     1.06,
+     0.67,
+     1.04,
+     1.48,
+     1.62,
+     2.25
+    ],
+    "final_all": [
+     2.15,
+     1.71,
+     1.99,
+     2.23,
+     1.96,
+     2.4,
+     1.91,
+     1.37,
+     2.02,
+     2.16
+    ]
+   }
   },
   {
    "lang": "he",
    "name": "Hebrew",
    "speech_chrf": 37.34,
    "text_chrf": 59.6,
-   "first_s": 1.11,
-   "final_s": 1.68,
-   "first_all": [
-    1.14,
-    2.14,
-    1.07,
-    0.83,
-    1.0,
-    0.63,
-    3.41,
-    1.84,
-    1.32,
-    0.65
-   ],
-   "final_all": [
-    1.41,
-    -0.41,
-    1.45,
-    2.34,
-    1.92,
-    1.87,
-    1.56,
-    1.41,
-    1.96,
-    1.79
-   ],
-   "less_reliable": true
+   "less_reliable": true,
+   "legacy_latency": {
+    "first_s": 1.11,
+    "final_s": 1.68,
+    "first_all": [
+     1.14,
+     2.14,
+     1.07,
+     0.83,
+     1.0,
+     0.63,
+     3.41,
+     1.84,
+     1.32,
+     0.65
+    ],
+    "final_all": [
+     1.41,
+     -0.41,
+     1.45,
+     2.34,
+     1.92,
+     1.87,
+     1.56,
+     1.41,
+     1.96,
+     1.79
+    ]
+   }
   },
   {
    "lang": "lt",
    "name": "Lithuanian",
    "speech_chrf": 36.67,
    "text_chrf": 55.1,
-   "first_s": 1.14,
-   "final_s": 2.05,
-   "first_all": [
-    1.46,
-    1.34,
-    0.89,
-    1.08,
-    1.05,
-    1.08,
-    1.02,
-    1.69,
-    1.19,
-    1.19
-   ],
-   "final_all": [
-    2.38,
-    1.84,
-    2.01,
-    1.97,
-    2.21,
-    1.94,
-    2.04,
-    2.07,
-    2.26,
-    2.23
-   ],
-   "less_reliable": true
+   "less_reliable": true,
+   "legacy_latency": {
+    "first_s": 1.14,
+    "final_s": 2.05,
+    "first_all": [
+     1.46,
+     1.34,
+     0.89,
+     1.08,
+     1.05,
+     1.08,
+     1.02,
+     1.69,
+     1.19,
+     1.19
+    ],
+    "final_all": [
+     2.38,
+     1.84,
+     2.01,
+     1.97,
+     2.21,
+     1.94,
+     2.04,
+     2.07,
+     2.26,
+     2.23
+    ]
+   }
   },
   {
    "lang": "sl",
    "name": "Slovenian",
    "speech_chrf": 36.29,
    "text_chrf": 57.4,
-   "first_s": 1.46,
-   "final_s": 1.77,
-   "first_all": [
-    1.48,
-    1.01,
-    1.44,
-    1.79,
-    1.17,
-    1.01,
-    1.69,
-    0.88,
-    2.77,
-    1.89
-   ],
-   "final_all": [
-    1.27,
-    1.74,
-    2.06,
-    2.12,
-    1.26,
-    1.95,
-    1.84,
-    1.81,
-    1.38,
-    1.23
-   ],
-   "less_reliable": true
+   "less_reliable": true,
+   "legacy_latency": {
+    "first_s": 1.46,
+    "final_s": 1.77,
+    "first_all": [
+     1.48,
+     1.01,
+     1.44,
+     1.79,
+     1.17,
+     1.01,
+     1.69,
+     0.88,
+     2.77,
+     1.89
+    ],
+    "final_all": [
+     1.27,
+     1.74,
+     2.06,
+     2.12,
+     1.26,
+     1.95,
+     1.84,
+     1.81,
+     1.38,
+     1.23
+    ]
+   }
   },
   {
    "lang": "th",
    "name": "Thai",
    "speech_chrf": 0.94,
    "text_chrf": 51.7,
-   "first_s": null,
-   "final_s": null,
-   "first_all": null,
-   "final_all": null,
-   "less_reliable": false
+   "less_reliable": false,
+   "legacy_latency": {
+    "first_s": null,
+    "final_s": null,
+    "first_all": null,
+    "final_all": null
+   }
   }
- ]
+ ],
+ "legacy_latency": {
+  "scorer_version": 1,
+  "method": "first 10 clips per language played in real time with translation on, language detected; medians. first_s: from the start of speech to the first English shown; final_s: from the end of speech to the clip's English being complete (4 s of digital silence follow each clip). Ryzen 9 7900X, six sessions in parallel on its 12 cores",
+  "median_first_s": 1.22,
+  "median_final_s": 2.0
+ },
+ "latency": {
+  "scorer_version": 2,
+  "status": "needs_rerun",
+  "reason": "Historical scorer counted duplicate events, did not verify completion, and omitted clips without output."
+ }
 }

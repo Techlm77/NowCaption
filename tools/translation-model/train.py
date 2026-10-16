@@ -9,6 +9,7 @@ import torch.nn.functional as F
 
 sys.path.insert(0, os.path.dirname(__file__))
 from model import BOS, EOS, PAD, Config, Translator
+from data_manifest import validate_encoded
 
 ROOT = os.getcwd()  # the work folder: data/ and runs/ live here
 D = os.environ.get('NCMT_DATA', f'{ROOT}/data')
@@ -20,6 +21,7 @@ EVAL_EVERY, KEEP = 2500, 6
 
 class Data:
     def __init__(self):
+        validate_encoded(D)
         self.src = np.fromfile(f'{D}/bin/src.u16', dtype=np.uint16)
         self.tgt = np.fromfile(f'{D}/bin/tgt.u16', dtype=np.uint16)
         self.src_len = np.fromfile(f'{D}/bin/src_len.u16', dtype=np.uint16).astype(np.int64)

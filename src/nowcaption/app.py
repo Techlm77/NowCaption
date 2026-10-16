@@ -789,8 +789,11 @@ class NowCaption(Adw.Application):
         elif kind == 'translation-error':
             self.window.show_status(value, seconds=8)
         elif kind == 'translation-language':
+            spoken = self.settings.get('spoken')
+            if spoken != 'auto' and value != spoken:
+                return False  # a queued event must not replace a newer language selection
             name = engine.LANGUAGES.get(value, value)
-            self.window.show_status('English speech, shown as it is.' if value == 'en'
+            self.window.show_status('English speech detected.' if value == 'en'
                                     else f'Translating from {name}.', seconds=3)
         elif kind == 'overload':
             self.window.show_status(f'Falling behind: skipped {value:.1f} s of audio', seconds=4)

@@ -60,6 +60,24 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.3.1" date="2026-10-16">
+      <description>
+        <p>
+          Fixes for Translate to English.
+        </p>
+        <ul>
+          <li>Speech that was mistaken for English is now translated instead of shown as it is</li>
+          <li>Translated captions no longer stop short when the speaker pauses: the newest
+            words appear without waiting for more speech</li>
+          <li>Guessed sentence endings no longer stay on screen after the speaker carries on</li>
+          <li>Changing the spoken language or the sound source no longer loses words, merges
+            two sentences or relabels what was already said</li>
+          <li>Turning translation off no longer briefly brings back old English captions</li>
+          <li>Copied and saved transcripts keep sentences in the order they were spoken, even
+            when a translation finishes late</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.3.0" date="2026-10-15">
       <description>
         <p>

@@ -24,6 +24,14 @@ python3 $T/convert.py runs/v1/ck066000.pt nowcaption-translate-v1
 $T/pack.sh nowcaption-translate-v1          # dist/nowcaption-translate-v1.tar.bz2
 ```
 
+`build_data.py` exits with a nonzero status if a corpus fails or a requested language has
+no usable pairs. Its `data/clean/manifest.json` records the requested language set before
+downloads start. Retry just the failed languages with the same command; earlier requests
+remain in the manifest. `prepare.py` refuses incomplete or missing languages, and
+`train.py` checks that the encoded data contains every requested language. Older work
+folders without a manifest must contain all 33 languages; run `build_data.py` with an
+explicit subset to record a deliberately smaller training set.
+
 | File | Does |
 |---|---|
 | `build_data.py` | Samples OPUS corpora per language and filters them (length, script, fastText language ID, duplicates, FLEURS sentences) |

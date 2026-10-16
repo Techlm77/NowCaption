@@ -10,10 +10,10 @@ Usage: prepare.py spm | encode
 """
 import glob, json, os, random, re, sys, unicodedata
 import numpy as np
+from data_manifest import clean_languages
 
 ROOT = os.getcwd()  # the work folder: data/ and runs/ live here
 D = os.environ.get('NCMT_DATA', f'{ROOT}/data')
-LANGS = sorted(os.path.basename(p)[:-4] for p in glob.glob(f'{D}/clean/*.tsv'))
 END_PUNCT = re.compile(r'[\s.?!。？！।؟…:;,、，"\'”’»)\]」』]+$')
 ALL_PUNCT = re.compile(r'[^\w\s]', re.UNICODE)
 MAX_TOK = 200
@@ -36,11 +36,12 @@ def rows(lang, folder='clean'):
 
 
 def spm_train():
+    langs = clean_languages(D)
     import sentencepiece as spm
     os.makedirs(f'{D}/spm', exist_ok=True)
     rng = random.Random(1)
     src, tgt = open(f'{D}/spm/src.txt', 'w'), open(f'{D}/spm/tgt.txt', 'w')
-    for lang in LANGS:
+    for lang in langs:
         lines = list(rows(lang))
         for x, _ in rng.sample(lines, min(len(lines), 150_000)):
             src.write(x + '\n')
@@ -124,11 +125,15 @@ def encode_lang(job):
 
 
 def encode():
+    requested = clean_languages(D)
     from multiprocessing import Pool
     os.makedirs(f'{D}/bin', exist_ok=True)
     kd = sorted(os.path.basename(p)[:-4] for p in glob.glob(f'{D}/kd/*.tsv'))
     with Pool(8) as p:
-        stats = p.map(encode_lang, LANGS + [('kd', l) for l in kd], chunksize=1)
+        stats = p.map(encode_lang, requested + [('kd', l) for l in kd], chunksize=1)
+    empty = [name for name, count, *_ in stats if count == 0]
+    if empty:
+        raise ValueError(f'No encodable pairs for: {empty}')
     langs = [l for l, *_ in stats]
     parts = [np.load(f'{D}/bin/{l}.npz') for l in langs]
     for key in ('src', 'tgt', 'src_len', 'tgt_len'):

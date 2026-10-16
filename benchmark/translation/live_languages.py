@@ -53,87 +53,174 @@ def clips(base, folder, n=None):
     return json.load(open(f'{base}/{folder}/refs.json'))[:n]
 
 
-def accuracy(base, folders):
+def translate_clip(rec, tr, pcm, timeout=30.0):
+    """Drain final sentences, with a deadline and an error path even if the thread dies."""
+    errors, store = [], engine.TranscriptStore()
+    tw = engine.TranslationWorker(tr, store, on_caption=lambda *a: None, on_error=errors.append)
+    tw.start()
+    try:
+        cap = engine.TranslatingCaptioner(rec, tw, gen=lambda: 0, store=store)
+        data = pcm.tobytes() + bytes(16000 * 2 * 2)
+        for i in range(0, len(data), 3200):
+            cap.feed(data[i:i + 3200])
+        cap.flush()
+        tw.close()  # no more input: exiting normally is the completion signal
+        tw.join(timeout)
+        if tw.is_alive():
+            raise TimeoutError(f'Translation did not finish within {timeout:g} seconds')
+        if errors:
+            raise RuntimeError(f'Translation failed: {errors[0]}') from errors[0]
+        if tw.pending():
+            raise RuntimeError('Translation worker stopped with unfinished sentences')
+        return ' '.join(line.split('] ', 1)[1].split(' [')[0] for line in store.lines())
+    finally:
+        tw.stop()
+        tw.join(3)
+
+
+def accuracy(base, folders, timeout=30.0):
     import sacrebleu
     rec, tr = engine.load_translation()
     for folder in folders:
         hyps, refs = [], []
         for r in clips(base, folder):
-            pcm = read_wav(f'{base}/{folder}/{r["audio"]}').tobytes() + bytes(16000 * 2 * 2)
-            store = engine.TranscriptStore()
-            tw = engine.TranslationWorker(tr, store, on_caption=lambda *a: None)
-            tw.start()
-            cap = engine.TranslatingCaptioner(rec, tw, gen=lambda: 0, store=store)
-            for i in range(0, len(pcm), 3200):
-                cap.feed(pcm[i:i + 3200])
-            cap.flush()
-            quiet_since, last = time.monotonic(), None
-            while time.monotonic() - quiet_since < 0.4:  # until every sentence is translated
-                with tw.lock:
-                    state = (len(tw.waiting), tw.sentence, store.count)
-                if state != last or state[0] or state[1]:
-                    last, quiet_since = state, time.monotonic()
-                time.sleep(0.02)
-            hyps.append(' '.join(l.split('] ', 1)[1].split(' [')[0] for l in store.lines()))
+            try:
+                pcm = read_wav(f'{base}/{folder}/{r["audio"]}')
+                hyps.append(translate_clip(rec, tr, pcm, timeout))
+            except Exception as exc:
+                raise RuntimeError(f'{folder}/{r["audio"]}: {exc}') from exc
             refs.append(r['english'])
-            tw.stop()
-            tw.join(3)
         print(json.dumps({'lang': code(folder), 'clips': len(refs),
                           'chrf': round(sacrebleu.corpus_chrf(hyps, [refs]).score, 2)}), flush=True)
 
 
-def latency(base, n, folders):
-    events = queue.Queue()
+def observe(event, log):
+    t, kind, value = event
+    if kind in ('load-error', 'error', 'translation-error', 'overload'):
+        raise RuntimeError(f'{kind}: {value}')
+    if kind == 'caption':
+        log.append((t, value[1]))
+
+
+def wait_event(events, kind, log, pred=lambda v: True, timeout=120.0):
+    deadline = time.monotonic() + timeout
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(f'Timed out waiting for {kind}')
+        try:
+            event = events.get(timeout=remaining)
+        except queue.Empty as exc:
+            raise TimeoutError(f'Timed out waiting for {kind}') from exc
+        observe(event, log)
+        if event[1] == kind and pred(event[2]):
+            return event
+
+
+def drain(events, log):
+    while True:
+        try:
+            event = events.get_nowait()
+        except queue.Empty:
+            return
+        observe(event, log)
+
+
+def score_clip(log, on, off, end, complete, reason=None):
+    """Only changed, nonempty passages count; completion must be checked by the caller."""
+    previous, changes = '', []
+    for t, text in sorted(log):
+        if t > end:
+            break
+        changed = text != previous
+        previous = text
+        if on <= t and changed and text.strip():
+            changes.append(t)
+    status = 'complete' if complete and changes else 'no_caption' if complete else 'unfinished'
+    return {'status': status,
+            'first_s': round(changes[0] - on, 2) if changes else None,
+            'final_s': round(changes[-1] - off, 2) if status == 'complete' else None,
+            'reason': reason or (None if status == 'complete' else status)}
+
+
+def latency_summary(records):
+    rows = []
+    for lang in dict.fromkeys(r['lang'] for r in records):
+        results = [r for r in records if r['lang'] == lang]
+        first = [r['first_s'] for r in results if r['first_s'] is not None]
+        final = [r['final_s'] for r in results if r['final_s'] is not None]
+        completed = sum(r['status'] == 'complete' for r in results)
+        rows.append({'lang': lang, 'scorer_version': 2, 'clips': len(results),
+                     'completed': completed, 'failed': len(results) - completed,
+                     'first_s': round(float(np.median(first)), 2) if first else None,
+                     'final_s': round(float(np.median(final)), 2) if final else None,
+                     'first_all': [r['first_s'] for r in results],
+                     'final_all': [r['final_s'] for r in results], 'results': results})
+    return rows
+
+
+def latency(base, n, folders, timeout=30.0):
+    events, log, records = queue.Queue(), [], []
     w = engine.RecognitionWorker(lambda k, v: events.put((time.monotonic(), k, v)))
     w.start()
-
-    def wait(kind, pred=lambda v: True):
-        while True:
-            t, k, v = events.get(timeout=120)
-            if k == kind and pred(v):
-                return
-
-    wait('ready')
-    w.set_translation(True)
-    wait('translation', lambda v: v is True)
-    time.sleep(1)
-    log, plays = [], []
-
-    def drain():
-        while not events.empty():
-            t, k, v = events.get()
-            if k == 'caption':
-                log.append((t, v[1]))
-            if k == 'overload':
-                print('OVERLOAD', v, flush=True)
-    for folder in folders:
-        for r in clips(base, folder, n):
-            pcm = read_wav(f'{base}/{folder}/{r["audio"]}')
-            on, off = speech_span(pcm)
-            data = pcm.tobytes() + bytes(16000 * 2 * 4)  # then 4 s of silence
-            start = t_next = time.monotonic()
-            for i in range(0, len(data), 1280):  # 40 ms at a time, in real time
-                w.feed(w.source_gen, data[i:i + 1280])
-                t_next += 0.04
-                time.sleep(max(0, t_next - time.monotonic()))
-                if i % 64000 == 0:
-                    drain()
-            drain()
-            plays.append((code(folder), start + on, start + off, time.monotonic()))
-    w.stop()
-    w.join_all(10)
-    found = {}
-    for lang, on, off, end in plays:
-        before = [text for t, text in log if t <= on]
-        changes = [(t, text) for t, text in log if on < t <= end and text != (before[-1] if before else '')]
-        if changes:
-            found.setdefault(lang, []).append((changes[0][0] - on, changes[-1][0] - off))
-    for lang in dict.fromkeys(lang for lang, *_ in plays):
-        v = found.get(lang, [])
-        print(json.dumps({'lang': lang, 'clips': len(v),
-                          'first_s': round(float(np.median([a for a, _ in v])), 2) if v else None,
-                          'final_s': round(float(np.median([b for _, b in v])), 2) if v else None,
-                          'first_all': [round(a, 2) for a, _ in v], 'final_all': [round(b, 2) for _, b in v]}), flush=True)
+    failure = None
+    try:
+        wait_event(events, 'ready', log)
+        w.set_translation(True)
+        wait_event(events, 'translation', log, lambda v: v is True)
+        for folder in folders:
+            for r in clips(base, folder, n):
+                # Each clip has its own stream and passage; late work cannot be attributed
+                # to the next language. A snapshot is a barrier after queued audio/commands.
+                w.clear(len(records) + 1)
+                w.snapshot(None)
+                wait_event(events, 'snapshot', log, timeout=timeout)
+                log.clear()
+                pcm = read_wav(f'{base}/{folder}/{r["audio"]}')
+                on, off = speech_span(pcm)
+                data = pcm.tobytes() + bytes(16000 * 2 * 4)
+                start = t_next = time.monotonic()
+                complete, reason = False, None
+                try:
+                    for i in range(0, len(data), 1280):  # 40 ms, in real time
+                        w.feed(w.source_gen, data[i:i + 1280])
+                        t_next += 0.04
+                        time.sleep(max(0, t_next - time.monotonic()))
+                        drain(events, log)
+                    w.snapshot(None)
+                    wait_event(events, 'snapshot', log, timeout=timeout)
+                    deadline = time.monotonic() + timeout
+                    while True:
+                        tw = w.translation_worker
+                        if tw is None:
+                            raise RuntimeError('Translation stopped before the clip completed')
+                        with tw.lock:
+                            complete = (w.captioner.flushed and not tw.waiting
+                                        and not tw.sentence and not tw.words)
+                            alive = tw.is_alive()
+                        drain(events, log)
+                        if complete:
+                            break
+                        if not alive:
+                            raise RuntimeError('Translation worker stopped before the clip completed')
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError(f'Clip did not finish within {timeout:g} seconds after playback')
+                        time.sleep(0.01)
+                except (RuntimeError, TimeoutError) as exc:
+                    complete, reason, failure = False, str(exc), exc
+                result = score_clip(log, start + on, start + off, time.monotonic(), complete, reason)
+                records.append({'lang': code(folder), 'clip': r['audio'], **result})
+                if failure:
+                    break
+            if failure:
+                break
+    finally:
+        w.stop()
+        w.join_all(10)
+    for row in latency_summary(records):
+        print(json.dumps(row), flush=True)
+    if failure:
+        raise RuntimeError(f'Latency run failed: {failure}') from failure
 
 
 if __name__ == '__main__':

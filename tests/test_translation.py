@@ -75,8 +75,8 @@ class EchoTranslator:
     def __init__(self, gate=None, fail=False):
         self.calls, self.gate, self.fail, self.prefixes, self.batches = [], gate, fail, [], []
 
-    def translate(self, text, previous=None, prefix=''):
-        return self.translate_many([(text, prefix)], previous)[0]
+    def translate(self, text, previous=None, prefix='', **kwargs):
+        return self.translate_many([(text, prefix)], previous, **kwargs)[0]
 
     CUT_WORDS = 40  # stands in for MT_SECTION_PIECES: a word is a piece here
 
@@ -84,7 +84,7 @@ class EchoTranslator:
         words = text.split()
         return 0 if len(words) <= self.CUT_WORDS else len(' '.join(words[:self.CUT_WORDS])) + 1
 
-    def translate_many(self, items, previous=None):
+    def translate_many(self, items, previous=None, *, fixed=None):
         """Like the real model, the English starts with the prefix it is given, whatever the
         text: a prefix from another sentence shows up in the English."""
         self.batches.append(len(items))
@@ -100,7 +100,7 @@ class EchoTranslator:
             english = text.upper()
             if prefix and not english.startswith(prefix):
                 english = prefix + ' ' + english
-            out.append((english, 'es'))
+            out.append((english, fixed or 'es'))
         return out
 
 
@@ -185,8 +185,10 @@ class TranslatorTests(unittest.TestCase):
         self.assertTrue(all(len(b) <= engine.MT_SECTION_PIECES for b in batch))
         self.assertEqual(len(english.split()), 1000)  # nothing is dropped
 
-    def test_english_passes_through_untouched(self):
-        self.assertEqual(self.translator('en').translate('Hello there, everyone.'), ('Hello there, everyone.', 'en'))
+    def test_explicitly_fixed_english_passes_through_untouched(self):
+        translator = self.translator('en')
+        translator.fixed = 'en'
+        self.assertEqual(translator.translate('Hello there, everyone.'), ('Hello there, everyone.', 'en'))
         self.assertEqual(self.model.calls, [])
 
     def test_short_text_keeps_the_language_of_the_sentence_before(self):
@@ -374,8 +376,8 @@ class TranslationWorkerTests(WorkerFixture):
 
     def test_a_finished_sentence_shows_its_whole_translation(self):
         class Guessing(EchoTranslator):
-            def translate(self, text, previous=None, prefix=''):  # a live line, translated as it grows
-                english, lang = super().translate(text, previous, prefix)
+            def translate(self, text, previous=None, prefix='', **kwargs):  # a live line, translated as it grows
+                english, lang = super().translate(text, previous, prefix, **kwargs)
                 return english.replace('TRES', 'THREE?'), lang  # guessed before the rest was said
         tw = self.start(Guessing())
         for text in ('uno dos tres cuatro', 'uno dos tres cuatro cinco'):
@@ -389,8 +391,8 @@ class TranslationWorkerTests(WorkerFixture):
 
     def test_english_on_screen_only_ever_grows(self):
         class Wobbly(EchoTranslator):
-            def translate(self, text, previous=None, prefix=''):
-                english, lang = super().translate(text, previous, prefix)
+            def translate(self, text, previous=None, prefix='', **kwargs):
+                english, lang = super().translate(text, previous, prefix, **kwargs)
                 words = english.split()
                 return ' '.join(words[:-1] + [f'GUESS{len(text)}']), lang  # the last word wobbles
         tw = self.start(Wobbly())
@@ -405,8 +407,8 @@ class TranslationWorkerTests(WorkerFixture):
 
     def test_unfinished_live_english_has_no_full_stop(self):
         class Stopping(EchoTranslator):
-            def translate(self, text, previous=None, prefix=''):
-                english, lang = super().translate(text, previous, prefix)
+            def translate(self, text, previous=None, prefix='', **kwargs):
+                english, lang = super().translate(text, previous, prefix, **kwargs)
                 return english + '.', lang  # as the model does with every fragment
         tw = self.start(Stopping())
         tw.partial_text('esto parece')
@@ -476,10 +478,10 @@ class Slow(EchoTranslator):
         super().__init__(**kw)
         self.seconds, self.disagree, self.starts, self.n = seconds, disagree, [], 0
 
-    def translate_many(self, items, previous=None):
+    def translate_many(self, items, previous=None, **kwargs):
         self.starts.append(time.monotonic())
         time.sleep(self.seconds)
-        out = super().translate_many(items, previous)
+        out = super().translate_many(items, previous, **kwargs)
         if self.disagree and len(items) == 1 and items[0][1] == '':
             self.n += 1
             out = [(f'GUESS{self.n} ' + english, lang) for english, lang in out]
@@ -677,10 +679,10 @@ class WorkerModeTests(unittest.TestCase):
         gate = threading.Event()
 
         class SentencesWait(EchoTranslator):
-            def translate(self, text, previous=None, prefix=''):  # a live line is not held up
+            def translate(self, text, previous=None, prefix='', **kwargs):  # a live line is not held up
                 held, self.gate = self.gate, None
                 try:
-                    return super().translate(text, previous, prefix)
+                    return super().translate(text, previous, prefix, **kwargs)
                 finally:
                     self.gate = held
         translator = SentencesWait(gate)
@@ -703,6 +705,102 @@ class WorkerModeTests(unittest.TestCase):
         text = events.snapshot(worker)
         self.assertNotIn('secreto', text.lower())
         self.assertNotIn('SECRETO', ' '.join(str(v) for k, v in events.seen[after:] if k == 'caption'))
+
+    def test_switching_off_keeps_pending_source_then_late_english_in_speech_order(self):
+        gate, entered = threading.Event(), threading.Event()
+
+        class HeldTranslator(EchoTranslator):
+            def translate_many(self, items, previous=None, **kwargs):
+                entered.set()
+                return super().translate_many(items, previous, **kwargs)
+        worker, events = self.make(self.translation(translator=HeldTranslator(gate)))
+        self.addCleanup(gate.set)
+        worker.set_translation(True)
+        events.wait('translation', lambda v: v is True)
+        old = worker.translation_worker
+        old.line(time.time() - 10, 'palabras anteriores.')
+        self.assertTrue(entered.wait(2))
+        worker.set_translation(False)
+        events.wait('translation', lambda v: v is False)
+        worker.feed(0, SPEECH)
+        worker.feed(0, SPEECH)
+        worker.feed(0, SILENCE * 12)
+        before = events.snapshot(worker).splitlines()
+        self.assertEqual(len(before), 2, before)
+        self.assertTrue(before[0].endswith('palabras anteriores.'), before)
+        self.assertIn('English words.', before[1])
+        gate.set()
+        old.join(2)
+        self.assertFalse(old.is_alive())
+        after = events.snapshot(worker).splitlines()
+        self.assertEqual(len(after), 2, after)
+        self.assertIn('PALABRAS ANTERIORES.', after[0])
+        self.assertIn('English words.', after[1])
+
+    def test_stop_prevents_a_command_in_flight_from_starting_a_loader(self):
+        entered, resume, loaded = threading.Event(), threading.Event(), threading.Event()
+
+        def load():
+            loaded.set()
+            return FakeRecognizer(), EchoTranslator()
+        worker, events = self.make(load)
+        original = worker._load_translation
+
+        def held_command():
+            entered.set()
+            resume.wait(2)
+            original()
+        worker._load_translation = held_command
+        self.addCleanup(resume.set)
+        worker.set_translation(True)
+        self.assertTrue(entered.wait(2))
+        worker.stop()
+        resume.set()
+        worker.join_all(2)
+        self.assertFalse(worker.is_alive())
+        self.assertFalse(loaded.is_set())
+        self.assertIsNone(worker.translation_loader)
+
+    def test_join_all_collects_children_after_joining_the_owner(self):
+        create, entered, finish = threading.Event(), threading.Event(), threading.Event()
+        joining, joined = threading.Event(), threading.Event()
+        worker = engine.RecognitionWorker(lambda *args: None)
+
+        def child():
+            entered.set()
+            finish.wait(3)
+
+        def owner():
+            create.wait(3)
+            worker.translation_loader = threading.Thread(target=child, daemon=True)
+            worker.translation_loader.start()
+        worker.run = owner
+        original_join = worker.join
+
+        def owner_join(timeout=None):
+            joining.set()
+            original_join(timeout)
+        worker.join = owner_join
+        worker.start()
+        worker.stop()
+
+        def join_all():
+            worker.join_all(3)
+            joined.set()
+        waiter = threading.Thread(target=join_all, daemon=True)
+        waiter.start()
+        try:
+            self.assertTrue(joining.wait(1))
+            create.set()
+            self.assertTrue(entered.wait(1))
+            self.assertFalse(joined.wait(0.1), 'join_all returned while the late loader was alive')
+        finally:
+            create.set()
+            finish.set()
+            waiter.join(3)
+            worker.join_all(3)
+        self.assertTrue(joined.is_set())
+        self.assertFalse(worker.translation_loader.is_alive())
 
     def test_translation_that_cannot_start_leaves_english_captions_working(self):
         worker, events = self.make(lambda: (Unstartable(), EchoTranslator()))
@@ -846,6 +944,19 @@ class WorkerModeTests(unittest.TestCase):
         self.assertIs(events.wait('translation', lambda v: v is False), False)
         self.assertIs(type(worker.captioner), engine.Captioner)
 
+    def test_live_inference_failure_keeps_unfinished_source_and_english_captions_working(self):
+        worker, events = self.make(self.translation(
+            words=['palabras sin terminar '], translator=EchoTranslator(fail=True)))
+        worker.set_translation(True)
+        events.wait('translation', lambda v: v is True)
+        worker.feed(0, SPEECH)
+        events.wait('translation-error')
+        events.wait('translation', lambda v: v is False)
+        self.assertFalse(worker.broken)
+        self.assertIn('palabras sin terminar', events.snapshot(worker))
+        worker.feed(0, SPEECH)
+        events.wait('caption', lambda v: 'english' in v[1].lower())
+
     def test_translation_missing_says_what_to_install(self):
         with patch.object(engine, 'models_dir', side_effect=FileNotFoundError('Speech model not found')):
             self.assertIn('not found', engine.translation_missing())
@@ -858,6 +969,7 @@ class AppTests(unittest.TestCase):
         from test_regressions import app_with_fakes
         self.app = app_with_fakes()
         self.app.settings.set('translate', 0)
+        self.app.settings.set('spoken', 'auto')
         self.state = False
         self.action = NS(get_state=lambda: NS(get_boolean=lambda: self.state),
                          set_state=lambda v: setattr(self, 'state', v.unpack()))
@@ -895,6 +1007,17 @@ class AppTests(unittest.TestCase):
         self.assertFalse(self.state)
         self.assertEqual(self.app.settings.get('translate'), 0)
         self.assertIn('boom', self.app.window.statuses[-1])
+
+    def test_a_queued_language_event_cannot_replace_the_users_new_selection(self):
+        self.app.settings.set('spoken', 'ja')
+        before = list(self.app.window.statuses)
+        self.app.on_worker('translation-language', 'fr')
+        self.assertEqual(self.app.window.statuses, before)
+        self.app.on_worker('translation-language', 'ja')
+        self.assertEqual(self.app.window.statuses[-1], 'Translating from Japanese.')
+        self.app.settings.set('spoken', 'auto')
+        self.app.on_worker('translation-language', 'fr')
+        self.assertEqual(self.app.window.statuses[-1], 'Translating from French.')
 
 
 if __name__ == '__main__':

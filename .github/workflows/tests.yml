@@ -24,6 +24,8 @@ jobs:
       - run: PYTHONPATH=src python tests/test_fixes_113.py
       - run: PYTHONPATH=src python tests/test_fixes_114.py
       - run: PYTHONPATH=src python tests/test_translation.py
+      - run: PYTHONPATH=src python tests/test_translation_streaming.py
+      - run: PYTHONPATH=src python tests/test_translation_tools.py
       - run: python tests/test_version.py
       - run: python -m compileall -q src tests benchmark tools
       - run: for script in tools/*.sh tests/*.sh flatpak/*.sh; do sh -n "$script"; done
