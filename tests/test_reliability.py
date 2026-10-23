@@ -22,6 +22,8 @@ import numpy as np
 # Captioners keep the transcript in an unnamed file in the cache folder; tests use their own.
 CACHE = tempfile.TemporaryDirectory()
 os.environ['XDG_CACHE_HOME'] = CACHE.name
+DATA = tempfile.TemporaryDirectory()  # transcript history goes here, never to the user's
+os.environ['XDG_DATA_HOME'] = DATA.name
 
 from nowcaption import audio, engine
 

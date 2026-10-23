@@ -37,9 +37,22 @@ AppImageUpdate can keep it up to date.
 Captions start straight away from whatever your computer is playing. Drag them to
 move, drag an edge to resize. **Right-click** for the menu:
 
-- **Desktop audio** or **Microphone**
-- Text size, text colour, background, position
-- Copy, save or clear the transcript
+- **Listen to:** desktop audio or your microphone
+- **Appearance:** text size, background and text colour
+- **Transcript:** open the transcript, keep history, or clear this session
+- Reset the captions' position and size
+
+**Transcript.** **Open transcript** shows everything captioned, in a window you can
+scroll, select and copy from, and search with Ctrl+F. Earlier sessions are listed under
+their date, and the current one updates as each line is finished. **Copy all** and
+**Save** give the whole transcript; **Delete history** removes it.
+
+**History.** NowCaption keeps each session's transcript for 7 days, then deletes it,
+so it never fills up your disk. It stays on your computer, readable only by you, in
+`~/.var/app/io.github.Techlm77.NowCaption/data/nowcaption/history` (Flatpak) or
+`~/.local/share/nowcaption/history` (AppImage). Untick **Keep 7 days of history** in
+the menu to stop keeping it. **Clear this session** also removes the current session
+from the history.
 
 **Text colour.** Captions are white by default. If another colour is easier for you to
 read, choose yellow, cyan or lime under **Text colour**. The captions change as soon as you

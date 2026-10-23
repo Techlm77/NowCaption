@@ -1,7 +1,9 @@
 """NowCaption: on-device live captions for anything your computer plays, or your microphone."""
 import logging
 import os
+import re
 import sys
+import time
 from pathlib import Path
 
 import gi
@@ -9,7 +11,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 import cairo  # noqa: E402
 gi.require_version('Pango', '1.0')
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango  # noqa: E402
 
 try:
     gi.require_version('Gtk4LayerShell', '1.0')
@@ -32,17 +34,18 @@ CURSORS = {'n': 'n-resize', 's': 's-resize', 'e': 'e-resize', 'w': 'w-resize',
 # Rows of − / + buttons in the menu. They are real buttons rather than menu items, because
 # GTK closes a menu when one of its items is chosen, and these are pressed several times.
 STEPPERS = {
-    'text-size': ('Text size', ('Smaller text', 'app.smaller', 'zoom-out-symbolic'),
-                  ('Larger text', 'app.larger', 'zoom-in-symbolic')),
-    'background': ('Background', ('More see-through', 'app.lighter', 'value-decrease-symbolic'),
-                   ('More solid', 'app.darker', 'value-increase-symbolic')),
+    'text-size': ('Text size', ('Smaller text', 'app.smaller', 'list-remove-symbolic'),
+                  ('Larger text', 'app.larger', 'list-add-symbolic')),
+    'background': ('Background', ('More see-through', 'app.lighter', 'list-remove-symbolic'),
+                   ('More solid', 'app.darker', 'list-add-symbolic')),
 }
+MENU_INDENT = 34  # button rows start where the menu's item labels do, after the tick column
 # Caption text colours, as TV captions offer them. Their swatches in the menu are buttons too,
 # so colours can be compared on the captions before the menu closes.
 COLOURS = {'white': ('White', '#ffffff'), 'yellow': ('Yellow', '#ffff00'),
            'cyan': ('Cyan', '#00ffff'), 'lime': ('Lime', '#00ff00')}
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
-            'width': -1, 'rows': ROWS, 'colour': 'white'}
+            'width': -1, 'rows': ROWS, 'colour': 'white', 'history': True}
 LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100)}
 CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS)}
 
@@ -62,7 +65,9 @@ class Settings:
         """The stored value, brought back into range if the file was edited by hand."""
         default = DEFAULTS[key]
         try:
-            if isinstance(default, int):
+            if isinstance(default, bool):
+                value = self.kf.get_boolean('main', key)
+            elif isinstance(default, int):
                 value = self.kf.get_integer('main', key)
             elif isinstance(default, float):
                 value = self.kf.get_double('main', key)
@@ -81,7 +86,8 @@ class Settings:
 
     def set(self, key, value):
         """Remember value; if the file cannot be written it still applies until the app quits."""
-        {int: self.kf.set_integer, float: self.kf.set_double}.get(type(DEFAULTS[key]), self.kf.set_string)('main', key, value)
+        {bool: self.kf.set_boolean, int: self.kf.set_integer,
+         float: self.kf.set_double}.get(type(DEFAULTS[key]), self.kf.set_string)('main', key, value)
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.kf.save_to_file(str(self.path))
@@ -221,18 +227,23 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     def update_menu(self, several_screens):
         """Set the menu, with the text size, background and text colour rows as buttons that
-        keep it open."""
+        keep it open. The size and background rows show their value between their buttons."""
         self.popover.set_menu_model(self.app.build_menu(several_screens))
+        self.values = {}
         for name, (title, *buttons) in STEPPERS.items():
-            row = Gtk.Box(spacing=4, margin_start=12, margin_end=6)
+            row = Gtk.Box(spacing=2, margin_start=MENU_INDENT, margin_end=6)
             row.append(Gtk.Label(label=title, xalign=0, hexpand=True))
             for tooltip, action, icon in buttons:
                 button = Gtk.Button(icon_name=icon, action_name=action, tooltip_text=tooltip)
                 button.add_css_class('flat')
                 button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
                 row.append(button)
+                if not self.values.get(name):
+                    self.values[name] = Gtk.Label(width_chars=5, css_classes=['dim-label', 'numeric'])
+                    row.append(self.values[name])
             self.popover.add_child(row, name)
-        row = Gtk.Box(spacing=4, margin_start=12, margin_end=6)
+        self.show_values()
+        row = Gtk.Box(spacing=4, margin_start=MENU_INDENT, margin_end=6)
         row.append(Gtk.Label(label='Text colour', xalign=0, hexpand=True))
         for name, (label, _) in COLOURS.items():  # pressed in, like a radio button, when chosen
             swatch = Gtk.Box(css_classes=['colour-swatch', f'colour-{name}'],
@@ -243,6 +254,12 @@ class CaptionWindow(Gtk.ApplicationWindow):
             button.update_property([Gtk.AccessibleProperty.LABEL], [label])
             row.append(button)
         self.popover.add_child(row, 'text-colour')
+
+    def show_values(self):
+        values = getattr(self, 'values', None)
+        if values:
+            values['text-size'].set_label(f"{self.settings.get('size')} px")
+            values['background'].set_label(f"{round(self.settings.get('opacity') * 100)}%")
 
     def watch_screens(self, *args):
         """Follow screens being connected or disconnected, and the current screen's geometry."""
@@ -348,6 +365,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
                                                border: 1px solid rgba(0, 0, 0, 0.4); }}
             window.nowcaption button:checked .colour-swatch {{ box-shadow: 0 0 0 2px currentColor; }}
             {swatches}""")
+        self.show_values()
         # measure one row in the caption font, then fix the box at exactly ROWS rows
         probe = self.label.create_pango_layout('Ag')
         self.row_height = probe.get_pixel_size()[1]
@@ -534,6 +552,246 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.popover.popup()
 
 
+def session_heading(started):
+    """A session's heading in the transcript, such as "Thursday 23 October 2026, 14:05"."""
+    return time.strftime('%A %-d %B %Y, %H:%M', time.localtime(started))
+
+
+def rgba(spec):
+    colour = Gdk.RGBA()
+    colour.parse(spec)
+    return colour
+
+
+TIME = re.compile(r'(\[\d\d:\d\d:\d\d\]) ')
+
+
+class TranscriptWindow(Adw.Window):
+    """Every kept session, oldest first, then this one as it grows: scroll, select and copy any
+    of it, find words (Ctrl+F), save it, or delete the history. Earlier sessions come from the
+    history folder; this one is fetched again from the recognition worker shortly after each
+    caption, and only its changed lines are replaced, so a selection or the place being read
+    stays put. The view follows new lines only while it is at the end."""
+
+    REFRESH_MS = 500
+
+    def __init__(self, app):
+        super().__init__(application=app, default_width=680, default_height=720)
+        self.app, self.closed = app, False
+        self.block, self.current = [], None  # this session's lines as shown (heading first), and its start
+        self.matches, self.match, self.refresh_id = [], -1, None
+
+        self.buffer = Gtk.TextBuffer()
+        self.time_tag = self.buffer.create_tag('time')
+        self.heading_tag = self.buffer.create_tag('heading', weight=Pango.Weight.BOLD,
+                                                  pixels_above_lines=18, pixels_below_lines=6)
+        self.match_tag = self.buffer.create_tag('match', background_rgba=rgba('rgba(246, 211, 45, 0.45)'))
+        self.current_tag = self.buffer.create_tag('current-match', background_rgba=rgba('rgba(255, 140, 0, 0.75)'))
+        self.end = self.buffer.create_mark('end', self.buffer.get_end_iter(), False)
+        self.view = Gtk.TextView(buffer=self.buffer, editable=False, cursor_visible=False,
+                                 wrap_mode=Gtk.WrapMode.WORD_CHAR, left_margin=18, right_margin=18,
+                                 top_margin=6, bottom_margin=18)
+        self.scroller = Gtk.ScrolledWindow(child=self.view, vexpand=True)
+        self.stack = Gtk.Stack()
+        self.stack.add_named(Adw.StatusPage(icon_name='format-justify-left-symbolic', title='No captions yet',
+                                            description='Each line appears here once it is finished.'), 'empty')
+        self.stack.add_named(self.scroller, 'text')
+        self.toasts = Adw.ToastOverlay(child=self.stack)
+
+        self.entry = Gtk.SearchEntry(placeholder_text='Find in transcript', hexpand=True)
+        self.count = Gtk.Label(css_classes=['dim-label', 'numeric'])
+        bar = Gtk.Box(spacing=6)
+        bar.append(self.entry)
+        bar.append(self.count)
+        for icon, tooltip, step in (('go-up-symbolic', 'Previous match', -1), ('go-down-symbolic', 'Next match', 1)):
+            button = Gtk.Button(icon_name=icon, tooltip_text=tooltip)
+            button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
+            button.connect('clicked', lambda b, step=step: self.step(step))
+            bar.append(button)
+        self.search = Gtk.SearchBar(child=Adw.Clamp(child=bar, maximum_size=560), show_close_button=True)
+        self.search.connect_entry(self.entry)
+        self.search.set_key_capture_widget(self)  # typing anywhere starts a search
+        self.entry.connect('search-changed', lambda e: self.find())
+        self.entry.connect('activate', lambda e: self.step(1))
+        self.entry.connect('next-match', lambda e: self.step(1))
+        self.entry.connect('previous-match', lambda e: self.step(-1))
+
+        header = Adw.HeaderBar()
+        self.title = Adw.WindowTitle(title='Transcript')
+        header.set_title_widget(self.title)
+        find = Gtk.ToggleButton(icon_name='edit-find-symbolic', tooltip_text='Find (Ctrl+F)')
+        find.update_property([Gtk.AccessibleProperty.LABEL], ['Find'])
+        find.bind_property('active', self.search, 'search-mode-enabled',
+                           GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
+        header.pack_start(find)
+        for icon, tooltip, action in (('user-trash-symbolic', 'Delete history…', self.confirm_delete),
+                                      ('document-save-symbolic', 'Save…', app.save_transcript),
+                                      ('edit-copy-symbolic', 'Copy all', self.copy_all)):
+            button = Gtk.Button(icon_name=icon, tooltip_text=tooltip)
+            button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
+            button.connect('clicked', lambda b, action=action: action())
+            header.pack_end(button)
+        page = Adw.ToolbarView(content=self.toasts)
+        page.add_top_bar(header)
+        page.add_top_bar(self.search)
+        self.set_content(page)
+
+        keys = Gtk.ShortcutController()
+        for trigger, action in (('<Control>f', lambda: self.search.set_search_mode(True)), ('<Control>w', self.close)):
+            keys.add_shortcut(Gtk.Shortcut(trigger=Gtk.ShortcutTrigger.parse_string(trigger),
+                                           action=Gtk.CallbackAction.new(lambda w, a, action=action: action() or True)))
+        self.add_controller(keys)
+        Adw.StyleManager.get_default().connect('notify::dark', lambda *a: GLib.idle_add(self.restyle))
+        self.restyle()
+        self.reload()
+
+    def restyle(self):
+        colour = self.view.get_color()  # the text colour, dimmed for the times
+        colour.alpha *= 0.55
+        self.time_tag.set_property('foreground-rgba', colour)
+        return False
+
+    def show_title(self):
+        keep = self.app.settings.get('history')
+        self.title.set_subtitle(f'Last {engine.HISTORY_DAYS} days' if keep else 'This session only')
+
+    def reload(self):
+        """Read the kept sessions again and fetch this one."""
+        engine.prune_history()
+        if self.current:
+            self.buffer.delete_mark(self.current)
+        self.buffer.set_text('')
+        for started, text in self.app.earlier_sessions():
+            self.add_lines([session_heading(started)] + text.splitlines())
+        self.current = self.buffer.create_mark(None, self.buffer.get_end_iter(), True)  # stays before this session
+        self.block = []
+        self.show_title()
+        self.show_page()
+        self.refresh()
+        GLib.idle_add(self.scroll_to_end)
+
+    def add_lines(self, lines, heading=True):
+        """Append lines; the first is a session's heading unless heading is False."""
+        for i, line in enumerate(lines):
+            if i == 0 and heading:
+                self.buffer.insert_with_tags(self.buffer.get_end_iter(), line + '\n', self.heading_tag)
+                continue
+            stamp = TIME.match(line)
+            if stamp:
+                self.buffer.insert_with_tags(self.buffer.get_end_iter(), stamp.group(1), self.time_tag)
+                line = ' ' + line[stamp.end():]
+            self.buffer.insert(self.buffer.get_end_iter(), line + '\n')
+
+    def changed(self):
+        """A caption changed: fetch this session again soon (at most twice a second)."""
+        if self.refresh_id is None:
+            self.refresh_id = GLib.timeout_add(self.REFRESH_MS, self.refresh)
+
+    def refresh(self):
+        self.refresh_id = None
+        if self.app.worker and not self.app.closing and not self.closed:
+            try:
+                self.app.worker.snapshot(self.apply)
+            except RuntimeError as e:
+                LOG.warning('Could not refresh the transcript: %s', e)
+        return False
+
+    def apply(self, text):
+        """Show this session's transcript, replacing only the lines that changed."""
+        if self.closed:
+            return
+        lines = text.splitlines()
+        block = [session_heading(self.app.started)] + lines if lines else []
+        same = 0
+        while same < min(len(block), len(self.block)) and block[same] == self.block[same]:
+            same += 1
+        if same == len(block) == len(self.block):
+            return
+        follow = self.at_end()
+        start = self.buffer.get_iter_at_mark(self.current).get_offset()
+        start += sum(len(line) + 1 for line in self.block[:same])
+        self.buffer.delete(self.buffer.get_iter_at_offset(start), self.buffer.get_end_iter())
+        self.add_lines(block[same:], heading=same == 0)
+        self.block = block
+        self.show_page()
+        if self.entry.get_text():
+            self.find(keep=True)
+        if follow:
+            GLib.idle_add(self.scroll_to_end)
+
+    def at_end(self):
+        adjustment = self.scroller.get_vadjustment()
+        return adjustment.get_value() + adjustment.get_page_size() >= adjustment.get_upper() - 24
+
+    def scroll_to_end(self):
+        self.view.scroll_to_mark(self.end, 0, False, 0, 1)
+        return False
+
+    def show_page(self):
+        self.stack.set_visible_child_name('text' if self.buffer.get_char_count() else 'empty')
+
+    def find(self, keep=False):
+        """Highlight every match of the search text and go to the newest (or keep the place)."""
+        start, end = self.buffer.get_bounds()
+        self.buffer.remove_tag(self.match_tag, start, end)
+        self.buffer.remove_tag(self.current_tag, start, end)
+        for a, b in self.matches:
+            self.buffer.delete_mark(a)
+            self.buffer.delete_mark(b)
+        self.matches = []
+        text, where = self.entry.get_text(), start
+        while text:
+            found = where.forward_search(text, Gtk.TextSearchFlags.CASE_INSENSITIVE, None)
+            if found and len(found) == 3:  # (found, start, end) in older PyGObject
+                found = found[1:] if found[0] else None
+            if not found:
+                break
+            a, b = found
+            self.buffer.apply_tag(self.match_tag, a, b)
+            self.matches.append((self.buffer.create_mark(None, a, True), self.buffer.create_mark(None, b, False)))
+            where = b
+        if keep and 0 <= self.match < len(self.matches):
+            self.show_match(scroll=False)
+        else:
+            self.match = len(self.matches) - 1
+            self.show_match(scroll=True)
+
+    def step(self, direction):
+        if self.matches:
+            self.buffer.remove_tag(self.current_tag, *self.buffer.get_bounds())
+            self.match = (self.match + direction) % len(self.matches)
+            self.show_match(scroll=True)
+
+    def show_match(self, scroll):
+        if not self.entry.get_text():
+            self.count.set_label('')
+        elif not self.matches:
+            self.count.set_label('No matches')
+        else:
+            a, b = self.matches[self.match]
+            self.buffer.apply_tag(self.current_tag, self.buffer.get_iter_at_mark(a), self.buffer.get_iter_at_mark(b))
+            self.count.set_label(f'{self.match + 1} of {len(self.matches)}')
+            if scroll:
+                self.view.scroll_to_mark(a, 0.1, True, 0, 0.3)
+
+    def copy_all(self):
+        self.app.copy_transcript()
+        self.toasts.add_toast(Adw.Toast(title='Transcript copied', timeout=2))
+
+    def confirm_delete(self):
+        dialog = Adw.AlertDialog(
+            heading='Delete all transcripts?',
+            body=f'This deletes everything NowCaption has kept from the last {engine.HISTORY_DAYS} '
+                 'days, including this session, and clears the captions on screen.')
+        dialog.add_response('cancel', 'Cancel')
+        dialog.add_response('delete', 'Delete')
+        dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response('cancel')
+        dialog.set_close_response('cancel')
+        dialog.connect('response', lambda d, response: response == 'delete' and self.app.delete_history())
+        dialog.present(self)
+
+
 class NowCaption(Adw.Application):
     """Owns the window, the capture and the recognition worker. All methods run on the GTK
     thread; worker and capture callbacks are passed here with GLib.idle_add."""
@@ -549,6 +807,9 @@ class NowCaption(Adw.Application):
         self.recognition_retry_id = None
         self.recognition_retry_token = 0
         self.pending_saves = 0
+        self.started = time.time()
+        self.history_path = engine.history_file(self.started)  # created once something is said
+        self.transcript = None  # the transcript window, while it is open
         self.save_queues = {}  # destination URI -> accepted writes, in snapshot order
         self.quit_requested = False
         self.capture = audio.Capture(
@@ -560,34 +821,33 @@ class NowCaption(Adw.Application):
         self.add_actions()
 
     def build_menu(self, several_screens=False):
-        """Compact menu: sound source, one-row size/background controls, transcript, app."""
-        def section(*items):
+        """The caption box's menu, in labelled sections: what to listen to, how captions look,
+        the transcript, the box's place, and the app. CaptionWindow.update_menu fills the
+        'custom' items with rows of buttons that keep the menu open."""
+        def section(label, *items):
             m = Gio.Menu()
-            for text, action, icon in items:
-                item = Gio.MenuItem.new(text, action)
-                if icon:
-                    item.set_attribute_value('verb-icon', GLib.Variant('s', icon))
+            for item in items:
                 m.append_item(item)
-            return Gio.MenuItem.new_section(None, m)
+            return Gio.MenuItem.new_section(label, m)
 
-        menu = Gio.Menu()
-        menu.append_item(section(('Desktop audio', 'app.source::desktop', None),
-                                 ('Microphone', 'app.source::mic', None)))
-        steppers = Gio.Menu()  # filled with button rows by CaptionWindow.update_menu
-        for name in (*STEPPERS, 'text-colour'):
+        def custom(name):
             item = Gio.MenuItem.new(None, None)
             item.set_attribute_value('custom', GLib.Variant('s', name))
-            steppers.append_item(item)
-        menu.append_section(None, steppers)
-        place = [('Reset position', 'app.reset-position', None), ('Reset size', 'app.reset-size', None)]
+            return item
+
+        item = Gio.MenuItem.new
+        menu = Gio.Menu()
+        menu.append_item(section('Listen to', item('Desktop audio', 'app.source::desktop'),
+                                 item('Microphone', 'app.source::mic')))
+        menu.append_item(section('Appearance', *(custom(name) for name in (*STEPPERS, 'text-colour'))))
+        menu.append_item(section('Transcript', item('Open transcript', 'app.transcript'),
+                                 item(f'Keep {engine.HISTORY_DAYS} days of history', 'app.history'),
+                                 item('Clear this session', 'app.clear')))
+        place = [item('Reset position and size', 'app.reset')]
         if several_screens:
-            place.append(('Move to next screen', 'app.next-screen', None))
-        menu.append_item(section(*place))
-        menu.append_item(section(('Copy transcript', 'app.copy', None),
-                                 ('Save transcript…', 'app.save', None),
-                                 ('Clear transcript', 'app.clear', None)))
-        menu.append_item(section(('About NowCaption', 'app.about', None),
-                                 ('Quit', 'app.quit', None)))
+            place.append(item('Move to next screen', 'app.next-screen'))
+        menu.append_item(section(None, *place))
+        menu.append_item(section(None, item('About NowCaption', 'app.about'), item('Quit', 'app.quit')))
         return menu
 
     def add_actions(self):
@@ -610,6 +870,11 @@ class NowCaption(Adw.Application):
         act('smaller', lambda: self.resize(-1), ['<Control>minus'])
         act('lighter', lambda: self.opacity(-0.15))
         act('darker', lambda: self.opacity(+0.15))
+        history = Gio.SimpleAction.new_stateful('history', None, GLib.Variant('b', self.settings.get('history')))
+        history.connect('activate', self.on_history)
+        self.add_action(history)
+        act('transcript', self.open_transcript, ['<Control>t'])
+        act('reset', lambda: (self.window.reset_position(), self.window.reset_size()))
         act('reset-position', lambda: self.window.reset_position())
         act('reset-size', lambda: self.window.reset_size())
         act('next-screen', lambda: self.window.next_monitor())
@@ -631,6 +896,61 @@ class NowCaption(Adw.Application):
             # replaces the load error until the model loads or fails again
             self.window.show_failure('model', 'Retrying the speech model…')
             self.worker.restart()
+
+    def on_history(self, action, value):
+        keep = not action.get_state().get_boolean()
+        action.set_state(GLib.Variant('b', keep))
+        self.settings.set('history', keep)
+        if self.worker:
+            self.worker.set_history(self.history_path if keep else None)
+        if self.transcript:
+            self.transcript.show_title()
+
+    def open_transcript(self):
+        if self.transcript is None:
+            self.transcript = TranscriptWindow(self)
+            self.transcript.connect('close-request', self.on_transcript_closed)
+        self.transcript.present()
+
+    def on_transcript_closed(self, window):
+        window.closed = True
+        self.transcript = None
+        return False
+
+    def earlier_sessions(self):
+        """Kept sessions before this one, oldest first, as (start time, text)."""
+        sessions = []
+        for started, path in engine.history_files():
+            if path == self.history_path:
+                continue
+            try:
+                text = path.read_text(errors='replace').strip()
+            except OSError as e:
+                LOG.warning('Could not read the transcript %s: %s', path, e)
+                continue
+            if text:
+                sessions.append((started, text))
+        return sessions
+
+    def full_transcript(self, current):
+        """Every kept session and this one, each under its heading, as Copy and Save give it."""
+        parts = [f'{session_heading(started)}\n{text}' for started, text in self.earlier_sessions()]
+        if current.strip():
+            parts.append(f'{session_heading(self.started)}\n{current.strip()}')
+        return '\n\n'.join(parts)
+
+    def delete_history(self):
+        """Delete every kept session, this one included, and clear the captions."""
+        for _, path in engine.history_files():
+            try:
+                path.unlink()
+            except OSError as e:
+                LOG.warning('Could not delete the transcript %s: %s', path, e)
+        self.clear_transcript()
+        if self.worker and self.settings.get('history'):
+            self.worker.set_history(self.history_path)  # what is said next starts a new file
+        if self.transcript:
+            self.transcript.reload()
 
     def on_colour(self, action, value):
         if value.get_string() not in COLOURS:
@@ -662,6 +982,9 @@ class NowCaption(Adw.Application):
         self.window.show_status('Loading speech model…')
         # models load on the worker thread, so the window stays responsive meanwhile
         self.worker = engine.RecognitionWorker(lambda kind, value: GLib.idle_add(self.on_worker, kind, value))
+        engine.prune_history()
+        if self.settings.get('history'):
+            self.worker.set_history(self.history_path)
         self.worker.start()
         GLib.timeout_add_seconds(60, self.release_memory)
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
@@ -737,6 +1060,8 @@ class NowCaption(Adw.Application):
             gen, text = value
             if gen == self.ui_gen:  # ignore captions from before the last Clear
                 self.window.show_text(text)
+                if self.transcript:
+                    self.transcript.changed()
         elif kind == 'recognition-ok':
             if value == self.source_gen:
                 self.cancel_recognition_retry(reset=True)
@@ -822,6 +1147,7 @@ class NowCaption(Adw.Application):
 
     def copy_transcript(self):
         def copy(text):
+            text = self.full_transcript(text)
             self.window.get_clipboard().set(text)
             self.window.show_status('Transcript copied.' if text else 'Nothing to copy yet.', seconds=3)
         if self.worker:
@@ -862,7 +1188,7 @@ class NowCaption(Adw.Application):
                 self.finish_save(False)
 
             try:
-                self.worker.snapshot(lambda text: self.write_transcript(f, text, tracked=True),
+                self.worker.snapshot(lambda text: self.write_transcript(f, self.full_transcript(text), tracked=True),
                                      on_error=failed_snapshot)
             except Exception as e:
                 failed_snapshot(e)

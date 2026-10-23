@@ -7,10 +7,13 @@ when NOWCAPTION_REQUIRE_GUI_TESTS=1, otherwise these tests skip locally.
 """
 import os
 import tempfile
+import time
 import unittest
 
 CONFIG = tempfile.TemporaryDirectory()
 os.environ['XDG_CONFIG_HOME'] = CONFIG.name
+DATA = tempfile.TemporaryDirectory()  # transcript history for these tests only
+os.environ['XDG_DATA_HOME'] = DATA.name
 try:
     from nowcaption import app as nc
     if not nc.Gtk.init_check() or nc.Gdk.Display.get_default() is None:
@@ -21,19 +24,27 @@ except (ImportError, ValueError, RuntimeError) as e:
     nc, SKIP = None, str(e)
 
 
+APP = []
+
+
+def shared_app():
+    """One registered application for every test class: a second one could not export its
+    actions on the session bus under the same path."""
+    if not APP:
+        app = nc.NowCaption()
+        # A NowCaption that is already running owns the app ID; as its remote instance this
+        # one would have no windows of its own, and GTK crashes building one.
+        app.set_flags(app.get_flags() | nc.Gio.ApplicationFlags.NON_UNIQUE)
+        app.register(None)
+        APP.append(app)
+    return APP[0]
+
+
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))
 class WindowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = nc.NowCaption()
-        # A NowCaption that is already running owns the app ID; as its remote instance this
-        # one would have no windows of its own, and GTK crashes building one.
-        cls.app.set_flags(cls.app.get_flags() | nc.Gio.ApplicationFlags.NON_UNIQUE)
-        cls.app.register(None)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.app.quit()
+        cls.app = shared_app()
 
     def setUp(self):
         self.app.settings.set('size', 30)
@@ -123,6 +134,14 @@ class WindowTests(unittest.TestCase):
         rgba = window.label.get_color()
         self.assertEqual((rgba.red, rgba.green, rgba.blue), (0.0, 1.0, 1.0))
 
+    def test_the_size_and_background_rows_show_their_values(self):
+        self.app.settings.set('opacity', 0.78)
+        self.window.restyle()
+        self.assertEqual(self.window.values['text-size'].get_label(), '30 px')
+        self.assertEqual(self.window.values['background'].get_label(), '78%')
+        self.app.resize(+1)
+        self.assertEqual(self.window.values['text-size'].get_label(), '36 px')
+
     def test_two_row_caption_renders_and_font_size_can_change(self):
         self.window.show_text('hello ' * 100)
         self.assertLessEqual(len(self.window.label.get_text().splitlines()), nc.ROWS)
@@ -193,6 +212,81 @@ class WindowTests(unittest.TestCase):
         self.assertEqual(self.window.status_label.get_text(), 'Device unavailable')
         self.window.clear_failure('capture')
         self.assertFalse(self.window.status_label.get_visible())
+
+
+@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+class TranscriptWindowTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = shared_app()
+
+    def setUp(self):
+        self.app.settings.set('history', True)
+        for _, path in nc.engine.history_files():
+            path.unlink()
+        folder = nc.engine.history_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        now = time.time()
+        self.older_start, self.newer_start = now - 2 * 86400, now - 3600
+        self.older = nc.engine.history_file(self.older_start, folder)
+        self.newer = nc.engine.history_file(self.newer_start, folder)
+        self.older.write_text('[09:00:01] Good morning everyone.\n[09:00:05] Bright and early today.\n')
+        self.newer.write_text('[13:00:00] Welcome back.\n')
+        self.window = nc.TranscriptWindow(self.app)
+        self.addCleanup(self.window.destroy)
+
+    def text(self):
+        return self.window.buffer.get_text(*self.window.buffer.get_bounds(), False)
+
+    def test_earlier_sessions_are_shown_oldest_first_under_their_headings(self):
+        text = self.text()
+        self.assertLess(text.index('Good morning'), text.index('Welcome back'))
+        self.assertLess(text.index(nc.session_heading(int(self.older_start))), text.index('Good morning'))
+        self.assertEqual(self.window.title.get_subtitle(), 'Last 7 days')
+
+    def test_this_session_grows_without_touching_the_earlier_text(self):
+        w = self.window
+        before = self.text()
+        w.apply('[14:05:20] Hello there.')
+        self.assertTrue(self.text().startswith(before))
+        self.assertIn(nc.session_heading(self.app.started), self.text())
+        w.apply('[14:05:20] Hello there, how are you?\n[14:05:26] Fine')  # the newest line changed
+        self.assertTrue(self.text().endswith('[14:05:20] Hello there, how are you?\n[14:05:26] Fine\n'))
+        self.assertEqual(self.text().count('Hello there'), 1)
+        w.apply('')  # Clear this session
+        self.assertEqual(self.text(), before)
+
+    def test_find_counts_matches_and_steps_through_them(self):
+        w = self.window
+        w.apply('[14:05:20] A bright idea.')
+        w.entry.set_text('bright')
+        w.find()
+        self.assertEqual(w.count.get_label(), '2 of 2', 'the newest match first')
+        w.step(1)
+        self.assertEqual(w.count.get_label(), '1 of 2')
+        w.entry.set_text('nothing like this')
+        w.find()
+        self.assertEqual(w.count.get_label(), 'No matches')
+
+    def test_turning_history_off_says_so(self):
+        self.app.settings.set('history', False)
+        self.window.show_title()
+        self.assertEqual(self.window.title.get_subtitle(), 'This session only')
+
+    def test_delete_history_removes_every_kept_session(self):
+        from types import SimpleNamespace as NS
+        cleared, sent = [], []
+        self.app.worker = NS(clear=cleared.append, set_history=sent.append, snapshot=lambda fn, on_error=None: None)
+        self.app.window = NS(show_text=lambda text: None)
+        self.app.transcript = self.window
+        self.app.ready = self.app.closing = self.app.quit_requested = False
+        for name in ('worker', 'window', 'transcript'):
+            self.addCleanup(setattr, self.app, name, None)
+        self.app.delete_history()
+        self.assertEqual(nc.engine.history_files(), [])
+        self.assertEqual(len(cleared), 1)
+        self.assertEqual(sent, [self.app.history_path])
+        self.assertEqual(self.text(), '')
 
 
 if __name__ == '__main__':

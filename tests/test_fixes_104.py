@@ -344,7 +344,8 @@ class SaveTests(unittest.TestCase):
         self.app.request_quit()
         self.assertEqual(self.app.quits, 0)
         self.app.on_worker('snapshot', (callbacks.pop(), 'requested transcript'))
-        self.assertEqual(file.contents, b'requested transcript\n')
+        # Saved transcripts start with the session's heading (fixed in the test fakes) since 1.1.9.
+        self.assertEqual(file.contents, b'Thursday 23 October 2026, 14:05\nrequested transcript\n')
         self.assertEqual(self.app.quits, 0)
         file.callback(file, None)
         self.assertEqual(self.app.quits, 1)

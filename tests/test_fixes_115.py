@@ -339,7 +339,7 @@ class OrderedSaveTests(unittest.TestCase):
         self.assertEqual(len(self.operations), 1)
         self.complete(0)
         self.complete(1)
-        self.assertEqual(self.disk[uri], b'newer\n')
+        self.assertEqual(self.disk[uri], b'Thursday 23 October 2026, 14:05\nnewer\n')  # with its heading since 1.1.9
         self.assertEqual(self.app.pending_saves, 0)
 
 

@@ -16,6 +16,7 @@ try:
     gi.require_version('Adw', '1')
     from gi.repository import Gio, GLib
     os.environ['XDG_CONFIG_HOME'] = tempfile.mkdtemp()  # never touch the user's settings
+    os.environ['XDG_DATA_HOME'] = tempfile.mkdtemp()  # nor their transcript history
     from nowcaption import app as nc
     import logging
     logging.getLogger('nowcaption').setLevel(logging.CRITICAL)
@@ -125,6 +126,27 @@ class MenuTests(unittest.TestCase):
         self.assertIn('Desktop audio', labels)
         self.assertNotIn('Background filter', labels)
         self.assertIsNone(a.lookup_action('music-filter'))
+
+    def test_the_menu_has_labelled_sections_and_opens_the_transcript(self):
+        a = AppTests.make(self)
+        labels = list(self.labels(a.build_menu(True)))
+        for label in ('Listen to', 'Appearance', 'Transcript', 'Open transcript', 'Keep 7 days of history',
+                      'Clear this session', 'Reset position and size', 'Move to next screen', 'Quit'):
+            self.assertIn(label, labels)
+        self.assertNotIn('Copy transcript', labels)
+        self.assertNotIn('Move to next screen', list(self.labels(a.build_menu(False))))
+
+    def test_the_history_switch_is_remembered_and_reaches_the_worker(self):
+        a = AppTests.make(self)
+        sent = []
+        a.worker = NS(set_history=sent.append)
+        action = a.lookup_action('history')
+        self.assertTrue(action.get_state().get_boolean(), 'history is on by default')
+        action.activate(None)
+        self.assertFalse(a.settings.get('history'))
+        action.activate(None)
+        self.assertTrue(a.settings.get('history'))
+        self.assertEqual(sent, [None, a.history_path])
 
 
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))

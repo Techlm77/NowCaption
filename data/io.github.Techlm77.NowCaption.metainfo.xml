@@ -57,6 +57,25 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.9" date="2026-10-23">
+      <description>
+        <p>
+          A transcript window, history, and a clearer menu. Open transcript shows everything
+          captioned in a window you can scroll, select and copy from, and search. NowCaption
+          now keeps each session's transcript for 7 days, on your computer only, and deletes
+          older ones by itself; it can be turned off in the menu.
+        </p>
+        <ul>
+          <li>Open transcript: earlier sessions under their date, the current one updating as
+            each line is finished, with Find (Ctrl+F), Copy all, Save and Delete history</li>
+          <li>Keep 7 days of history, on by default; Clear this session removes the current
+            session from it too</li>
+          <li>The words still being spoken when NowCaption quits are kept as well</li>
+          <li>A tidier menu in labelled sections; text size and background show their value</li>
+          <li>Saved and copied transcripts start each session with its date</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.8" date="2026-10-23">
       <description>
         <p>

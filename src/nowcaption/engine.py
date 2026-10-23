@@ -133,6 +133,43 @@ def cache_dir():
     return Path(base) / 'nowcaption'
 
 
+HISTORY_DAYS = 7  # sessions older than this are deleted
+
+
+def history_dir():
+    """$XDG_DATA_HOME/nowcaption/history: one file per session, named by when it started
+    (in the Flatpak, ~/.var/app/<app id>/data/nowcaption/history)."""
+    base = os.environ.get('XDG_DATA_HOME') or os.path.join(os.path.expanduser('~'), '.local', 'share')
+    return Path(base) / 'nowcaption' / 'history'
+
+
+def history_file(started, folder=None):
+    """The history file of a session started at this time (seconds since the epoch)."""
+    return Path(folder or history_dir()) / time.strftime('%Y-%m-%d %H.%M.%S.txt', time.localtime(started))
+
+
+def history_files(folder=None):
+    """Kept sessions, oldest first, as (start time, path)."""
+    sessions = []
+    for path in Path(folder or history_dir()).glob('????-??-?? ??.??.??.txt'):
+        try:
+            sessions.append((time.mktime(time.strptime(path.stem, '%Y-%m-%d %H.%M.%S')), path))
+        except ValueError:
+            continue
+    return sorted(sessions)
+
+
+def prune_history(folder=None, days=HISTORY_DAYS, now=None):
+    """Delete sessions that ended (were last written) more than `days` ago."""
+    cutoff = (now or time.time()) - days * 86400
+    for _, path in history_files(folder):
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+        except OSError as e:
+            LOG.warning('Could not delete old transcript %s: %s', path, e)
+
+
 class TranscriptStore:
     """The session's finished lines as Copy and Save export them, until Clear.
 
@@ -140,11 +177,15 @@ class TranscriptStore:
     kept in memory, so a long session does not make NowCaption grow. The file never has
     a name: other programs cannot open it, and the system deletes it when NowCaption
     exits, even after a crash. If it cannot be created or written, lines stay in memory.
+
+    With history on (set_history), each line is also appended to the session's history file,
+    which only the user can read and which is only created once something is said.
     """
 
     def __init__(self, folder=None):
         self.count = self.size = 0
         self.file, self.memory = None, None
+        self.history, self.history_fd = None, None
         try:
             folder = Path(folder) if folder else cache_dir()
             folder.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -168,6 +209,13 @@ class TranscriptStore:
         if self.memory is not None:
             self.memory.append(line)
         self.count += 1
+        if self.history is not None:
+            self._write_history((line + '\n').encode())
+
+    def set_history(self, path):
+        """Also keep finished lines in this file from now on, or stop when path is None."""
+        self._close_history()
+        self.history = Path(path) if path else None
 
     def lines(self):
         if self.file is None:
@@ -184,10 +232,38 @@ class TranscriptStore:
                 self._keep_in_memory(e)
         if self.memory is not None:
             self.memory = []
+        if self.history_fd is not None:
+            try:
+                os.ftruncate(self.history_fd, 0)  # the session's history is cleared with it
+            except OSError as e:
+                LOG.warning('Could not clear the transcript history %s: %s', self.history, e)
 
     def __del__(self):
         if getattr(self, 'file', None) is not None:
             self.file.close()  # the system deletes the unnamed file with its last descriptor
+        if getattr(self, 'history_fd', None) is not None:
+            self._close_history()
+
+    def _write_history(self, data):
+        try:
+            if self.history_fd is None:
+                self.history.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                self.history_fd = os.open(self.history, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_CLOEXEC, 0o600)
+            written = 0
+            while written < len(data):
+                written += os.write(self.history_fd, data[written:])
+        except OSError as e:  # keep captioning; the history just stops here
+            LOG.warning('Could not write the transcript history %s: %s', self.history, e)
+            self._close_history()
+            self.history = None
+
+    def _close_history(self):
+        if self.history_fd is not None:
+            try:
+                os.close(self.history_fd)
+            except OSError:
+                pass
+        self.history_fd = None
 
     def _read(self):
         data, fd = b'', self.file.fileno()
@@ -295,6 +371,13 @@ class Captioner:
         self.primed = False
         self.result = None
 
+    def finish(self):
+        """NowCaption is quitting: the words still being spoken and the newest lines become
+        final, punctuated as they were last shown, so the session's history keeps them."""
+        self.commit_partial()
+        self.caption_text()
+        self._settle(0)
+
     def commit_partial(self):
         """Keep the last known visible words, even if the old native stream has failed."""
         raw = self.partial.strip()
@@ -324,10 +407,11 @@ class Captioner:
         if self.count - self.settled > self.DISPLAY_LINES + self.LIVE_LINES:
             self._settle()  # nothing is showing captions: memory stays bounded all the same
 
-    def _settle(self):
-        """Freeze the punctuation of all but the newest LIVE_LINES lines, and forget the lines
-        the passage no longer needs."""
-        while self.count - self.settled > self.LIVE_LINES:
+    def _settle(self, live=None):
+        """Freeze the punctuation of all but the newest `live` (LIVE_LINES) lines, and forget
+        the lines the passage no longer needs."""
+        live = self.LIVE_LINES if live is None else live
+        while self.count - self.settled > live:
             line = self.recent[self.settled - self.first]
             text = self.settle(line)
             # Copy/Save must retain the same punctuation that freezes on screen.
@@ -504,6 +588,7 @@ class RecognitionWorker(threading.Thread):
         self.stream_gen = 0
         self._event_source_gen = 0  # the command/audio being processed, not a newer queued source
         self.captioner, self.broken = None, False
+        self.history = None  # the session's history file, or None while history is off
         self.confirmed = False
 
     # --- called from any thread -------------------------------------------------------------
@@ -563,6 +648,10 @@ class RecognitionWorker(threading.Thread):
             self.inbox.append(('snapshot', (fn, on_error)))
             self.lock.notify()
 
+    def set_history(self, path):
+        """Keep finished lines in this file as well (the session's history), or stop if None."""
+        self._put('history', path)
+
     def restart(self, recover_only=False, source_gen=None):
         """Manual restart, or a guarded automatic retry for a failed source generation."""
         self._put('recover' if recover_only else 'restart', source_gen)
@@ -583,7 +672,7 @@ class RecognitionWorker(threading.Thread):
                 while not self.inbox and not self.stopping:
                     self.lock.wait()
                 if self.stopping:
-                    return
+                    break
                 kind, value = self.inbox.popleft()
                 self._event_source_gen = (value[0] if kind == 'audio' else
                                           value if kind == 'source' else self.source_gen)
@@ -603,13 +692,15 @@ class RecognitionWorker(threading.Thread):
                         self.on_event('recognition-ok', gen)
             elif kind == 'clear':
                 self._safely(self._handle, kind, value)  # generations apply even when loading failed
-            elif kind == 'snapshot':
+            elif kind in ('snapshot', 'history'):
                 self._safely(self._handle, kind, value)
             elif loaded:
                 if kind != 'source' or value == self.source_gen:
                     self._safely(self._handle, kind, value)
             elif kind in ('restart', 'source'):  # loading failed earlier: try again
                 loaded = self._load()
+        if loaded and self.captioner and not self.broken:
+            self._safely(self.captioner.finish)  # the last words reach the session's history
 
     def _load(self):
         try:
@@ -632,6 +723,8 @@ class RecognitionWorker(threading.Thread):
                         store=old.store if old else None, keep_raw=self.on_trace is not None)
         if old:  # keep the session transcript when recovering from an error
             new.continue_from(old)
+        else:
+            new.store.set_history(self.history)
         self.captioner = new
         self.broken = False
         self.confirmed = False
@@ -639,7 +732,11 @@ class RecognitionWorker(threading.Thread):
             self._caption(new.caption_text())
 
     def _handle(self, kind, value):
-        if kind == 'source':
+        if kind == 'history':
+            self.history = value
+            if self.captioner:
+                self.captioner.store.set_history(value)
+        elif kind == 'source':
             if self.broken:
                 self._safely(self._new_captioner)
             else:
