@@ -26,6 +26,12 @@ and ARM64. You can also download a `.flatpak` file from the
 
 To uninstall: `flatpak uninstall io.github.Techlm77.NowCaption`.
 
+**AppImage:** download `NowCaption-*-x86_64.AppImage` (or `aarch64`) from the
+[latest release](https://github.com/Techlm77/NowCaption/releases/latest), then run
+`chmod +x NowCaption-*.AppImage` and `./NowCaption-*.AppImage`. It needs a system from
+2024 or newer (glibc 2.39: Ubuntu 24.04, Debian 13, Fedora 40, Arch). Gear Lever or
+AppImageUpdate can keep it up to date.
+
 ## Use
 
 Captions start straight away from whatever your computer is playing. Drag them to

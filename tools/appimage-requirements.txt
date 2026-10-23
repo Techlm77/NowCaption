@@ -1,0 +1,12 @@
+# Python packages bundled in the AppImage (Python 3.12, as on Ubuntu 24.04), checked by hash.
+# The same sherpa-onnx and numpy versions as the Flatpak; one hash per architecture
+# (x86_64, then aarch64).
+sherpa-onnx==1.13.8 \
+    --hash=sha256:6949773017647febc0c3696dffb2c67dd3febd4737b87e3dd135a42773704a06 \
+    --hash=sha256:2520b1e7b779a29a493a8cec893612218dfad7304786bf3f64df2ff7ac6c3302
+sherpa-onnx-core==1.13.8 \
+    --hash=sha256:4da90acf435373d7b2ba9cc0be806e7e274d28f63f5780880b5dea6721626e36 \
+    --hash=sha256:a51a03d55c376c32e15dd63ea852236042ba91a5cd73e253bbf7cf21f6582ba9
+numpy==2.5.4 \
+    --hash=sha256:fbde6962867ee75b48b0ee29b2b9372ec5d617799dbaf38e82dc0596f2f7738a \
+    --hash=sha256:fe4d21ab149f15e4e6043dfb0de87e6e5f34ac176cde83060e9802981fca2ac2

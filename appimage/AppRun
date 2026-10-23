@@ -1,0 +1,25 @@
+#!/bin/sh
+# NowCaption AppImage entry point. Bundled libraries find each other through their RUNPATH,
+# so nothing here changes how programs started from NowCaption load their own.
+HERE=$(dirname "$(readlink -f "$0")")
+cache=${XDG_CACHE_HOME:-$HOME/.cache}/nowcaption
+mkdir -p "$cache"
+
+export NOWCAPTION_MODELS="$HERE/usr/share/nowcaption/models"
+export GI_TYPELIB_PATH="$HERE/usr/lib/girepository-1.0"
+export GIO_MODULE_DIR="$HERE/usr/lib/gio/modules"
+export GST_PLUGIN_SYSTEM_PATH_1_0="$HERE/usr/lib/gstreamer-1.0" GST_PLUGIN_PATH_1_0=
+export GST_REGISTRY_1_0="$cache/gstreamer-appimage-$(uname -m).bin" GST_REGISTRY_FORK=no
+# Last, so the system's own icons, settings schemas and MIME types come first where it has them.
+export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:$HERE/usr/share"
+export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1
+# The SVG icon loader's path depends on where the AppImage is mounted.
+sed "s|@APPDIR@|$HERE|g" "$HERE/usr/lib/gdk-pixbuf-2.0/loaders.cache.in" > "$cache/pixbuf-loaders.cache" &&
+    export GDK_PIXBUF_MODULE_FILE="$cache/pixbuf-loaders.cache"
+# gtk4-layer-shell must load before libwayland-client; nowcaption-appimage takes it out of
+# LD_PRELOAD again once Python has started.
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    export NOWCAPTION_HOST_LD_PRELOAD="${LD_PRELOAD:-}"
+    export LD_PRELOAD="$HERE/usr/lib/libgtk4-layer-shell.so.0${LD_PRELOAD:+ $LD_PRELOAD}"
+fi
+exec "$HERE/usr/bin/python3" "$HERE/usr/bin/nowcaption-appimage" "$@"
