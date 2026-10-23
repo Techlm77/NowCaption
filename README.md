@@ -7,8 +7,10 @@ your desktop. It is made for people who are deaf or hard of hearing.
 ![NowCaption showing three lines of live captions](data/screenshots/captions.png)
 
 - **Private.** Everything runs on your computer, offline. No account, and audio never leaves it.
-- **Accurate.** Punctuation and capital letters included. 2.4% word errors on clear
-  speech, a third of upstream Live Captions' 8.1% ([benchmark](benchmark/)).
+- **Accurate.** Punctuation and capital letters included. NowCaption's own speech model
+  makes 2.5% word errors on clear speech, a third of upstream Live Captions' 8.1%, and
+  fewer than the NVIDIA model it was trained from on meetings, calls and noisy speech
+  ([benchmark](benchmark/)).
 - **Light.** Runs on the CPU as speech arrives. No GPU needed.
 
 ## Install
@@ -30,8 +32,6 @@ Captions start straight away from whatever your computer is playing. Drag them t
 move, drag an edge to resize. **Right-click** for the menu:
 
 - **Desktop audio** or **Microphone**
-- **Background filter**: picks voices out of music and noise. Off by default, as it
-  uses a little more CPU and slightly lowers accuracy on plain speech.
 - Text size, background, position
 - Copy, save or clear the transcript
 
@@ -65,9 +65,8 @@ the other files in [`tests/`](tests/) say what they cover.
 
 | Part | Model | License |
 |---|---|---|
-| Speech recognition | NVIDIA [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi), int8 ONNX, 80 ms lookahead | CC-BY-4.0 |
+| Speech recognition | NowCaption's own fine-tune of NVIDIA [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi), int8 ONNX, 80 ms lookahead | CC-BY-4.0 |
 | Punctuation and casing | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) | Apache-2.0 |
-| Background filter | [DPDFNet2](https://github.com/ceva-ip/DPDFNet) by Ceva | Apache-2.0 |
 
 Everything bundled is listed in [MODEL-LICENSES.md](MODEL-LICENSES.md). NowCaption's
 own code is MIT licensed.

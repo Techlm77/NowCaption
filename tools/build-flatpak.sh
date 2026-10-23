@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 manifest=io.github.Techlm77.NowCaption.yml
 if ls dist/nowcaption-fastconformer-*.tar.bz2 >/dev/null 2>&1; then
     archive=$(ls dist/nowcaption-fastconformer-*.tar.bz2 | head -1)
-    sed "s|url: https://github.com/Techlm77/NowCaption/releases/download/models-v1/.*|path: $archive|" \
+    sed "s|url: https://github.com/Techlm77/NowCaption/releases/download/models-v[0-9]*/.*|path: $archive|" \
         $manifest > .local-manifest.yml
     manifest=.local-manifest.yml
 fi

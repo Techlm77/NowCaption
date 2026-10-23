@@ -26,6 +26,9 @@ class WindowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = nc.NowCaption()
+        # A NowCaption that is already running owns the app ID; as its remote instance this
+        # one would have no windows of its own, and GTK crashes building one.
+        cls.app.set_flags(cls.app.get_flags() | nc.Gio.ApplicationFlags.NON_UNIQUE)
         cls.app.register(None)
 
     @classmethod
@@ -100,6 +103,25 @@ class WindowTests(unittest.TestCase):
         self.window.on_monitor_geometry(self.window.monitor, None)
         self.assertLessEqual(self.window.box_width, self.window.monitor.get_geometry().width)
         self.assertEqual(self.window.box_width, self.window.width_for(self.window.monitor))
+
+    def test_changing_screen_keeps_watching_screens_until_the_window_is_destroyed(self):
+        # gtk4-layer-shell unrealizes and maps the window again whenever its screen changes
+        # (Move to next screen, or a screen unplugged). That is not the window closing.
+        w = self.window
+        w.present()
+        self.settle()
+        w.unrealize()
+        w.map()
+        self.settle()
+        self.assertIsNotNone(w._monitors_handler, 'screens plugged in or removed are no longer noticed')
+        if w.monitor:
+            self.assertTrue(w._monitor_handlers, 'resolution and scale changes are no longer noticed')
+        other = nc.CaptionWindow(self.app)
+        other.present()
+        self.settle()
+        other.destroy()
+        self.assertIsNone(other._monitors_handler)
+        self.assertEqual(other._monitor_handlers, [])
 
     def test_dragging_the_bottom_right_corner_adds_rows_and_width(self):
         w = self.window

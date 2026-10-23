@@ -64,30 +64,24 @@ modules:
         url: https://files.pythonhosted.org/packages/63/d6/34b0a2b0741386a63025a65a2c09caaaaaad6d0ca95b66cd65c30dd7fcb5/numpy-2.5.4-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
         sha256: 4054173604cd8658796053f1f3bc0befb68ec1c0762c57fdad61e199256a8617
 
-  # Speech model: NVIDIA stt_en_fastconformer_hybrid_large_streaming_multi (CC-BY-4.0),
-  # exported to ONNX at 80 ms lookahead by tools/export-model.py and attached to a GitHub release.
+  # Speech model: NowCaption's fine-tune of NVIDIA stt_en_fastconformer_hybrid_large_streaming_multi
+  # (CC-BY-4.0; see its README.md), exported to ONNX at 80 ms lookahead and attached to a GitHub release.
   # Punctuation/casing model: Edge-Punct-Casing (Apache-2.0), packaged by k2-fsa.
-  # Optional background filter: DPDFNet2 speech enhancement by Ceva (Apache-2.0), packaged by k2-fsa.
   - name: models
     buildsystem: simple
     build-commands:
-      - install -Dm644 -t /app/share/nowcaption/models/nowcaption-fastconformer-en-80ms-cc-by-v1 asr/tokens.txt asr/encoder.int8.onnx asr/decoder.int8.onnx asr/joiner.int8.onnx asr/README.md
+      - install -Dm644 -t /app/share/nowcaption/models/nowcaption-fastconformer-en-80ms-cc-by-v2 asr/tokens.txt asr/encoder.int8.onnx asr/decoder.int8.onnx asr/joiner.int8.onnx asr/README.md
       - install -Dm644 -t /app/share/nowcaption/models/sherpa-onnx-online-punct-en-2024-08-06 punct/model.int8.onnx punct/bpe.vocab punct/README.md
-      - install -Dm644 -t /app/share/nowcaption/models/dpdfnet2 filter/dpdfnet2.onnx
     sources:
       - type: archive
-        url: https://github.com/Techlm77/NowCaption/releases/download/models-v1/nowcaption-fastconformer-en-80ms-cc-by-v1.tar.bz2
-        sha256: 857639f81da8a52110d659f2d1a91bc5c25f0122f46fd3358091096b74a6ce80
+        url: https://github.com/Techlm77/NowCaption/releases/download/models-v2/nowcaption-fastconformer-en-80ms-cc-by-v2.tar.bz2
+        sha256: 4ecb5591981f4e6bd3456d5bd1a523ae170e22465717ae59cc30c70ddf470fb8
         dest: asr
       - type: archive
         url: https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-online-punct-en-2024-08-06.tar.bz2
         sha256: 9f5e5a72c7d2829635bd074fce92b6bbd5b78da8a52e7ad8ed1be933f366b99d
         strip-components: 2  # entries are ./<dir>/<file>
         dest: punct
-      - type: file
-        url: https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/dpdfnet2.onnx
-        sha256: ce35d6025fc71df0ef10d1540e1b7916837bbfe5f6896deb744508d2cad487a9
-        dest: filter
 
   - name: nowcaption
     buildsystem: simple

@@ -23,12 +23,31 @@ words). test-other is the harder half of LibriSpeech's test data.
 | Engine | WER test-clean | WER test-other | Median lag | p90 lag | CPU | RAM |
 |---|---|---|---|---|---|---|
 | April English (upstream Live Captions) | 8.1% | 17.9% | 0.42 s | 0.52–0.54 s | 0.21 | 895 MB |
-| **NowCaption (FastConformer multi, 80 ms, CC-BY)** | **2.4%** | **7.0%** | **0.23–0.31 s** | **0.47 s** | **0.15–0.16** | **271–273 MB** |
+| **NowCaption 1.1.6 (own model, 80 ms, CC-BY)** | **2.5%** | **7.1%** | **0.23–0.30 s** | **0.39–0.47 s** | **0.15** | **283–284 MB** |
+| NowCaption 1.1.5 (NVIDIA FastConformer multi, 80 ms, CC-BY) | 2.4% | 7.0% | 0.23–0.31 s | 0.47 s | 0.15–0.16 | 271–273 MB |
 
-**NowCaption** was re-measured for 1.1.4: audio fed in 40 ms blocks, as the app
-captures it, and the text read as the app reads it. April was measured with
-100 ms blocks; fed 100 ms blocks, NowCaption has a median lag of 0.31–0.37 s
-([block size](#capture-block-size-engine-only)).
+**NowCaption 1.1.6** was measured with its own speech model and with 0.96 s of
+silence fed to each new stream before the clip (`bench.py --warmup-ms 960`), as the
+app does since 1.1.6; 1.1.5 was measured for 1.1.4 without it. Audio is fed in
+40 ms blocks, as the app captures it, and the text is read as the app reads it.
+April was measured with 100 ms blocks; fed 100 ms blocks, NowCaption 1.1.5 has a
+median lag of 0.31–0.37 s ([block size](#capture-block-size-engine-only)).
+
+On these read audiobooks the new model makes slightly more errors than the one it
+was trained from, measured the same way (with the warm-up):
+
+| Speech model | WER test-clean | WER test-other | Median lag | p90 lag |
+|---|---|---|---|---|
+| NVIDIA FastConformer multi (1.1.5) | **2.28%** | **6.80%** | 0.225 / 0.305 s | 0.464 / 0.544 s |
+| NowCaption's own (1.1.6) | 2.51% | 7.09% | 0.225 / 0.304 s | **0.385 / 0.465 s** |
+
+That is 7 more errors in each set. On test-clean about half are spellings such as
+"endeavouring" and "today" where these old books have "endeavoring" and "to day"; the
+rest, and those on test-other, are recognition errors. Words appear as soon, and the
+slowest tenth 80 ms sooner. On everyday speech the new model makes fewer
+errors ([next section](#everyday-speech-engine-only)). Without the warm-up, when
+speech starts on a stream's very first sample, its median lag was 80 ms longer
+(0.305 / 0.385 s).
 
 **April** is measured as upstream Live Captions by abb128 ships it: abb128/april-asr
 at commit `8b52f65` (the one Live Captions pins), built against ONNX Runtime 1.14.1 as
@@ -49,6 +68,38 @@ the word correctly.
 
 **CPU** is CPU seconds per second of audio, including 1.5 s of silence after each
 clip.
+
+## Everyday speech (engine-only)
+
+NowCaption 1.1.6 has its own speech model: NVIDIA's model fine-tuned on about 3,100
+hours of CC-BY and CC0 English speech (podcasts and YouTube videos, meetings, speeches,
+audiobooks), with the text NVIDIA's Parakeet TDT 0.6B v2 heard in each clip, and then
+averaged 50/50 with the original weights. Its card is in the model archive's README.md;
+the training data is listed in [MODEL-LICENSES.md](../MODEL-LICENSES.md).
+
+The test sets are the [ESB](https://huggingface.co/datasets/hf-audio/esb-datasets-test-only-sorted)
+English test sets: 400 random clips from each (54,033 words), and to check the choice,
+400 other clips from each (54,279 words) that were never used to pick between models.
+
+| Test set | 1.1.5 | 1.1.6 | 1.1.5, other clips | 1.1.6, other clips | Median lag 1.1.5 / 1.1.6 |
+|---|---|---|---|---|---|
+| AMI (meetings) | 24.5% | **21.1%** | 21.5% | **19.2%** | 0.40 / **0.32 s** |
+| URGENT 2024 (noisy speech) | 24.5% | **20.8%** | 23.7% | **19.4%** | 0.40 / 0.40 s |
+| Earnings-22 (business calls, accents) | 20.0% | **17.2%** | 17.7% | **16.3%** | 0.40 / 0.40 s |
+| GigaSpeech (podcasts, YouTube) | 14.3% | **13.7%** | 13.9% | **12.8%** | 0.40 / **0.32 s** |
+| Common Voice (cheap microphones, accents) | **17.7%** | 18.1% | 15.9% | **15.6%** | 0.48 / **0.40 s** |
+| VoxPopuli (speeches, accents) | 9.0% | **8.9%** | 8.8% | **8.1%** | 0.32 / 0.32 s |
+| LibriSpeech test-other | 7.4% | **6.8%** | 6.3% | 6.3% | 0.32 / 0.32 s |
+| LibriSpeech test-clean | **2.8%** | 3.1% | 2.9% | 2.9% | 0.32 / 0.32 s |
+| **Average** | 15.0% | **13.7%** | 13.9% | **12.6%** | |
+
+Here WER is measured after the Whisper English normalizer (so British and American
+spellings count as the same word), each clip comes after 1 s of silence on a fresh
+stream, and audio is fed in 40 ms blocks. Lag is the same measure as above against
+Parakeet timestamps; on the words both models got right, words appear 18 ms sooner on
+average. For comparison, Parakeet TDT 0.6B v2 itself, an offline model too slow to
+caption live on a CPU, averages 8.7% on the first 400 clips. These sets were scored with
+the model-training scripts, which are not in this repository.
 
 ## Capture block size (engine-only)
 
@@ -71,10 +122,10 @@ test-clean and 6.84% against 6.83% on test-other.
 `modified_beam_search` is not available: sherpa-onnx supports only greedy search
 for streaming NeMo transducers such as this model.
 
-## Background filter
+## Background filter (removed in 1.1.6)
 
-**Background filter** puts a streaming speech-enhancement model in front of the
-recognizer. Candidates were run through NowCaption's caption pipeline (40 ms
+Until 1.1.5, the optional **Background filter** put a streaming speech-enhancement
+model in front of the recognizer. Candidates were run through NowCaption's caption pipeline (40 ms
 blocks, punctuation, line splitting) on a 3 min 50 s pop song, scored against its
 244 sung words (backing vocals in brackets excluded). The song is not included here.
 
@@ -98,6 +149,9 @@ speech (full pipeline, one run each):
 | test-clean | 2.73% | 3.17% |
 | test-clean + white noise at 10 dB SNR | 6.16% | 6.47% |
 | test-other | 7.01% | 7.39% |
+
+1.1.6 removed it: even the best live filter missed most sung words, and it made
+plain speech worse. Robustness to music has to come from the speech model itself.
 
 ## Capture to worker event
 
@@ -152,12 +206,11 @@ read it after every 40 ms block. Real sessions reached 1.9 GB after 2.5 hours an
 | | 1.1.2 | 1.1.3 |
 |---|---|---|
 | Caption pipeline, 30 min of looped speech, as fast as possible | 208 → 616 MB | 208 → 209 MB |
-| The same with the background filter | 224 → 631 MB | 227 → 228 MB |
 | Whole app, 15 min of speech played in real time | +7.7 MB per minute | +0.08 MB per minute |
 
 Memory is anonymous resident memory after `malloc_trim`, from the end of the
 first minute (warm-up) to the end of the run. `tests/test_memory.py 30` repeats
-the first row with the real models (`--filter` for the second) and fails above
+the first row with the real models and fails above
 1 MB per audio minute.
 
 1.1.3 still kept every finished transcript line in memory, and glibc held on to
@@ -212,8 +265,8 @@ upstream april-asr with ONNX Runtime 1.14.1 and downloads the model into `april/
 ```sh
 python get-data.py --set test-clean        # also: --set test-other, or no option for the 73-clip set
 python word_times.py --data data/test-clean
-python bench.py sherpa --model ../models/nowcaption-fastconformer-en-80ms-cc-by-v1 \
-    --name nowcaption --threads 1 --data data/test-clean
+python bench.py sherpa --model ../models/nowcaption-fastconformer-en-80ms-cc-by-v2 \
+    --name nowcaption-v2 --threads 1 --warmup-ms 960 --data data/test-clean
 ./build-april.sh
 APRIL_LIB=april/build/libaprilasr.so python bench.py april --model april/april-english-dev-01110_en.april \
     --name april-upstream --threads 1 --chunk-ms 100 --data data/test-clean   # as published

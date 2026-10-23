@@ -2,7 +2,7 @@
 """Memory test with the real models: caption looped speech for several minutes of audio,
 as fast as the CPU allows, and fail if memory keeps growing. No audio device is used.
 
-    PYTHONPATH=src .venv/bin/python tests/test_memory.py [audio-minutes] [--filter]
+    PYTHONPATH=src .venv/bin/python tests/test_memory.py [audio-minutes]
 
 1.1.2 and earlier grew by 4-14 MB per audio minute (sherpa-onnx leaked result.text).
 Since 1.1.3 growth is a few KB per audio minute, until the recognizer's text resets at
@@ -32,13 +32,11 @@ def anon_mb():
 
 
 def main():
-    minutes = float(next((a for a in sys.argv[1:] if not a.startswith('--')), 8))
+    minutes = float(sys.argv[1]) if len(sys.argv) > 1 else 8
     if minutes < 2:
         sys.exit('Use at least 2 audio minutes: the first one is warm-up.')
     rec, punct = engine.load_models()
     cap = engine.Captioner(rec, punct)
-    if '--filter' in sys.argv:
-        cap.set_music_filter(engine.load_music_filter())
     pause = bytes(int(engine.RATE * 1.5) * 2)
     loop = b''.join(wave.open(str(f)).readframes(10**9) + pause for f in sorted(HERE.glob('*.wav')))
     blocks = [loop[i:i + BLOCK] for i in range(0, len(loop) - BLOCK + 1, BLOCK)]

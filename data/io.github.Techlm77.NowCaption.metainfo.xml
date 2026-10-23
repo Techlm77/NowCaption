@@ -57,6 +57,27 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.6" date="2026-10-23">
+      <description>
+        <p>
+          NowCaption's own speech model: NVIDIA's model trained further on 3,100 hours of
+          English speech. It makes fewer mistakes in meetings, calls, videos and
+          noisy speech (13.7% of words against 15.0% on average), as quickly as before and
+          on the same CPU. Also fixes for changing screens and for computers that cannot keep
+          up with the speech. The Background filter has been removed: it still missed most
+          words over music and made plain speech less accurate.
+        </p>
+        <ul>
+          <li>Fewer word errors on everyday speech: meetings 21.1% instead of 24.5%,
+            noisy speech 20.8% instead of 24.5%, business calls 17.2% instead of 20.0%</li>
+          <li>After Move to next screen, the captions still notice screens being plugged in or
+            removed, and still fit the screen when its resolution or scaling changes</li>
+          <li>When recognition falls behind, captions skip ahead to live speech in one step
+            instead of staying two seconds late and restarting many times a second</li>
+          <li>The Falling behind notice no longer says that 0.0 s of audio was skipped</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.5" date="2026-10-16">
       <description>
         <p>

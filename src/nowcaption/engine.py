@@ -20,14 +20,14 @@ LOG = logging.getLogger(__name__)
 
 RATE = 16000
 SILENCE_FLUSH_S = 1.0   # digital silence before the last words are flushed
+WARMUP_S = 0.96         # silence before a new stream's first audio (12 encoder steps): NowCaption's own
+                        # model shows words up to 80 ms later when speech starts on the first sample
 PAUSE_S = 0.8           # no new words for this long starts a new caption line
 MAX_LINE = 160          # characters before a running line is split anyway
-ASR_DIR = 'nowcaption-fastconformer-en-80ms-cc-by-v1'
+ASR_DIR = 'nowcaption-fastconformer-en-80ms-cc-by-v2'
 ASR_FILES = ('tokens.txt', 'encoder.int8.onnx', 'decoder.int8.onnx', 'joiner.int8.onnx')
 PUNCT_DIR = 'sherpa-onnx-online-punct-en-2024-08-06'
 PUNCT_FILES = ('model.int8.onnx', 'bpe.vocab')
-MUSIC_FILTER_DIR = 'dpdfnet2'  # streaming speech enhancement (Apache-2.0), used by the optional background filter
-MUSIC_FILTER_FILE = 'dpdfnet2.onnx'
 
 
 def complete(folder, names):
@@ -76,18 +76,6 @@ def load_punctuation():
         raise FileNotFoundError(f'{PUNCT_DIR} is missing or incomplete')
     return so.OnlinePunctuation(so.OnlinePunctuationConfig(model_config=so.OnlinePunctuationModelConfig(
         cnn_bilstm=str(p / 'model.int8.onnx'), bpe_vocab=str(p / 'bpe.vocab'), num_threads=1)))
-
-
-def load_music_filter():
-    """DPDFNet2, a causal speech enhancer that keeps voices and suppresses music and noise.
-    It adds about 20 ms of delay and roughly 0.1 core, so the app only loads it on request."""
-    import sherpa_onnx as so
-    p = models_dir() / MUSIC_FILTER_DIR
-    if not complete(p, (MUSIC_FILTER_FILE,)):
-        raise FileNotFoundError(f'{MUSIC_FILTER_DIR}/{MUSIC_FILTER_FILE} is missing')
-    config = so.OfflineSpeechDenoiserModelConfig(num_threads=1)
-    config.dpdfnet.model = str(p / MUSIC_FILTER_FILE)
-    return so.OnlineSpeechDenoiser(so.OnlineSpeechDenoiserConfig(model=config))
 
 
 def load_models(on_warning=None):
@@ -235,11 +223,10 @@ class Captioner:
     DISPLAY_LINES = 60  # finished lines kept for the on-screen passage; the box shows its last rows
     LIVE_LINES = 2      # finished lines still re-punctuated with the words being spoken
 
-    def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None, on_filter_error=None,
+    def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None,
                  store=None, keep_raw=False):
         self.rec, self.punct = recognizer, punctuation
         self.on_update, self.on_warning = on_update, on_warning
-        self.on_filter_error = on_filter_error
         self.store = store if store is not None else TranscriptStore()  # settled lines, until cleared
         # Only the lines the caption passage still needs stay in memory: recent[0] is line
         # number first, and the newest LIVE_LINES are still re-punctuated with the words
@@ -251,48 +238,12 @@ class Captioner:
         self.live_input = None  # exporting unchanged words reuses their on-screen punctuation
         self.raw = [] if keep_raw else None  # the whole session's raw text, for benchmark tracing only
         self.stream = recognizer.create_stream()
+        self.primed = False  # see WARMUP_S
         self.result = None  # the stream's text after its last decode
         self.done, self.partial, self.quiet = 0, '', 0.0
         self.partial_since = None  # when the words still being spoken started
         self.silent_for, self.flushed = 0.0, True
         self.decoded = False  # audio buffering alone does not prove native inference works
-        self.music_filter = None  # optional OnlineSpeechDenoiser in front of the recognizer
-        self.filtering = False  # the filter holds the last few ms of the current speech
-
-    def set_music_filter(self, music_filter):
-        if music_filter is not self.music_filter:
-            self._flush_filter()  # an orderly disable must keep audio already accepted by the filter
-            self.music_filter, self.filtering = music_filter, False
-            self._reset_filter()
-
-    def _filter_failed(self, error):
-        """An optional enhancer must never take ordinary recognition down with it."""
-        LOG.exception('Background filter failed; continuing without it')
-        self.music_filter, self.filtering = None, False
-        if self.on_filter_error:
-            self.on_filter_error(error)
-        elif self.on_warning:
-            self.on_warning(f'The background filter was turned off after an error: {error}')
-
-    def _reset_filter(self):
-        if self.music_filter is not None:
-            try:
-                self.music_filter.reset()
-            except Exception as e:
-                self._filter_failed(e)
-
-    def _flush_filter(self):
-        if not self.filtering:
-            return
-        self.filtering = False
-        try:
-            # The denoiser's flush() returns its tail and resets its native state.
-            tail = np.asarray(self.music_filter.flush().samples, dtype=np.float32)
-        except Exception as e:
-            self._filter_failed(e)
-            return
-        if len(tail):
-            self._decode(tail)  # recognizer failures still use the recognizer's recovery policy
 
     def format(self, text):
         text = text.strip()
@@ -309,28 +260,15 @@ class Captioner:
     def feed(self, pcm16):
         x = np.frombuffer(pcm16, dtype=np.int16) if isinstance(pcm16, (bytes, bytearray, memoryview)) else pcm16
         if not x.any():
-            self._flush_filter()
             self.silent_for += len(x) / RATE
             if self.silent_for < SILENCE_FLUSH_S:
                 return self._decode(np.zeros(len(x), np.float32))
             self.flush()  # push the model's lookahead through once, then stay idle
             return
         self.silent_for, self.flushed = 0.0, False
-        samples = x.astype(np.float32) / 32768
-        if self.music_filter:
-            self.filtering = True
-            try:
-                filtered = np.asarray(self.music_filter.run(samples, RATE).samples, dtype=np.float32)
-            except Exception as e:
-                self._filter_failed(e)  # the current input block can still be recognised unfiltered
-            else:
-                samples = filtered
-                if not len(samples):
-                    return
-        self._decode(samples)
+        self._decode(x.astype(np.float32) / 32768)
 
     def flush(self):
-        self._flush_filter()
         if not self.flushed:
             self.flushed = True
             self._decode(np.zeros(int(0.8 * RATE), np.float32), force=True)
@@ -347,11 +285,10 @@ class Captioner:
         self.partial, self.quiet, self.partial_since = '', 0.0, None
         self.silent_for, self.flushed = 0.0, True
         self.decoded = False
-        self.filtering = False  # Clear discards the tail instead of draining pre-Clear speech
-        self._reset_filter()
         if self.on_update:
             self.on_update('')
         self.stream = self.rec.create_stream()
+        self.primed = False
         self.result = None
 
     def commit_partial(self):
@@ -402,7 +339,11 @@ class Captioner:
 
     def _decode(self, samples, force=False):
         rec, s = self.rec, self.stream
-        s.accept_waveform(RATE, samples)
+        if not self.primed:  # silence in front of the stream's first block: see WARMUP_S
+            self.primed = True
+            s.accept_waveform(RATE, np.concatenate([np.zeros(int(WARMUP_S * RATE), np.float32), samples]))
+        else:
+            s.accept_waveform(RATE, samples)
         ran = False
         while rec.is_ready(s):
             rec.decode_stream(s)
@@ -497,7 +438,7 @@ class RecognitionWorker(threading.Thread):
     """The only thread that touches the speech models.
 
     Other threads talk to it with the methods below; it reports back through
-      on_event(kind, value), called on this thread (overload may also come from capture):
+      on_event(kind, value), called on this thread (overload comes from the thread feeding audio):
       ('ready', None)            models loaded
       ('caption', (gen, text))   new caption passage; gen is the clear() generation it belongs to
       ('snapshot', (fn, text))   reply to snapshot(fn)
@@ -507,25 +448,21 @@ class RecognitionWorker(threading.Thread):
       ('load-error', message)    the models could not be loaded; a new source or restart() retries
       ('overload', seconds)      audio arrived faster than it could be recognised and was dropped
       ('recognition-ok', gen)    the new stream processed audio successfully
-      ('music-filter', on)       the background filter is now on or off (off if it could not load)
     Audio is tagged with a source generation; blocks from an older source are ignored, so a
     capture thread that is still shutting down can never feed the new source's captions.
     Pending audio is bounded at enqueue time; commands are never dropped for lack of space.
     """
 
     MAX_BACKLOG = 50  # at most 2 s of pending 40 ms capture blocks, excluding one in-flight call
-    REPORT_DROPPED_S = 2.0  # say so while the worker is stalled, after this much audio is dropped
 
-    def __init__(self, on_event, load=None, on_trace=None, load_filter=None):
+    def __init__(self, on_event, load=None, on_trace=None):
         super().__init__(name='nowcaption-recognition', daemon=True)
         self.on_event = on_event
         self.on_trace = on_trace  # optional complete-text trace, used only by benchmarks
         self.load = load or (lambda: load_models(lambda m: self.on_event('warning', m)))
-        self.load_filter = load_filter or load_music_filter
-        self.music_filter, self.music_filter_on = None, False
         self.inbox = deque()  # ordered commands and at most MAX_BACKLOG audio blocks
         self.lock = threading.Condition()
-        self.backlog = self.dropped = 0
+        self.backlog = 0
         self.discontinuity = self.stopping = False
         self.source_gen, self.ui_gen = 0, 0
         self.stream_gen = 0
@@ -536,26 +473,22 @@ class RecognitionWorker(threading.Thread):
     # --- called from any thread -------------------------------------------------------------
 
     def feed(self, gen, pcm):
-        report = None
+        dropped = 0
         with self.lock:
             if self.stopping or gen != self.source_gen:
                 return
             if self.backlog >= self.MAX_BACKLOG:
-                # Preserve command ordering while removing only the oldest audio.
-                for i, (kind, value) in enumerate(self.inbox):
-                    if kind == 'audio':
-                        del self.inbox[i]
-                        self.backlog -= 1
-                        self.dropped += duration(value[1])
-                        break
+                # Recognition is slower than real time. Skip all pending audio at once (commands
+                # keep their order) and go on from live audio after this one gap. Dropping one
+                # block at a time kept captions 2 s late and restarted the stream at every block.
+                dropped = sum(duration(value[1]) for kind, value in self.inbox if kind == 'audio')
+                self._discard_audio()
                 self.discontinuity = True
-                if self.dropped >= self.REPORT_DROPPED_S:
-                    report, self.dropped = self.dropped, 0
             self.backlog += 1
             self.inbox.append(('audio', (gen, pcm)))
             self.lock.notify()
-        if report:
-            self.on_event('overload', report)  # visible even if the native worker is stalled
+        if dropped:
+            self.on_event('overload', dropped)  # visible even if the native worker is stalled
 
     def _discard_audio(self):
         """Called with lock held; preserve user commands and discard buffered audio."""
@@ -594,10 +527,6 @@ class RecognitionWorker(threading.Thread):
             self.inbox.append(('snapshot', (fn, on_error)))
             self.lock.notify()
 
-    def set_music_filter(self, on):
-        """Turn the optional background filter on or off; it is loaded the first time it is needed."""
-        self._put('music-filter', bool(on))
-
     def restart(self, recover_only=False, source_gen=None):
         """Manual restart, or a guarded automatic retry for a failed source generation."""
         self._put('recover' if recover_only else 'restart', source_gen)
@@ -623,11 +552,9 @@ class RecognitionWorker(threading.Thread):
                 self._event_source_gen = (value[0] if kind == 'audio' else
                                           value if kind == 'source' else self.source_gen)
                 discontinuity = False
-                dropped = 0
                 if kind == 'audio':
                     self.backlog -= 1
                     discontinuity, self.discontinuity = self.discontinuity, False
-                    dropped, self.dropped = self.dropped, 0
             if kind == 'audio':
                 gen, pcm = value
                 if loaded and gen == self.source_gen and not self.broken:
@@ -638,11 +565,9 @@ class RecognitionWorker(threading.Thread):
                     if self._safely(self.captioner.feed, pcm) and self.captioner.decoded and not self.confirmed:
                         self.confirmed = True
                         self.on_event('recognition-ok', gen)
-                if dropped:
-                    self.on_event('overload', dropped)
             elif kind == 'clear':
                 self._safely(self._handle, kind, value)  # generations apply even when loading failed
-            elif kind in ('snapshot', 'music-filter'):
+            elif kind == 'snapshot':
                 self._safely(self._handle, kind, value)
             elif loaded:
                 if kind != 'source' or value == self.source_gen:
@@ -668,11 +593,9 @@ class RecognitionWorker(threading.Thread):
         old = self.captioner
         new = Captioner(rec, punct, on_update=self._caption,
                         on_warning=lambda m: self.on_event('warning', m),
-                        on_filter_error=self._filter_failed,
                         store=old.store if old else None, keep_raw=self.on_trace is not None)
         if old:  # keep the session transcript when recovering from an error
             new.continue_from(old)
-        new.set_music_filter(self.music_filter if self.music_filter_on else None)
         self.captioner = new
         self.broken = False
         self.confirmed = False
@@ -701,29 +624,12 @@ class RecognitionWorker(threading.Thread):
                 self.on_event('snapshot-error', (on_error, str(e)))
             else:
                 self.on_event('snapshot', (callback, text))
-        elif kind == 'music-filter':
-            if value and self.music_filter is None:
-                try:
-                    self.music_filter = self.load_filter()
-                except Exception as e:
-                    LOG.exception('Could not load the background filter')
-                    self.on_event('warning', f'The background filter could not be loaded: {e}')
-                    value = False
-            self.music_filter_on = value
-            if self.captioner:
-                self.captioner.set_music_filter(self.music_filter if value else None)
-            self.on_event('music-filter', self.music_filter_on)
         elif kind == 'restart':
             self._safely(self._new_captioner)
         elif kind == 'recover' and self.broken and (value is None or value == self.source_gen):
             # An automatic timer may already have queued its command when a user
             # recovers manually. Never replace a healthy or newer stream for it.
             self._safely(self._new_captioner)
-
-    def _filter_failed(self, error):
-        self.music_filter, self.music_filter_on = None, False
-        self.on_event('warning', f'The background filter was turned off after an error: {error}')
-        self.on_event('music-filter', False)
 
     def _safely(self, fn, *args):
         try:

@@ -42,7 +42,11 @@ class Sherpa:
         self.r = so.OnlineRecognizer.from_transducer(
             tokens=str(p / 'tokens.txt'), encoder=f('encoder'), decoder=f('decoder'), joiner=f('joiner'),
             num_threads=threads, decoding_method=decoding)
-    def start(self): self.s = self.r.create_stream()
+    def start(self, warmup_ms=0):
+        self.s = self.r.create_stream()
+        if warmup_ms:  # silence first, as the app primes every new stream since 1.1.6
+            self.s.accept_waveform(16000, np.zeros(warmup_ms * 16, np.float32))
+            while self.r.is_ready(self.s): self.r.decode_stream(self.s)
     def feed(self, x):
         self.s.accept_waveform(16000, x.astype(np.float32) / 32768)
         while self.r.is_ready(self.s): self.r.decode_stream(self.s)
@@ -102,6 +106,7 @@ def main():
     ap.add_argument('--threads', type=int, default=2)
     ap.add_argument('--limit', type=int)
     ap.add_argument('--chunk-ms', type=int, default=40, help='audio fed per step (40 ms, as NowCaption captures it)')
+    ap.add_argument('--warmup-ms', type=int, default=0, help='silence fed to each new stream before the clip (NowCaption 1.1.6: 960)')
     ap.add_argument('--decoding', default='greedy_search', choices=['greedy_search', 'modified_beam_search'],
                     help='sherpa only')
     ap.add_argument('--data', default=str(ROOT / 'data' / 'dummy'), help='folder with refs.json and WAVs')
@@ -121,7 +126,7 @@ def main():
             sig = x.astype(np.float64); p = np.mean(sig ** 2)
             x = np.clip(sig + rng.normal(0, np.sqrt(p / 10), len(sig)), -32768, 32767).astype(np.int16)
         x = np.concatenate([x, np.zeros(int(TAIL * 16000), np.int16)])
-        eng.start(); hist = []
+        eng.start(a.warmup_ms) if a.warmup_ms else eng.start(); hist = []
         for off in range(0, len(x), CHUNK):
             t0 = time.perf_counter(); t0c = time.process_time()
             txt = eng.feed(x[off:off + CHUNK]) if off + CHUNK < len(x) else eng.finish()

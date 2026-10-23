@@ -12,63 +12,16 @@ from pathlib import Path
 from types import SimpleNamespace as NS
 from unittest.mock import patch
 
-import numpy as np
-
 from nowcaption import engine
 import test_reliability as fixtures
 import test_fixes_104 as previous
 from test_regressions import APP, ROOT, app_with_fakes
 
 
-class FaultyFilter(fixtures.FakeFilter):
-    def __init__(self, operation, reset_number=1):
-        super().__init__()
-        self.operation, self.reset_number = operation, reset_number
-
-    def reset(self):
-        super().reset()
-        if self.operation == 'reset' and self.resets == self.reset_number:
-            raise RuntimeError('denoiser reset failed')
-
-    def run(self, samples, rate):
-        if self.operation == 'run':
-            raise RuntimeError('denoiser inference failed')
-        return super().run(samples, rate)
-
-    def flush(self):
-        if self.operation == 'flush':
-            raise RuntimeError('denoiser flush failed')
-        return super().flush()
-
-
-class BufferedFilter(fixtures.FakeFilter):
-    """Holds accepted input until flush, just as a native enhancer holds its tail."""
-    def __init__(self):
-        super().__init__()
-        self.pending = []
-
-    def reset(self):
-        super().reset()
-        self.pending = []
-
-    def run(self, samples, rate):
-        self.runs += 1
-        self.pending.append(np.asarray(samples).copy())
-        return NS(samples=[])
-
-    def flush(self):
-        self.flushes += 1
-        tail = np.concatenate(self.pending) if self.pending else []
-        self.pending = []
-        return NS(samples=tail)
-
-
 class WorkerTests(unittest.TestCase):
-    def start_worker(self, script=('hello ', 'again '), music_filter=None, punct=None):
+    def start_worker(self, script=('hello ', 'again '), punct=None):
         events = fixtures.Events()
-        worker = engine.RecognitionWorker(
-            events, load=lambda: (fixtures.FakeRecognizer(script), punct),
-            load_filter=lambda: music_filter)
+        worker = engine.RecognitionWorker(events, load=lambda: (fixtures.FakeRecognizer(script), punct))
         worker.start()
         self.addCleanup(self.stop_worker, worker)
         events.wait('ready')
@@ -84,62 +37,15 @@ class WorkerTests(unittest.TestCase):
         self.assertFalse(worker.broken)
         self.assertFalse(any(kind == 'error' for kind, _ in events.seen))
 
-    def test_filter_reset_failure_keeps_captioning_and_snapshots_working(self):
-        worker, events = self.start_worker(music_filter=FaultyFilter('reset'))
-        worker.set_music_filter(True)
-        self.assertFalse(events.wait('music-filter'))
-        worker.feed(0, fixtures.SPEECH)
-        self.assertIn('Hello', events.snapshot(worker))
-        self.assertTrue(any('reset failed' in value for kind, value in events.seen if kind == 'warning'))
-        self.assert_healthy(worker, events)
-
-    def test_filter_inference_failure_falls_back_on_the_same_audio_block(self):
-        worker, events = self.start_worker(music_filter=FaultyFilter('run'))
-        worker.set_music_filter(True)
-        events.wait('music-filter')
-        worker.feed(0, fixtures.SPEECH)
-        self.assertIn('Hello', events.snapshot(worker))
-        worker.feed(0, fixtures.SPEECH)
-        self.assertIn('hello again', events.snapshot(worker).lower())
-        self.assertFalse(worker.music_filter_on)
-        self.assertIsNone(worker.music_filter)
-        self.assert_healthy(worker, events)
-
-    def test_filter_flush_failure_keeps_future_unfiltered_speech_working(self):
-        worker, events = self.start_worker(music_filter=FaultyFilter('flush'))
-        worker.set_music_filter(True)
-        events.wait('music-filter')
-        worker.feed(0, fixtures.SPEECH)
-        events.snapshot(worker)
-        worker.feed(0, fixtures.SILENCE)
-        worker.feed(0, fixtures.SPEECH)
-        self.assertIn('hello again', events.snapshot(worker).lower())
-        self.assertFalse(worker.music_filter_on)
-        self.assert_healthy(worker, events)
-
-    def test_filter_reset_failure_during_clear_does_not_break_the_new_stream(self):
-        worker, events = self.start_worker(music_filter=FaultyFilter('reset', reset_number=2))
-        worker.set_music_filter(True)
-        events.wait('music-filter')
-        worker.feed(0, fixtures.SPEECH)
-        events.snapshot(worker)
-        worker.clear(1)
-        events.snapshot(worker)
-        worker.feed(0, fixtures.SPEECH)
-        text = events.snapshot(worker).lower()
-        self.assertIn('again', text)
-        self.assertNotIn('hello', text)
-        self.assert_healthy(worker, events)
-
     def test_an_unexpected_command_error_is_reported_and_worker_can_recover(self):
         worker, events = self.start_worker()
         handle = worker._handle
         def fail(kind, value):
-            if kind == 'music-filter':
+            if kind == 'restart':
                 raise RuntimeError('command failed')
             handle(kind, value)
         with patch.object(worker, '_handle', side_effect=fail):
-            worker.set_music_filter(True)
+            worker.restart()
             self.assertIn('command failed', events.wait('error')[2])
         self.assertTrue(worker.is_alive())
         worker.restart()
@@ -164,51 +70,6 @@ class WorkerTests(unittest.TestCase):
         self.stop_worker(worker)
         with self.assertRaisesRegex(RuntimeError, 'not running'):
             worker.snapshot(None)
-
-    def test_source_change_drains_the_filter_tail_exactly_once(self):
-        music_filter = BufferedFilter()
-        worker, events = self.start_worker(script=('tail ',), music_filter=music_filter)
-        worker.set_music_filter(True)
-        events.wait('music-filter')
-        worker.feed(0, fixtures.SPEECH)
-        self.assertEqual(events.snapshot(worker), '')
-        worker.set_source(1)
-        text = events.snapshot(worker).lower()
-        self.assertEqual(text.count('tail'), 1)
-        self.assertEqual(music_filter.flushes, 1)
-        worker.set_source(2)
-        self.assertEqual(events.snapshot(worker).lower().count('tail'), 1)
-        self.assertEqual(music_filter.flushes, 1)
-
-    def test_filter_disable_drains_old_audio_before_new_unfiltered_audio(self):
-        music_filter = BufferedFilter()
-        worker, events = self.start_worker(script=('tail ', 'next '), music_filter=music_filter)
-        worker.set_music_filter(True)
-        events.wait('music-filter')
-        worker.feed(0, fixtures.SPEECH)
-        self.assertEqual(events.snapshot(worker), '')
-        worker.set_music_filter(False)
-        worker.feed(0, fixtures.SPEECH)
-        text = events.snapshot(worker).lower()
-        self.assertIn('tail next', text)
-        self.assertEqual(text.count('tail'), 1)
-        self.assertEqual(music_filter.flushes, 1)
-
-    def test_clear_discards_buffered_filter_audio_instead_of_draining_it(self):
-        music_filter = BufferedFilter()
-        worker, events = self.start_worker(script=('new ',), music_filter=music_filter)
-        worker.set_music_filter(True)
-        events.wait('music-filter')
-        worker.feed(0, fixtures.SPEECH)
-        events.snapshot(worker)
-        worker.clear(1)
-        self.assertEqual(events.snapshot(worker), '')
-        self.assertEqual(music_filter.flushes, 0)
-        self.assertEqual(music_filter.pending, [])
-        worker.feed(0, fixtures.SPEECH)
-        events.snapshot(worker)
-        worker.set_music_filter(False)
-        self.assertIn('New', events.snapshot(worker))
 
     def test_frozen_punctuation_survives_source_changes_and_recovery(self):
         worker, events = self.start_worker(
@@ -329,14 +190,13 @@ class SetupTests(unittest.TestCase):
         shutil.copy(ROOT / 'tools/run-dev.sh', self.root / 'tools')
         shutil.copy(ROOT / 'requirements.txt', self.root)
         for directory, names in ((engine.ASR_DIR, engine.ASR_FILES),
-                                 (engine.PUNCT_DIR, engine.PUNCT_FILES),
-                                 (engine.MUSIC_FILTER_DIR, (engine.MUSIC_FILTER_FILE,))):
+                                 (engine.PUNCT_DIR, engine.PUNCT_FILES)):
             folder = self.root / 'models' / directory
             folder.mkdir(parents=True)
             for name in names:
                 (folder / name).write_bytes(b'existing model')
         fetch = self.root / 'tools/fetch-models.sh'
-        fetch.write_text('#!/bin/sh\necho fetched >> fetch.log\nmkdir -p models/dpdfnet2\nprintf model > models/dpdfnet2/dpdfnet2.onnx\n')
+        fetch.write_text('#!/bin/sh\necho fetched >> fetch.log\n')
         fetch.chmod(0o755)
         (self.root / 'runtime').write_text('python-current')
         self.fake_python = ('#!' + sys.executable + '\n' + """
@@ -393,12 +253,11 @@ else:
     def calls(self):
         return [json.loads(line) for line in (self.root / 'calls.jsonl').read_text().splitlines()]
 
-    def test_upgrading_an_existing_checkout_fetches_the_missing_filter_model(self):
-        (self.root / 'models' / engine.MUSIC_FILTER_DIR / engine.MUSIC_FILTER_FILE).unlink()
+    def test_a_checkout_without_the_removed_filter_model_starts_without_fetching(self):
         result = self.run_launcher()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.root / 'fetch.log').exists())
-        self.assertTrue((self.root / 'models' / engine.MUSIC_FILTER_DIR / engine.MUSIC_FILTER_FILE).is_file())
+        self.assertFalse((self.root / 'fetch.log').exists())
+        self.assertTrue((self.root / 'launched').exists())
 
     def test_matching_dependency_stamp_does_not_hide_broken_imports(self):
         (self.root / 'broken').touch()

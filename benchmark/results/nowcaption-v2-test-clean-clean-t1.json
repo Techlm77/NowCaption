@@ -1,0 +1,980 @@
+{
+ "name": "nowcaption-v2",
+ "data": "test-clean",
+ "cond": "clean",
+ "threads": 1,
+ "wer": 0.0251,
+ "words": 3151,
+ "errors": 79,
+ "cpu_rtf": 0.1512,
+ "step_ms_p50": 0.063,
+ "step_ms_p99": 25.218,
+ "first_shown_lag_s_p50": 0.225,
+ "first_shown_lag_s_p90": 0.385,
+ "stable_lag_s_p50": 0.225,
+ "stable_lag_s_p90": 0.385,
+ "timed_words": 3063,
+ "peak_rss_mb": 283,
+ "items": [
+  {
+   "audio": "61-70970-0000.wav",
+   "ref": "YOUNG FITZOOTH HAD BEEN COMMANDED TO HIS MOTHER'S CHAMBER SO SOON AS HE HAD COME OUT FROM HIS CONVERSE WITH THE SQUIRE",
+   "hyp": "young fitzooth had been commanded to his mother's chamber so soon as he had come out from his converse with the squire",
+   "errors": 0
+  },
+  {
+   "audio": "61-70970-0004.wav",
+   "ref": "BUT TAKE IT WHILST I LIVE AND WEAR MONTFICHET'S SHIELD IN THE DAYS WHEN MY EYES CAN BE REJOICED BY SO BRAVE A SIGHT FOR YOU WILL NE'ER DISGRACE OUR SCUTCHEON I WARRANT ME",
+   "hyp": "but take it whilst i live and where montfiche's shield in the days when my eyes can be rejoiced by so brave a sight for you will ne'er disgrace our duchen i warrant me",
+   "errors": 3
+  },
+  {
+   "audio": "61-70968-0007.wav",
+   "ref": "SISTER NELL DO YOU HEAR THESE MARVELS",
+   "hyp": "sister nell do you hear these marvels",
+   "errors": 0
+  },
+  {
+   "audio": "61-70968-0041.wav",
+   "ref": "I LIKE YOU WILL YOU ARE THE SECOND WILL THAT I HAVE MET AND LIKED WITHIN TWO DAYS IS THERE A SIGN IN THAT",
+   "hyp": "i like you will you are the second will that i have met and liked within two days is there a sign in that",
+   "errors": 0
+  },
+  {
+   "audio": "121-127105-0027.wav",
+   "ref": "HE HAD FOR HIS OWN TOWN RESIDENCE A BIG HOUSE FILLED WITH THE SPOILS OF TRAVEL AND THE TROPHIES OF THE CHASE BUT IT WAS TO HIS COUNTRY HOME AN OLD FAMILY PLACE IN ESSEX THAT HE WISHED HER IMMEDIATELY TO PROCEED",
+   "hyp": "he had for his own town residence a big house filled with the spoils of travel and the trophies of the chase but it was to his country home an old family place in essex that he wished her immediately to proceed",
+   "errors": 0
+  },
+  {
+   "audio": "121-127105-0026.wav",
+   "ref": "THE FIRST OF THESE TOUCHES CONVEYED THAT THE WRITTEN STATEMENT TOOK UP THE TALE AT A POINT AFTER IT HAD IN A MANNER BEGUN",
+   "hyp": "the first of these touches conveyed that the written statement took up the tale at a point after it had in a manner begun",
+   "errors": 0
+  },
+  {
+   "audio": "121-127105-0013.wav",
+   "ref": "YOU'LL EASILY JUDGE WHY WHEN YOU HEAR BECAUSE THE THING HAD BEEN SUCH A SCARE HE CONTINUED TO FIX ME",
+   "hyp": "you easily judge why when you hear because the thing had been such a scare he continued to fix me",
+   "errors": 1
+  },
+  {
+   "audio": "121-127105-0003.wav",
+   "ref": "THERE WAS A UNANIMOUS GROAN AT THIS AND MUCH REPROACH AFTER WHICH IN HIS PREOCCUPIED WAY HE EXPLAINED",
+   "hyp": "there was a unanimous groan at this and much reproach after which in his preoccupied way he explained",
+   "errors": 0
+  },
+  {
+   "audio": "237-134500-0032.wav",
+   "ref": "I GET TIRED OF SEEING MEN AND HORSES GOING UP AND DOWN UP AND DOWN",
+   "hyp": "i get tired of seeing men and horses going up and down up and down",
+   "errors": 0
+  },
+  {
+   "audio": "237-134500-0010.wav",
+   "ref": "IT'S EXCITING TO SEE EVERYTHING GROWING SO FAST AND TO GET THE GRASS CUT",
+   "hyp": "it's exciting to see everything growing so fast and to get the grass cut",
+   "errors": 0
+  },
+  {
+   "audio": "237-134493-0002.wav",
+   "ref": "FROM THE NORWEGIAN GRAVEYARD ONE LOOKS OUT OVER A VAST CHECKER BOARD MARKED OFF IN SQUARES OF WHEAT AND CORN LIGHT AND DARK DARK AND LIGHT",
+   "hyp": "from the norwegian graveyard one looks out over a vast checkerboard marked off in squares of wheat and corn light and dark dark and light",
+   "errors": 2
+  },
+  {
+   "audio": "237-134500-0036.wav",
+   "ref": "I CAN'T PLAY WITH YOU LIKE A LITTLE BOY ANY MORE HE SAID SLOWLY THAT'S WHAT YOU MISS MARIE",
+   "hyp": "i can't play with you like a little boy any more he said slowly that's what you miss marie",
+   "errors": 0
+  },
+  {
+   "audio": "260-123286-0020.wav",
+   "ref": "TUESDAY AUGUST EIGHTEENTH",
+   "hyp": "tuesday august eighteenth",
+   "errors": 0
+  },
+  {
+   "audio": "260-123288-0008.wav",
+   "ref": "THERE'S A HEAVY STORM COMING ON I CRIED POINTING TOWARDS THE HORIZON",
+   "hyp": "there's a heavy storm coming on i cried pointing towards the horizon",
+   "errors": 0
+  },
+  {
+   "audio": "260-123286-0015.wav",
+   "ref": "IT MUST BE AS WIDE AS THE MEDITERRANEAN OR THE ATLANTIC AND WHY NOT",
+   "hyp": "it must be as wide as the mediterranean or the atlantic and why not",
+   "errors": 0
+  },
+  {
+   "audio": "260-123288-0004.wav",
+   "ref": "THE AIR IS HEAVY THE SEA IS CALM",
+   "hyp": "the air is heavy the sea is calm",
+   "errors": 0
+  },
+  {
+   "audio": "672-122797-0073.wav",
+   "ref": "THE WOOD FLAMED UP SPLENDIDLY UNDER THE LARGE BREWING COPPER AND IT SIGHED SO DEEPLY",
+   "hyp": "the wood flamed up splendidly under the large brewing copper and its sighed so deeply",
+   "errors": 1
+  },
+  {
+   "audio": "672-122797-0045.wav",
+   "ref": "TIME ENOUGH HAD HE TOO FOR HIS REFLECTIONS FOR DAYS AND NIGHTS PASSED ON AND NOBODY CAME UP AND WHEN AT LAST SOMEBODY DID COME IT WAS ONLY TO PUT SOME GREAT TRUNKS IN A CORNER OUT OF THE WAY",
+   "hyp": "time enough had he too for his reflections for days and nights passed on and nobody came up and when at last somebody did come it was only to put some great trunks in a corner out of the way",
+   "errors": 0
+  },
+  {
+   "audio": "672-122797-0058.wav",
+   "ref": "WHO IS HUMPY DUMPY ASKED THE MICE",
+   "hyp": "who is umpy dumpy asked the mice",
+   "errors": 1
+  },
+  {
+   "audio": "672-122797-0066.wav",
+   "ref": "WHY ONE MORNING THERE CAME A QUANTITY OF PEOPLE AND SET TO WORK IN THE LOFT",
+   "hyp": "why one morning there came a quantity of people and set to work in the loft",
+   "errors": 0
+  },
+  {
+   "audio": "908-31957-0016.wav",
+   "ref": "DEAREST TEACH ME SO TO POUR OUT GRATITUDE AS THOU DOST GOOD",
+   "hyp": "dearest teach me so to pour out gratitude as thou dost good",
+   "errors": 0
+  },
+  {
+   "audio": "908-157963-0013.wav",
+   "ref": "AND WHY IT SCATTERS ITS BRIGHT BEAUTY THRO THE HUMID AIR",
+   "hyp": "and why it scatters its bright beauty through the humid air",
+   "errors": 1
+  },
+  {
+   "audio": "908-157963-0024.wav",
+   "ref": "IMAGE OF WEAKNESS ART THOU BUT A WORM",
+   "hyp": "image of weakness art thou but a worm",
+   "errors": 0
+  },
+  {
+   "audio": "908-157963-0010.wav",
+   "ref": "SHE CEASD AND SMILD IN TEARS THEN SAT DOWN IN HER SILVER SHRINE",
+   "hyp": "she ceased and smiled in tears then sat down in her silver shrine",
+   "errors": 2
+  },
+  {
+   "audio": "1089-134691-0020.wav",
+   "ref": "HELLO STEPHANOS HERE COMES THE DEDALUS",
+   "hyp": "hello stephanos here comes the dadalus",
+   "errors": 1
+  },
+  {
+   "audio": "1089-134686-0005.wav",
+   "ref": "THE MUSIC CAME NEARER AND HE RECALLED THE WORDS THE WORDS OF SHELLEY'S FRAGMENT UPON THE MOON WANDERING COMPANIONLESS PALE FOR WEARINESS",
+   "hyp": "the music came nearer and he recalled the words the words of shelley's fragment upon the moon wandering companionless pale for weariness",
+   "errors": 0
+  },
+  {
+   "audio": "1089-134691-0017.wav",
+   "ref": "THE EUROPE THEY HAD COME FROM LAY OUT THERE BEYOND THE IRISH SEA EUROPE OF STRANGE TONGUES AND VALLEYED AND WOODBEGIRT AND CITADELLED AND OF ENTRENCHED AND MARSHALLED RACES",
+   "hyp": "the europe they had come from lay out there beyond the irish sea europe of strange tongues and valleyed and would be girt and citadeld and of intrenched and marshalled races",
+   "errors": 5
+  },
+  {
+   "audio": "1089-134686-0025.wav",
+   "ref": "A GENTLE KICK FROM THE TALL BOY IN THE BENCH BEHIND URGED STEPHEN TO ASK A DIFFICULT QUESTION",
+   "hyp": "a gentle kick from the tall boy in the bench behind urged stephen to ask a difficult question",
+   "errors": 0
+  },
+  {
+   "audio": "1188-133604-0022.wav",
+   "ref": "YOU MUST LOOK AT HIM IN THE FACE FIGHT HIM CONQUER HIM WITH WHAT SCATHE YOU MAY YOU NEED NOT THINK TO KEEP OUT OF THE WAY OF HIM",
+   "hyp": "you must look at him in the face fight him conquer him with what scathe you may you need not think to keep out of the way of him",
+   "errors": 0
+  },
+  {
+   "audio": "1188-133604-0027.wav",
+   "ref": "NOW HERE IS RAPHAEL EXACTLY BETWEEN THE TWO TREES STILL DRAWN LEAF BY LEAF WHOLLY FORMAL BUT BEAUTIFUL MIST COMING GRADUALLY INTO THE DISTANCE",
+   "hyp": "now here is rafael exactly between the two trees still drawn leaf by leaf wholly formal but beautiful mist coming gradually into the distance",
+   "errors": 1
+  },
+  {
+   "audio": "1188-133604-0004.wav",
+   "ref": "SOME OF THE TOUCHES INDEED WHEN THE TINT HAS BEEN MIXED WITH MUCH WATER HAVE BEEN LAID IN LITTLE DROPS OR PONDS SO THAT THE PIGMENT MIGHT CRYSTALLIZE HARD AT THE EDGE",
+   "hyp": "some of the touches indeed when the tint has been mixed with much water have been laid in little drops or ponds so that the pigment might crystallize hard at the edge",
+   "errors": 0
+  },
+  {
+   "audio": "1188-133604-0018.wav",
+   "ref": "IN ALL EARLY GOTHIC ART INDEED YOU WILL FIND FAILURE OF THIS KIND ESPECIALLY DISTORTION AND RIGIDITY WHICH ARE IN MANY RESPECTS PAINFULLY TO BE COMPARED WITH THE SPLENDID REPOSE OF CLASSIC ART",
+   "hyp": "in all early gothic art indeed you will find failure of this kind especially distortion and rigidity which are in many respects painfully to be compared with the splendid repose of classic art",
+   "errors": 0
+  },
+  {
+   "audio": "1221-135767-0008.wav",
+   "ref": "COME THEREFORE AND LET US FLING MUD AT THEM",
+   "hyp": "come therefore and let us fling mud at them",
+   "errors": 0
+  },
+  {
+   "audio": "1221-135767-0001.wav",
+   "ref": "ANOTHER AND FAR MORE IMPORTANT REASON THAN THE DELIVERY OF A PAIR OF EMBROIDERED GLOVES IMPELLED HESTER AT THIS TIME TO SEEK AN INTERVIEW WITH A PERSONAGE OF SO MUCH POWER AND ACTIVITY IN THE AFFAIRS OF THE SETTLEMENT",
+   "hyp": "another and far more important reason than the delivery of a pair of embroidered gloves impelled hester at this time to seek an interview with a personage of so much power and activity in the affairs of the settlement",
+   "errors": 0
+  },
+  {
+   "audio": "1221-135767-0018.wav",
+   "ref": "LITTLE PEARL WHO WAS AS GREATLY PLEASED WITH THE GLEAMING ARMOUR AS SHE HAD BEEN WITH THE GLITTERING FRONTISPIECE OF THE HOUSE SPENT SOME TIME LOOKING INTO THE POLISHED MIRROR OF THE BREASTPLATE",
+   "hyp": "little pearl who was as greatly pleased with the gleaming armor as she had been with the glittering frontispiece of the house spent some time looking into the polished mirror of the breastplate",
+   "errors": 1
+  },
+  {
+   "audio": "1221-135767-0019.wav",
+   "ref": "MOTHER CRIED SHE I SEE YOU HERE LOOK LOOK",
+   "hyp": "mother cried she i see you here look look",
+   "errors": 0
+  },
+  {
+   "audio": "1284-1180-0013.wav",
+   "ref": "AND YOU MUST BE OJO THE UNLUCKY SHE ADDED",
+   "hyp": "and you must be ojo the unlucky she added",
+   "errors": 0
+  },
+  {
+   "audio": "1284-1181-0006.wav",
+   "ref": "WELL THAT MAY BE TRUE AGREED MARGOLOTTE BUT ON THE CONTRARY A SERVANT WITH TOO MUCH BRAINS IS SURE TO BECOME INDEPENDENT AND HIGH AND MIGHTY AND FEEL ABOVE HER WORK",
+   "hyp": "well that may be true agreed margolotte but on the contrary a servant with too much brains is sure to become independent and high and mighty and feel above her work",
+   "errors": 0
+  },
+  {
+   "audio": "1284-1181-0001.wav",
+   "ref": "MARGOLOTTE HAD FIRST MADE THE GIRL'S FORM FROM THE PATCHWORK QUILT AND THEN SHE HAD DRESSED IT WITH A PATCHWORK SKIRT AND AN APRON WITH POCKETS IN IT USING THE SAME GAY MATERIAL THROUGHOUT",
+   "hyp": "margolotte had first made the girl's form from the patchwork quilt and then she had dressed it with a patchwork skirt and an apron with pockets in it using the same gay material throughout",
+   "errors": 0
+  },
+  {
+   "audio": "1284-1180-0032.wav",
+   "ref": "I WILL SHOW YOU WHAT A GOOD JOB I DID AND SHE WENT TO A TALL CUPBOARD AND THREW OPEN THE DOORS",
+   "hyp": "i will show you what a good job i did and she went to a tall cupboard and threw open the doors",
+   "errors": 0
+  },
+  {
+   "audio": "1320-122617-0017.wav",
+   "ref": "THEN AS IF SATISFIED OF THEIR SAFETY THE SCOUT LEFT HIS POSITION AND SLOWLY ENTERED THE PLACE",
+   "hyp": "then as if satisfied of their safety the scout left his position and slowly entered the place",
+   "errors": 0
+  },
+  {
+   "audio": "1320-122612-0016.wav",
+   "ref": "RUN BACK UNCAS AND BRING ME THE SIZE OF THE SINGER'S FOOT",
+   "hyp": "run back uncas and bring me the size of the singer's foot",
+   "errors": 0
+  },
+  {
+   "audio": "1320-122612-0003.wav",
+   "ref": "HE OFTEN STOPPED TO EXAMINE THE TREES NOR DID HE CROSS A RIVULET WITHOUT ATTENTIVELY CONSIDERING THE QUANTITY THE VELOCITY AND THE COLOR OF ITS WATERS",
+   "hyp": "he often stopped to examine the trees nor did he cross a rivulet without attentively considering the quantity the velocity and the colour of its waters",
+   "errors": 1
+  },
+  {
+   "audio": "1320-122617-0037.wav",
+   "ref": "THE DELAWARE DOG HE SAID LEANING FORWARD AND PEERING THROUGH THE DIM LIGHT TO CATCH THE EXPRESSION OF THE OTHER'S FEATURES IS HE AFRAID",
+   "hyp": "the delaware dog he said leaning forward and peering through the dim light to catch the expression of the other's features is he afraid",
+   "errors": 0
+  },
+  {
+   "audio": "1580-141084-0042.wav",
+   "ref": "A SUDDEN IMPULSE CAME OVER HIM TO ENTER AND SEE IF THEY WERE INDEED THE PROOFS",
+   "hyp": "a sudden impulse came over him to enter and see if they were indeed the proofs",
+   "errors": 0
+  },
+  {
+   "audio": "1580-141083-0001.wav",
+   "ref": "I HAD ALWAYS KNOWN HIM TO BE RESTLESS IN HIS MANNER BUT ON THIS PARTICULAR OCCASION HE WAS IN SUCH A STATE OF UNCONTROLLABLE AGITATION THAT IT WAS CLEAR SOMETHING VERY UNUSUAL HAD OCCURRED",
+   "hyp": "i had always known him to be restless in his manner but on this particular occasion he was in such a state of uncontrollable agitation that it was clear something very unusual had occurred",
+   "errors": 0
+  },
+  {
+   "audio": "1580-141083-0013.wav",
+   "ref": "ABOVE ALL THINGS I DESIRE TO SETTLE THE MATTER QUIETLY AND DISCREETLY",
+   "hyp": "above all things i desire to settle the matter quietly and discreetly",
+   "errors": 0
+  },
+  {
+   "audio": "1580-141084-0011.wav",
+   "ref": "WHEN WE WERE OUT IN THE DARKNESS OF THE QUADRANGLE WE AGAIN LOOKED UP AT THE WINDOWS",
+   "hyp": "when we were out in the darkness of the quadrangle we again looked up at the windows",
+   "errors": 0
+  },
+  {
+   "audio": "1995-1837-0015.wav",
+   "ref": "THE SQUARES OF COTTON SHARP EDGED HEAVY WERE JUST ABOUT TO BURST TO BOLLS",
+   "hyp": "the squares of cotton sharp edged heavy were just about to burst to boles",
+   "errors": 1
+  },
+  {
+   "audio": "1995-1837-0022.wav",
+   "ref": "UP IN THE SICK ROOM ZORA LAY ON THE LITTLE WHITE BED",
+   "hyp": "up in the sick room zora lay on the little white bed",
+   "errors": 0
+  },
+  {
+   "audio": "1995-1837-0020.wav",
+   "ref": "THE YEARS OF THE DAYS OF HER DYING WERE TEN",
+   "hyp": "the years of the days of her dying were ten",
+   "errors": 0
+  },
+  {
+   "audio": "1995-1837-0012.wav",
+   "ref": "HE SPLASHED AND STAMPED ALONG FARTHER AND FARTHER ONWARD UNTIL HE NEARED THE RAMPART OF THE CLEARING AND PUT FOOT UPON THE TREE BRIDGE",
+   "hyp": "he's blashed and stamped along farther and farther onward until he neared the rampart of the clearing and put foot upon the tree bridge",
+   "errors": 2
+  },
+  {
+   "audio": "2094-142345-0001.wav",
+   "ref": "BUT THE WINDOWS ARE PATCHED WITH WOODEN PANES AND THE DOOR I THINK IS LIKE THE GATE IT IS NEVER OPENED",
+   "hyp": "but the windows are patched with wooden panes and the door i think is like the gate it is never opened",
+   "errors": 0
+  },
+  {
+   "audio": "2094-142345-0054.wav",
+   "ref": "OH SIR SAID MISSUS POYSER RATHER ALARMED YOU WOULDN'T LIKE IT AT ALL",
+   "hyp": "oh sir said missus poyser rather alarmed you wouldn't like it at all",
+   "errors": 0
+  },
+  {
+   "audio": "2094-142345-0039.wav",
+   "ref": "I'VE STRONG ASSURANCE THAT NO EVIL WILL HAPPEN TO YOU AND MY UNCLE AND THE CHILDREN FROM ANYTHING I'VE DONE",
+   "hyp": "i've strong assurance that no evil will happen to you and my uncle and the children from anything i have done",
+   "errors": 2
+  },
+  {
+   "audio": "2094-142345-0032.wav",
+   "ref": "I OFTEN HEARD HER TALK OF YOU IN THE SAME SORT OF WAY",
+   "hyp": "i often heard her talk of you in the same sort of way",
+   "errors": 0
+  },
+  {
+   "audio": "2300-131720-0032.wav",
+   "ref": "THE STANDARD EDISON METER PRACTICE WAS TO REMOVE THE CELLS ONCE A MONTH TO THE METER ROOM OF THE CENTRAL STATION COMPANY FOR EXAMINATION ANOTHER SET BEING SUBSTITUTED",
+   "hyp": "the standard edison meter practice was to remove the cells once a month to the meter room of the central station company for examination another set being substituted",
+   "errors": 0
+  },
+  {
+   "audio": "2300-131720-0013.wav",
+   "ref": "UNLESS HE COULD SECURE AN ENGINE OF SMOOTHER RUNNING AND MORE EXACTLY GOVERNED AND REGULATED THAN THOSE AVAILABLE FOR HIS DYNAMO AND LAMP EDISON REALIZED THAT HE WOULD FIND IT ALMOST IMPOSSIBLE TO GIVE A STEADY LIGHT",
+   "hyp": "unless he could secure an engine of smoother running and more exactly government regulated than those available for his dynamo and lamp edison realized that he would find it almost impossible to give a steady light",
+   "errors": 2
+  },
+  {
+   "audio": "2300-131720-0030.wav",
+   "ref": "THE PRINCIPLE EMPLOYED IN THE EDISON ELECTROLYTIC METER IS THAT WHICH EXEMPLIFIES THE POWER OF ELECTRICITY TO DECOMPOSE A CHEMICAL SUBSTANCE",
+   "hyp": "the principal employed in the edison electrolytic metre is that which exemplifies the power of electricity to decompose a chemical substance",
+   "errors": 2
+  },
+  {
+   "audio": "2300-131720-0038.wav",
+   "ref": "HE FELT HE WAS UP AGAINST IT AND THAT PERHAPS ANOTHER KIND OF A JOB WOULD SUIT HIM BETTER",
+   "hyp": "he felt he was up against it and that perhaps another kind of a job would suit him better",
+   "errors": 0
+  },
+  {
+   "audio": "2830-3979-0011.wav",
+   "ref": "THE LORD WHO HAS GIVEN US POWER TO TEACH AND TO HEAR LET HIM ALSO GIVE US THE POWER TO SERVE AND TO DO LUKE TWO",
+   "hyp": "the lord who has given us power to teach and to hear let him also give us the power to serve and to do luke two",
+   "errors": 0
+  },
+  {
+   "audio": "2830-3980-0019.wav",
+   "ref": "I KNEW NOTHING OF THE DOCTRINE OF FAITH BECAUSE WE WERE TAUGHT SOPHISTRY INSTEAD OF CERTAINTY AND NOBODY UNDERSTOOD SPIRITUAL BOASTING",
+   "hyp": "i knew nothing of the doctrine of faith because we were taught sophistry instead of certainty and nobody understood spiritual boasting",
+   "errors": 0
+  },
+  {
+   "audio": "2830-3980-0024.wav",
+   "ref": "IN THIS WHOLE EPISTLE PAUL TREATS OF THE RESURRECTION OF CHRIST",
+   "hyp": "in this whole epistle paul treats of the resurrection of christ",
+   "errors": 0
+  },
+  {
+   "audio": "2830-3980-0028.wav",
+   "ref": "THIS SHOULD GO FAR IN SHUTTING THE MOUTHS OF THE FALSE APOSTLES",
+   "hyp": "this should go far in shutting the mouths of the false apostles",
+   "errors": 0
+  },
+  {
+   "audio": "2961-960-0016.wav",
+   "ref": "BUT PLATO HAS NOT THE SAME MASTERY OVER HIS INSTRUMENT WHICH HE EXHIBITS IN THE PHAEDRUS OR SYMPOSIUM",
+   "hyp": "but plato has not the same mastery over his instrument which he exhibits in the phaedrus or symposium",
+   "errors": 0
+  },
+  {
+   "audio": "2961-961-0020.wav",
+   "ref": "THIS IS THE EXPLANATION OF THE SHALLOWS WHICH ARE FOUND IN THAT PART OF THE ATLANTIC OCEAN",
+   "hyp": "this is the explanation of the shallows which are found in that part of the atlantic ocean",
+   "errors": 0
+  },
+  {
+   "audio": "2961-961-0014.wav",
+   "ref": "NINE THOUSAND YEARS HAVE ELAPSED SINCE SHE FOUNDED YOURS AND EIGHT THOUSAND SINCE SHE FOUNDED OURS AS OUR ANNALS RECORD",
+   "hyp": "nine thousand years have elapsed since she founded yours and eight thousand since she found it ours as our annals record",
+   "errors": 2
+  },
+  {
+   "audio": "2961-960-0012.wav",
+   "ref": "MANY IF NOT ALL THE ELEMENTS OF THE PRE SOCRATIC PHILOSOPHY ARE INCLUDED IN THE TIMAEUS",
+   "hyp": "many if not all the elements of the pre socratic philosophy are included in the timiais",
+   "errors": 1
+  },
+  {
+   "audio": "3570-5694-0006.wav",
+   "ref": "DRUNKENNESS AND THE OTHER PATHOLOGICAL CONSEQUENCES OF THE FREE USE OF STIMULANTS THEREFORE TEND IN THEIR TURN TO BECOME HONORIFIC AS BEING A MARK AT THE SECOND REMOVE OF THE SUPERIOR STATUS OF THOSE WHO ARE ABLE TO AFFORD THE INDULGENCE",
+   "hyp": "drunkenness and the other pathological consequences of the free use of stimulants therefore tend in their turn to become honorific as being a mark at the second remove of the superior status of those who are able to afford the indulgence",
+   "errors": 0
+  },
+  {
+   "audio": "3570-5694-0021.wav",
+   "ref": "WHENEVER AS IN THESE CASES THE MENIAL SERVICE IN QUESTION HAS TO DO DIRECTLY WITH THE PRIMARY LEISURE EMPLOYMENTS OF FIGHTING AND HUNTING IT EASILY ACQUIRES A REFLECTED HONORIFIC CHARACTER",
+   "hyp": "whenever as in these cases the menial service in question has to do directly with a primary leisure employments of fighting and hunting it easily acquires a reflected onific character",
+   "errors": 2
+  },
+  {
+   "audio": "3570-5695-0011.wav",
+   "ref": "IT IS EVIDENT THEREFORE THAT THE PRESENT TREND OF THE DEVELOPMENT IS IN THE DIRECTION OF HEIGHTENING THE UTILITY OF CONSPICUOUS CONSUMPTION AS COMPARED WITH LEISURE",
+   "hyp": "it is evident therefore that the present trend of the development is in the direction of heightening the utility of conspicuous consumption as compared with leisure",
+   "errors": 0
+  },
+  {
+   "audio": "3570-5695-0010.wav",
+   "ref": "THE MODERN ORGANIZATION OF INDUSTRY WORKS IN THE SAME DIRECTION ALSO BY ANOTHER LINE",
+   "hyp": "the modern organization of industry works in the same direction also by another line",
+   "errors": 0
+  },
+  {
+   "audio": "3575-170457-0008.wav",
+   "ref": "AND SO LIFE AND DEATH HAVE DISPERSED THE CIRCLE OF VIOLENT RADICALS AND DISSENTERS INTO WHICH TWENTY YEARS AGO THE LITTLE QUIET RESOLUTE CLERGYMAN'S DAUGHTER WAS RECEIVED AND BY WHOM SHE WAS TRULY LOVED AND HONOURED",
+   "hyp": "and so life and death have disperse the circle of violent radicals and dissenters into which twenty years ago the little quiet resolute clergyman's daughter was received and by whom she was truly loved and honoured",
+   "errors": 1
+  },
+  {
+   "audio": "3575-170457-0023.wav",
+   "ref": "I CAREFULLY AVOID ANY APPEARANCE OF PREOCCUPATION AND ECCENTRICITY WHICH MIGHT LEAD THOSE I LIVE AMONGST TO SUSPECT THE NATURE OF MY PURSUITS",
+   "hyp": "i carefully avoid any appearance of preoccupation and eccentricity which might lead those i live amongst to suspect the nature of my pursuits",
+   "errors": 0
+  },
+  {
+   "audio": "3575-170457-0041.wav",
+   "ref": "SHE WAS GONE OUT INTO THE VILLAGE ON SOME ERRAND WHEN AS SHE WAS DESCENDING THE STEEP STREET HER FOOT SLIPPED ON THE ICE AND SHE FELL IT WAS DARK AND NO ONE SAW HER MISCHANCE TILL AFTER A TIME HER GROANS ATTRACTED THE ATTENTION OF A PASSER BY",
+   "hyp": "she was gone out into the village on some errand when as she was descending the steep street her foot slipped on the ice and she fell it was dark and no one saw her mischance till after a time her groans attracted the attention of a passer by",
+   "errors": 0
+  },
+  {
+   "audio": "3575-170457-0022.wav",
+   "ref": "IN THE EVENINGS I CONFESS I DO THINK BUT I NEVER TROUBLE ANY ONE ELSE WITH MY THOUGHTS",
+   "hyp": "in the evenings i confess i do think but i never trouble any one else with my thoughts",
+   "errors": 0
+  },
+  {
+   "audio": "3729-6852-0037.wav",
+   "ref": "SHE INTRODUCED ME TO ALL HER GUESTS AND GAVE ME SOME PARTICULARS RESPECTING EVERY ONE OF THEM",
+   "hyp": "she introduced me to all her guests and gave me some particulars respecting every one of them",
+   "errors": 0
+  },
+  {
+   "audio": "3729-6852-0007.wav",
+   "ref": "TWO YEARS BEFORE HER DEATH I SAW HER PERFORM THE CHARACTER OF MARIANNE IN THE COMEDY OF MARIVAUX AND IN SPITE OF HER AGE AND DECLINING HEALTH THE ILLUSION WAS COMPLETE",
+   "hyp": "two years before her death i saw her perform the character of marianne in the comedy of maravau an in spite of her age and declining health the illusion was complete",
+   "errors": 2
+  },
+  {
+   "audio": "3729-6852-0028.wav",
+   "ref": "ALL THESE HONEST PERSONS ARE WAITING THEIR TURN TO GET THEIR SNUFF BOXES FILLED",
+   "hyp": "all these honest persons are waiting their turn to get their snuff boxes filled",
+   "errors": 0
+  },
+  {
+   "audio": "3729-6852-0020.wav",
+   "ref": "THEN TURNING TOWARDS ME HE SAYS THAT I LOOK LIKE A FOREIGNER AND WHEN I SAY THAT I AM AN ITALIAN HE BEGINS TO SPEAK TO ME OF THE COURT OF THE CITY OF THE THEATRES AND AT LAST HE OFFERS TO ACCOMPANY ME EVERYWHERE",
+   "hyp": "then turning towards me he says that i look like a foreigner and when i say that i am an italian he begins to speak to me of the court the city of the theatres and at last he offers to accompany me everywhere",
+   "errors": 1
+  },
+  {
+   "audio": "4077-13754-0016.wav",
+   "ref": "AND SO THE STORY OF MORMONISM RUNS ON ITS FINALE HAS NOT YET BEEN WRITTEN THE CURRENT PRESS PRESENTS CONTINUOUSLY NEW STAGES OF ITS PROGRESS NEW DEVELOPMENTS OF ITS PLAN",
+   "hyp": "and so the story of mormonism runs on its finale has not yet been written the current press presents continuously new stages of its progress new developments of its plan",
+   "errors": 0
+  },
+  {
+   "audio": "4077-13754-0003.wav",
+   "ref": "MOREOVER HAD THE PEOPLE BEEN INCLINED TO REBELLION WHAT GREATER OPPORTUNITY COULD THEY HAVE WISHED",
+   "hyp": "moreover had the people been inclined to rebellion what greater opportunity could they have wished",
+   "errors": 0
+  },
+  {
+   "audio": "4077-13751-0010.wav",
+   "ref": "TO THE FERVENT LATTER DAY SAINT A TEMPLE IS NOT SIMPLY A CHURCH BUILDING A HOUSE FOR RELIGIOUS ASSEMBLY",
+   "hyp": "to the fervent latter day saint a temple is not simply a church building a house for religious assembly",
+   "errors": 0
+  },
+  {
+   "audio": "4077-13754-0014.wav",
+   "ref": "THE PEOPLE CONTESTED THESE MEASURES ONE BY ONE IN THE COURTS PRESENTING IN CASE AFTER CASE THE DIFFERENT PHASES OF THE SUBJECT AND URGING THE UNCONSTITUTIONALITY OF THE MEASURE",
+   "hyp": "the people contested these measures one by one in the courts presenting in case after case the different phases of the subject and urging the unconstitutionality of the measure",
+   "errors": 0
+  },
+  {
+   "audio": "4446-2275-0040.wav",
+   "ref": "THE SIGHT OF YOU BARTLEY TO SEE YOU LIVING AND HAPPY AND SUCCESSFUL CAN I NEVER MAKE YOU UNDERSTAND WHAT THAT MEANS TO ME",
+   "hyp": "the sight of you bartley to see you living and happy and successful can i never make you understand what that means to me",
+   "errors": 0
+  },
+  {
+   "audio": "4446-2273-0024.wav",
+   "ref": "BARTLEY STARTED WHEN HILDA RANG THE LITTLE BELL BESIDE HER DEAR ME WHY DID YOU DO THAT",
+   "hyp": "bartley started when hilda rang the little bell beside her dear me why did you do that",
+   "errors": 0
+  },
+  {
+   "audio": "4446-2275-0016.wav",
+   "ref": "HILDA WATCHED HIM FROM HER CORNER TREMBLING AND SCARCELY BREATHING DARK SHADOWS GROWING ABOUT HER EYES IT",
+   "hyp": "hilda watched him from the corner trembling and scarcely breathing dark shadows growing about her eyes",
+   "errors": 2
+  },
+  {
+   "audio": "4446-2271-0014.wav",
+   "ref": "WESTMERE AND I WERE BACK AFTER THE FIRST ACT AND WE THOUGHT SHE SEEMED QUITE UNCERTAIN OF HERSELF",
+   "hyp": "westmere and i were back after the first act and we thought she seemed quite uncertain of herself",
+   "errors": 0
+  },
+  {
+   "audio": "4507-16021-0054.wav",
+   "ref": "THAT IS WHY WE CRY EDUCATION SCIENCE",
+   "hyp": "that is why we cry education science",
+   "errors": 0
+  },
+  {
+   "audio": "4507-16021-0036.wav",
+   "ref": "FACTS FORM ONE OF THESE AND IDEAS THE OTHER",
+   "hyp": "facts form one of these and ideas the other",
+   "errors": 0
+  },
+  {
+   "audio": "4507-16021-0031.wav",
+   "ref": "AND THEN WE INSIST UPON IT THE STUDY OF SOCIAL DEFORMITIES AND INFIRMITIES AND THE TASK OF POINTING THEM OUT WITH A VIEW TO REMEDY IS NOT A BUSINESS IN WHICH CHOICE IS PERMITTED",
+   "hyp": "and then we insist upon it the study of social deformities and infirmities and the task of pointing them out with a view to remedy is not a business in which choice is permitted",
+   "errors": 0
+  },
+  {
+   "audio": "4507-16021-0052.wav",
+   "ref": "THE REAL HUMAN DIVISION IS THIS THE LUMINOUS AND THE SHADY",
+   "hyp": "the real human division is this the luminous and the shady",
+   "errors": 0
+  },
+  {
+   "audio": "4970-29093-0020.wav",
+   "ref": "WHY IT'S IN MISSOURI SOMEWHERE ON THE FRONTIER I THINK WE'LL GET A MAP",
+   "hyp": "why it's a missouri somewhere on the frontier i think we'll get a map",
+   "errors": 1
+  },
+  {
+   "audio": "4970-29095-0001.wav",
+   "ref": "SHE TRIED THIS MORNING AN AIR OR TWO UPON THE PIANO SANG A SIMPLE SONG IN A SWEET BUT SLIGHTLY METALLIC VOICE AND THEN SEATING HERSELF BY THE OPEN WINDOW READ PHILIP'S LETTER",
+   "hyp": "she tried this morning an error or two upon the piano saying a simple song in a sweet but slightly metallic voice and then seating herself by the open window read philip's letter",
+   "errors": 2
+  },
+  {
+   "audio": "4970-29093-0014.wav",
+   "ref": "WELL I'M GOING AS AN ENGINEER YOU CAN GO AS ONE",
+   "hyp": "well i'm going as an engineer you could go as one",
+   "errors": 1
+  },
+  {
+   "audio": "4970-29093-0015.wav",
+   "ref": "YOU CAN BEGIN BY CARRYING A ROD AND PUTTING DOWN THE FIGURES",
+   "hyp": "you can begin by carrying a rod and putting down the figures",
+   "errors": 0
+  },
+  {
+   "audio": "4992-23283-0014.wav",
+   "ref": "WHAT CAN YOU MEAN BY THAT MISS WOODLEY YOU TALK MYSTERIOUSLY",
+   "hyp": "what can you mean by that miss woodley you talk mysteriously",
+   "errors": 0
+  },
+  {
+   "audio": "4992-23283-0003.wav",
+   "ref": "SO THERE IS TO ME ADDED SANDFORD WITH A SARCASTIC SNEER",
+   "hyp": "so there is to me added samford with a sarcastic sneer",
+   "errors": 1
+  },
+  {
+   "audio": "4992-41806-0001.wav",
+   "ref": "TO NIGHT THERE WAS NO NEED OF EXTRA HEAT AND THERE WERE GREAT CEREMONIES TO BE OBSERVED IN LIGHTING THE FIRES ON THE HEARTHSTONES",
+   "hyp": "tonight there was no need of extra heat and there were great ceremonies to be observed in lighting the fires on the hearthstones",
+   "errors": 2
+  },
+  {
+   "audio": "4992-41806-0005.wav",
+   "ref": "NEXT CAME OLIVE'S TURN TO HELP IN THE CEREMONIES",
+   "hyp": "next came olive's turn to help in the ceremonies",
+   "errors": 0
+  },
+  {
+   "audio": "5105-28240-0007.wav",
+   "ref": "SERVADAC TOOK IT FOR GRANTED THAT THE DOBRYNA WAS ENDEAVORING TO PUT IN",
+   "hyp": "servadac took it for granted that the dobrina was endeavouring to put in",
+   "errors": 2
+  },
+  {
+   "audio": "5105-28241-0002.wav",
+   "ref": "THE LATE ASTOUNDING EVENTS HOWEVER HAD RENDERED PROCOPE MANIFESTLY UNEASY AND NOT THE LESS SO FROM HIS CONSCIOUSNESS THAT THE COUNT SECRETLY PARTOOK OF HIS OWN ANXIETY",
+   "hyp": "the late astounding events however had rendered procope manifestly uneasy and not the less so from his consciousness that the count secretly partook of his own anxiety",
+   "errors": 0
+  },
+  {
+   "audio": "5105-28233-0004.wav",
+   "ref": "ONCE IN ACTION HE WAS LEADING A DETACHMENT OF INFANTRY THROUGH AN INTRENCHMENT",
+   "hyp": "once in action he was leading a detachment of infantry through an intrenchment",
+   "errors": 0
+  },
+  {
+   "audio": "5105-28233-0005.wav",
+   "ref": "SOMETIMES HE WOULD WANDER ON FOOT UPON THE SANDY SHORE AND SOMETIMES HE WOULD ENJOY A RIDE ALONG THE SUMMIT OF THE CLIFF ALTOGETHER BEING IN NO HURRY AT ALL TO BRING HIS TASK TO AN END",
+   "hyp": "sometimes he would wander on foot upon the sandy shore and sometimes he would enjoy a ride along the summit of the cliff altogether being in no hurry at all to bring his task to an end",
+   "errors": 0
+  },
+  {
+   "audio": "5142-33396-0023.wav",
+   "ref": "IT WAS SO DARK THAT I COULD SEE NOTHING BUT A FEW SPARKS ON THE HEARTH",
+   "hyp": "it was so dark that i could see nothing but a few sparks on the hearth",
+   "errors": 0
+  },
+  {
+   "audio": "5142-33396-0026.wav",
+   "ref": "MY MEN LAUGHED YES A STINGY HOST",
+   "hyp": "my men laughed yes a stingy host",
+   "errors": 0
+  },
+  {
+   "audio": "5142-33396-0007.wav",
+   "ref": "AT THE PROW I CARVED THE HEAD WITH OPEN MOUTH AND FORKED TONGUE THRUST OUT",
+   "hyp": "had the prow i carved the head with open mouth and forked tongue thrust out",
+   "errors": 1
+  },
+  {
+   "audio": "5142-33396-0015.wav",
+   "ref": "AS OUR BOAT FLASHED DOWN THE ROLLERS INTO THE WATER I MADE THIS SONG AND SANG IT",
+   "hyp": "has our boat flashed down the rollers into the water i made this song and sang it",
+   "errors": 1
+  },
+  {
+   "audio": "5639-40744-0039.wav",
+   "ref": "WHEN SHE CAME TO HER SENSES AND BLUSHING TO FIND HERSELF IN RODOLFO'S ARMS WOULD HAVE DISENGAGED HERSELF NO SENORA HE SAID THAT MUST NOT BE STRIVE NOT TO WITHDRAW FROM THE ARMS OF HIM WHO HOLDS YOU IN HIS SOUL",
+   "hyp": "when she came to her senses and blushing to find herself in rodolph's arms would have disengaged herself no signora he said that must not be strive not to withdraw from the arms of him who holds you in his soul",
+   "errors": 2
+  },
+  {
+   "audio": "5639-40744-0029.wav",
+   "ref": "THIS TRUTH WHICH I HAVE LEARNED FROM HER LIPS IS CONFIRMED BY HIS FACE IN WHICH WE HAVE BOTH BEHELD THAT OF OUR SON",
+   "hyp": "this truth which i have learned from her lips is confirmed by his face in which we have both beheld that of our son",
+   "errors": 0
+  },
+  {
+   "audio": "5639-40744-0040.wav",
+   "ref": "THIS WAS DONE FOR THE EVENT TOOK PLACE AT A TIME WHEN THE CONSENT OF THE PARTIES WAS SUFFICIENT FOR THE CELEBRATION OF A MARRIAGE WITHOUT ANY OF THE PRELIMINARY FORMALITIES WHICH ARE NOW SO PROPERLY REQUIRED",
+   "hyp": "this was done for the event took place at a time when the consent of the parties was sufficient for the celebration of a marriage without any of the preliminary formalities which are now so properly required",
+   "errors": 0
+  },
+  {
+   "audio": "5639-40744-0037.wav",
+   "ref": "KNOW THEN SON OF MY HEART THAT THIS FAINTING LADY IS YOUR REAL BRIDE I SAY REAL BECAUSE SHE IS THE ONE WHOM YOUR FATHER AND I HAVE CHOSEN FOR YOU AND THE PORTRAIT WAS A PRETENCE",
+   "hyp": "know then son of my heart that this fainting lady is your real bride i say real because she is the one whom your father and i have chosen for you and the portrait was a pretence",
+   "errors": 0
+  },
+  {
+   "audio": "5683-32866-0028.wav",
+   "ref": "THE SOMBRE OLD TREES LIKE GIGANTIC HEARSE PLUMES BLACK AND AWFUL",
+   "hyp": "the sombre old trees like gigantic hearse plumes black and awful",
+   "errors": 0
+  },
+  {
+   "audio": "5683-32879-0007.wav",
+   "ref": "RACHEL'S PALE AND SHARPENED FEATURES AND DILATED EYE STRUCK HER WITH A PAINFUL SURPRISE",
+   "hyp": "rachel's pale and sharpened features and dilated eye struck her with a painful surprise",
+   "errors": 0
+  },
+  {
+   "audio": "5683-32866-0016.wav",
+   "ref": "MARK MY WORDS YOU'LL FIND HIM TOO STRONG FOR YOU AYE AND TOO DEEP",
+   "hyp": "mark my words you'll find him too strong for you aye and too deep",
+   "errors": 0
+  },
+  {
+   "audio": "5683-32879-0019.wav",
+   "ref": "I HAVE VERY FEW TO LOVE ME NOW AND I THOUGHT YOU MIGHT LOVE ME AS I HAVE BEGUN TO LOVE YOU",
+   "hyp": "i have very few to love me now and i thought you might love me as i have begun to love you",
+   "errors": 0
+  },
+  {
+   "audio": "6829-68771-0030.wav",
+   "ref": "HER MANNER WAS NEITHER INDEPENDENT NOR ASSERTIVE BUT RATHER ONE OF WELL BRED COMPOSURE AND CALM RELIANCE",
+   "hyp": "her manner was neither independent nor assertive but rather one of well bred composure and calm reliance",
+   "errors": 0
+  },
+  {
+   "audio": "6829-68769-0044.wav",
+   "ref": "IT HAS COST ME TWICE SIXTY DOLLARS IN ANNOYANCE",
+   "hyp": "it is cost me twice sixty dollars in annoyance",
+   "errors": 1
+  },
+  {
+   "audio": "6829-68771-0029.wav",
+   "ref": "BETH WAS A BEAUTIFUL GIRL THE HANDSOMEST OF THE THREE COUSINS BY FAR YET ELIZA SURPASSED HER IN NATURAL CHARM AND SEEMED WELL AWARE OF THE FACT",
+   "hyp": "beth was a beautiful girl the handsomest of the three cousins by far yet eliza surpassed her in natural charm and seemed well aware of the fact",
+   "errors": 0
+  },
+  {
+   "audio": "6829-68769-0033.wav",
+   "ref": "IT WAS BETTER FOR HIM TO THINK THE GIRL UNFEELING THAN TO KNOW THE TRUTH",
+   "hyp": "it was better for him to think the girl unfeeling than to know the truth",
+   "errors": 0
+  },
+  {
+   "audio": "6930-81414-0015.wav",
+   "ref": "I DO NOT KNOW I AM DAZED BEWILDERED",
+   "hyp": "i do not know i am dazed bewildered",
+   "errors": 0
+  },
+  {
+   "audio": "6930-75918-0017.wav",
+   "ref": "BUT IN THIS FRIENDLY PRESSURE RAOUL COULD DETECT THE NERVOUS AGITATION OF A GREAT INTERNAL CONFLICT",
+   "hyp": "but in this friendly pressure rao could detect the nervous agitation of a great internal conflict",
+   "errors": 1
+  },
+  {
+   "audio": "6930-81414-0021.wav",
+   "ref": "A TERRIBLE THOUGHT FLASHED INTO MY MIND",
+   "hyp": "a terrible thought flashed into my mind",
+   "errors": 0
+  },
+  {
+   "audio": "6930-81414-0003.wav",
+   "ref": "NO SOUND BROKE THE STILLNESS OF THE NIGHT",
+   "hyp": "no sound broke the stillness of the night",
+   "errors": 0
+  },
+  {
+   "audio": "7021-85628-0019.wav",
+   "ref": "WITH ONE JUMP ANDERS GOT OUT OF HIS CHAIR",
+   "hyp": "with one jump anders got out of his chair",
+   "errors": 0
+  },
+  {
+   "audio": "7021-85628-0005.wav",
+   "ref": "SEEING THAT I AM SO FINE I MAY AS WELL GO AND VISIT THE KING",
+   "hyp": "seeing that i am so fine i may as well go and visit the king",
+   "errors": 0
+  },
+  {
+   "audio": "7021-79740-0013.wav",
+   "ref": "PUT THESE PLAYTHINGS ALL AWAY QUICK AND CAREFULLY AND WE WILL NOT LET THEM KNOW ANY THING ABOUT YOUR LEAVING THEM OUT",
+   "hyp": "put these playthings all away quick and carefully and we will not let them know anything about your leaving them out",
+   "errors": 2
+  },
+  {
+   "audio": "7021-85628-0008.wav",
+   "ref": "FOR LIKE AS NOT THEY MUST HAVE THOUGHT HIM A PRINCE WHEN THEY SAW HIS FINE CAP",
+   "hyp": "four like as not they must have thought him a prince when they saw his fine cap",
+   "errors": 1
+  },
+  {
+   "audio": "7127-75947-0011.wav",
+   "ref": "REMAIN I IMPLORE YOU THE EVENING IS MOST LOVELY",
+   "hyp": "remain i implore you the evening is most lovely",
+   "errors": 0
+  },
+  {
+   "audio": "7127-75947-0025.wav",
+   "ref": "EXQUISITE SOFT TURF OF THE WOODS THE HAPPINESS WHICH YOUR FRIENDSHIP CONFERS UPON ME",
+   "hyp": "exquisite soft turf of the woods the happiness which your friendship confers upon me",
+   "errors": 0
+  },
+  {
+   "audio": "7127-75947-0024.wav",
+   "ref": "LOOK YONDER DO YOU NOT SEE THE MOON SLOWLY RISING SILVERING THE TOPMOST BRANCHES OF THE CHESTNUTS AND THE OAKS",
+   "hyp": "luck yonder do you not see the moon slowly rising silvering the topmost branches of the chestnuts and the oaks",
+   "errors": 1
+  },
+  {
+   "audio": "7127-75947-0027.wav",
+   "ref": "TO SAY NOTHING SAID MONTALAIS SO THAT WHEN MADEMOISELLE DE TONNAY CHARENTE THINKS ATHENAIS IS THE ONLY ONE WHO KNOWS IT",
+   "hyp": "to say nothing said montalais so that when mademoiselle de tonnage areand thinks athene is the only one who knows it",
+   "errors": 3
+  },
+  {
+   "audio": "7176-92135-0039.wav",
+   "ref": "TEA PLEASE MATTHEWS BUTLER IMPASSIVELY",
+   "hyp": "tea please matthews butler impassively",
+   "errors": 0
+  },
+  {
+   "audio": "7176-88083-0024.wav",
+   "ref": "THE LAST DROP FLY AS LUCK WOULD HAVE IT CAUGHT JUST IN THE CORNER OF THE HAWK'S ANGRILY OPEN BEAK HOOKING ITSELF FIRMLY",
+   "hyp": "the last drop fly as luck would have it caught just in the corner of the hawk's angrily open beak hooking itself firmly",
+   "errors": 0
+  },
+  {
+   "audio": "7176-88083-0006.wav",
+   "ref": "IT MIGHT HAVE SEEMED THAT A TROUT OF THIS SIZE WAS A FAIRLY SUBSTANTIAL MEAL",
+   "hyp": "they might have seemed that a trout of this size was a fairly substantial meal",
+   "errors": 1
+  },
+  {
+   "audio": "7176-88083-0022.wav",
+   "ref": "THE HAWK EMBITTERED BY THE LOSS OF HIS FIRST QUARRY HAD BECOME AS DOGGED IN PURSUIT AS A WEASEL NOT TO BE SHAKEN OFF OR EVADED OR DECEIVED",
+   "hyp": "the hawk embittered by the loss of his first quarry had become as dogged in pursuit as a weasel not to be shaken off or evaded or deceived",
+   "errors": 0
+  },
+  {
+   "audio": "7729-102255-0014.wav",
+   "ref": "THE LEADERS OF THE CONSPIRACY BECAME DISTRUSTFUL OF THEIR POWER TO CRUSH THE TOWN",
+   "hyp": "the leaders of the conspiracy became distrustful of their power to crush the town",
+   "errors": 0
+  },
+  {
+   "audio": "7729-102255-0042.wav",
+   "ref": "RELOCATED FOOTNOTE GOVERNOR ROBINSON BEING ON HIS WAY EAST THE STEAMBOAT ON WHICH HE WAS TRAVELING STOPPED AT LEXINGTON MISSOURI",
+   "hyp": "relocated footnote governor robinson being on his way east the steamboat on which he was travelling stopped at lexington missouri",
+   "errors": 1
+  },
+  {
+   "audio": "7729-102255-0030.wav",
+   "ref": "HE SUMMONED HALF A DOZEN CITIZENS TO JOIN HIS POSSE WHO FOLLOWED OBEYED AND ASSISTED HIM",
+   "hyp": "he summoned half a dozen citizens to join his posse who followed obeyed and assisted him",
+   "errors": 0
+  },
+  {
+   "audio": "7729-102255-0020.wav",
+   "ref": "THE INCIDENT WAS NOT VIOLENT NOR EVEN DRAMATIC NO POSSE WAS SUMMONED NO FURTHER EFFORT MADE AND REEDER FEARING PERSONAL VIOLENCE SOON FLED IN DISGUISE",
+   "hyp": "the incident was not violent nor even dramatic no posse was summoned no further effort made and reader fearing personal violence soon fled in disguise",
+   "errors": 1
+  },
+  {
+   "audio": "8224-274384-0002.wav",
+   "ref": "THEY INFORMED THE ENGLISH PARLIAMENT OF THIS UNEXPECTED INCIDENT AND ASSURED THEM THAT THEY HAD ENTERED INTO NO PRIVATE TREATY WITH THE KING",
+   "hyp": "they informed the english parliament of this unexpected incident and assured them that they had entered into no private treaty with the king",
+   "errors": 0
+  },
+  {
+   "audio": "8224-274381-0003.wav",
+   "ref": "THE KING'S EARS WERE NOW OPEN TO MONTROSE'S COUNSELS WHO PROPOSED NONE BUT THE BOLDEST AND MOST DARING AGREEABLY TO THE DESPERATE STATE OF THE ROYAL CAUSE IN SCOTLAND",
+   "hyp": "the king's ears were now open to monttrose's counsels who proposed none but the boldest and most daring agreeably to the desperate state of the royal cause in scotland",
+   "errors": 1
+  },
+  {
+   "audio": "8224-274384-0007.wav",
+   "ref": "HAVE MERCY LORD ON ME I PRAY FOR MEN WOULD ME DEVOUR",
+   "hyp": "have mercy lord on me i pray for men would me devour",
+   "errors": 0
+  },
+  {
+   "audio": "8224-274381-0013.wav",
+   "ref": "FROM THE SAME MEN NEW REGIMENTS AND NEW COMPANIES WERE FORMED DIFFERENT OFFICERS APPOINTED AND THE WHOLE MILITARY FORCE PUT INTO SUCH HANDS AS THE INDEPENDENTS COULD RELY ON",
+   "hyp": "from the same men new regiments and new companies were formed different officers appointed and the whole military force put into such hands as the independence could rely on",
+   "errors": 1
+  },
+  {
+   "audio": "8230-279154-0012.wav",
+   "ref": "FAMILIARITY IS A FEELING CAPABLE OF DEGREES",
+   "hyp": "familiarity is a feeling capable of degrees",
+   "errors": 0
+  },
+  {
+   "audio": "8230-279154-0020.wav",
+   "ref": "IF WE HAD RETAINED THE SUBJECT OR ACT IN KNOWLEDGE THE WHOLE PROBLEM OF MEMORY WOULD HAVE BEEN COMPARATIVELY SIMPLE",
+   "hyp": "if we had retained the subject or act in knowledge the whole problem of memory would have been comparatively simple",
+   "errors": 0
+  },
+  {
+   "audio": "8230-279154-0030.wav",
+   "ref": "SEMON'S TWO BOOKS MENTIONED IN AN EARLIER LECTURE DO NOT TOUCH KNOWLEDGE MEMORY AT ALL CLOSELY",
+   "hyp": "simmons two books mentioned in an earlier lecture do not touch knowledge memory at all closely",
+   "errors": 1
+  },
+  {
+   "audio": "8230-279154-0015.wav",
+   "ref": "THEY MUST HAVE SOME CHARACTERISTIC WHICH MAKES US REGARD THEM AS REFERRING TO MORE OR LESS REMOTE PORTIONS OF THE PAST",
+   "hyp": "they must have some characteristic which makes us regard them as referring to more or less remote portions of the past",
+   "errors": 0
+  },
+  {
+   "audio": "8455-210777-0026.wav",
+   "ref": "AND THE DEATH OF WHICH I DREAMT COULD NOT ALAS",
+   "hyp": "and the death of which i dreamt could not alas",
+   "errors": 0
+  },
+  {
+   "audio": "8455-210777-0033.wav",
+   "ref": "BUT YOUR POWER IS SO SUPERIOR TO ANY THAT I CAN ADVANCE AS TO MAKE US HERE FEEL THAT THERE IS NO DISGRACE IN YIELDING TO IT",
+   "hyp": "but your power is so superior to any that i can advance as to make us here feel that there is no disgrace in yielding to it",
+   "errors": 0
+  },
+  {
+   "audio": "8455-210777-0062.wav",
+   "ref": "WHEN DO YOU INTEND THAT THE JOHN BRIGHT SHALL START",
+   "hyp": "when do you intend that the john bright shall start",
+   "errors": 0
+  },
+  {
+   "audio": "8455-210777-0004.wav",
+   "ref": "I HAVE COME TO YOUR SHORES MISTER PRESIDENT WITH THE PURPOSE OF SEEING HOW THINGS ARE PROGRESSING IN THIS DISTANT QUARTER OF THE WORLD",
+   "hyp": "i have come to your shores mister president with the purpose of seeing how things are progressing in this distant quarter of the world",
+   "errors": 0
+  },
+  {
+   "audio": "8463-287645-0008.wav",
+   "ref": "AS USUAL NOTHING WAS DONE IN THE WAY OF PUNISHMENT",
+   "hyp": "as usual nothing was done in the way of punishment",
+   "errors": 0
+  },
+  {
+   "audio": "8463-294828-0035.wav",
+   "ref": "AND SO IF I'D BEEN DELAYED BY A QUARTER OF AN HOUR OR EVEN LESS THE FRIGATE WOULD HAVE GONE WITHOUT ME AND I WOULD HAVE MISSED OUT ON THIS UNEARTHLY EXTRAORDINARY AND INCONCEIVABLE EXPEDITION WHOSE TRUE STORY MIGHT WELL MEET WITH SOME SKEPTICISM",
+   "hyp": "and so if i had been delayed by a quarter of an hour or even less the frigate would have gone without me and i would have missed out on this unearthly extraordinary and inconceivable expedition whose true story might well meet with some scepticism",
+   "errors": 3
+  },
+  {
+   "audio": "8463-287645-0011.wav",
+   "ref": "SHE WAS A LARGE HOMELY WOMAN THEY WERE COMMON WHITE PEOPLE WITH NO REPUTATION IN THE COMMUNITY",
+   "hyp": "she was a large homely woman they were common white people with no reputation in the community",
+   "errors": 0
+  },
+  {
+   "audio": "8463-294828-0028.wav",
+   "ref": "I OPENED A LINE OF CREDIT SUFFICIENT TO COVER THE BABIRUSA AND CONSEIL AT MY HEELS I JUMPED INTO A CARRIAGE",
+   "hyp": "i opened a line of credit sufficient to cover the barbaroosa and conseil at my heels i jumped into a carriage",
+   "errors": 1
+  },
+  {
+   "audio": "8555-284447-0018.wav",
+   "ref": "AT ONCE THE GOAT GAVE A LEAP ESCAPED FROM THE SOLDIERS AND WITH BOWED HEAD RUSHED UPON THE BOOLOOROO",
+   "hyp": "at once the goat gave a leap escaped from the soldiers and with bowed head rushed upon the boolooroo",
+   "errors": 0
+  },
+  {
+   "audio": "8555-284447-0002.wav",
+   "ref": "I WOULDN'T MIND A CUP O COFFEE MYSELF SAID CAP'N BILL I'VE HAD CONSID'BLE EXERCISE THIS MORNIN AND I'M ALL READY FOR BREAKFAS",
+   "hyp": "i wouldn't mind a cup of coffee myself said cap'n bill i've had considerable exercise this morning and and am all ready for breakfast",
+   "errors": 6
+  },
+  {
+   "audio": "8555-284449-0019.wav",
+   "ref": "THAT EVENING TROT GAVE A GRAND BALL IN THE PALACE TO WHICH THE MOST IMPORTANT OF THE PINKIES AND THE BLUESKINS WERE INVITED",
+   "hyp": "that evening trot gave a grand ball in the palace to which the most important of the pinkies in the blueskins were invited",
+   "errors": 1
+  },
+  {
+   "audio": "8555-292519-0004.wav",
+   "ref": "THE PITY THAT WE MUST COME AND GO",
+   "hyp": "the pity that we must come and go",
+   "errors": 0
+  }
+ ]
+}

@@ -49,9 +49,7 @@ class AppTests(unittest.TestCase):
         a = nc.NowCaption()
         a.window = FakeWindow()
         a.capture = NS(starts=[], start=lambda device, gen: a.capture.starts.append(gen), stop=lambda: None)
-        a.worker = NS(set_source=lambda gen: None, clear=lambda gen: None, restart=lambda: None,
-                      filter_calls=[])
-        a.worker.set_music_filter = a.worker.filter_calls.append
+        a.worker = NS(set_source=lambda gen: None, clear=lambda gen: None, restart=lambda: None)
         return a
 
     def test_quitting_during_model_loading_never_starts_capture(self):
@@ -111,29 +109,22 @@ class AppTests(unittest.TestCase):
 
 
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))
-class MusicFilterAppTests(unittest.TestCase):
-    def make(self):
-        return AppTests.make(self)
+class MenuTests(unittest.TestCase):
+    def labels(self, model):
+        for i in range(model.get_n_items()):
+            label = model.get_item_attribute_value(i, 'label', GLib.VariantType.new('s'))
+            if label:
+                yield label.get_string()
+            section = model.get_item_link(i, 'section')
+            if section:
+                yield from self.labels(section)
 
-    def test_music_filter_is_off_by_default_and_the_menu_toggles_and_remembers_it(self):
-        a = self.make()
-        action = a.lookup_action('music-filter')
-        self.assertFalse(action.get_state().get_boolean())
-        action.activate(None)
-        self.assertTrue(action.get_state().get_boolean())
-        self.assertEqual(a.settings.get('music_filter'), 1)
-        self.assertEqual(a.worker.filter_calls, [True])
-        action.activate(None)
-        self.assertEqual(a.worker.filter_calls, [True, False])
-        self.assertEqual(a.settings.get('music_filter'), 0)
-
-    def test_a_filter_that_could_not_load_unticks_the_menu_item(self):
-        a = self.make()
-        action = a.lookup_action('music-filter')
-        action.activate(None)
-        a.on_worker('music-filter', False)
-        self.assertFalse(action.get_state().get_boolean())
-        self.assertEqual(a.settings.get('music_filter'), 0)
+    def test_the_background_filter_is_gone_from_the_menu_and_actions(self):
+        a = AppTests.make(self)
+        labels = list(self.labels(a.build_menu(True)))
+        self.assertIn('Desktop audio', labels)
+        self.assertNotIn('Background filter', labels)
+        self.assertIsNone(a.lookup_action('music-filter'))
 
 
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))

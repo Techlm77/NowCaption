@@ -38,8 +38,8 @@ STEPPERS = {
                    ('More solid', 'app.darker', 'value-increase-symbolic')),
 }
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
-            'width': -1, 'rows': ROWS, 'music_filter': 0}
-LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'music_filter': (0, 1)}
+            'width': -1, 'rows': ROWS}
+LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100)}
 CHOICES = {'source': ('desktop', 'mic')}
 
 
@@ -166,10 +166,12 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
         self.popover = Gtk.PopoverMenu()
         self.update_menu(self.layer and self.monitor_count() > 1)
-        self._monitor_handlers = []
+        self._monitor_handlers, self._monitors_handler = [], None
         self._monitors = Gdk.Display.get_default().get_monitors()
-        self._monitors_handler = self._monitors.connect('items-changed', self.on_monitors_changed)
-        self.watch_monitor()
+        self.watch_screens()
+        # gtk4-layer-shell unrealizes and maps the window again whenever its screen changes,
+        # so watch again on realize; destroying the window unrealizes it for good.
+        self.connect('realize', self.watch_screens)
         self.connect('unrealize', self.disconnect_monitors)
         self.popover.set_parent(self.box)
         self.popover.set_has_arrow(False)
@@ -225,6 +227,12 @@ class CaptionWindow(Gtk.ApplicationWindow):
                 button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
                 row.append(button)
             self.popover.add_child(row, name)
+
+    def watch_screens(self, *args):
+        """Follow screens being connected or disconnected, and the current screen's geometry."""
+        if self._monitors_handler is None:
+            self._monitors_handler = self._monitors.connect('items-changed', self.on_monitors_changed)
+        self.watch_monitor()
 
     def watch_monitor(self):
         for monitor, handler in self._monitor_handlers:
@@ -542,7 +550,6 @@ class NowCaption(Adw.Application):
         menu = Gio.Menu()
         menu.append_item(section(('Desktop audio', 'app.source::desktop', None),
                                  ('Microphone', 'app.source::mic', None)))
-        menu.append_item(section(('Background filter', 'app.music-filter', None)))
         steppers = Gio.Menu()  # filled with button rows by CaptionWindow.update_menu
         for name in STEPPERS:
             item = Gio.MenuItem.new(None, None)
@@ -572,10 +579,6 @@ class NowCaption(Adw.Application):
                                                GLib.Variant('s', self.settings.get('source')))
         source.connect('activate', self.on_source)
         self.add_action(source)
-        music = Gio.SimpleAction.new_stateful('music-filter', None,
-                                              GLib.Variant('b', bool(self.settings.get('music_filter'))))
-        music.connect('activate', self.on_music_filter)
-        self.add_action(music)
         act('larger', lambda: self.resize(+1), ['<Control>plus', '<Control>equal'])
         act('smaller', lambda: self.resize(-1), ['<Control>minus'])
         act('lighter', lambda: self.opacity(-0.15))
@@ -602,19 +605,6 @@ class NowCaption(Adw.Application):
             self.window.show_failure('model', 'Retrying the speech model…')
             self.worker.restart()
 
-    def on_music_filter(self, action, value):
-        """Optional background filter for speech over music or noise. Off by default: it uses more
-        processor time and slightly lowers accuracy on plain speech."""
-        on = not action.get_state().get_boolean()
-        action.set_state(GLib.Variant('b', on))
-        self.settings.set('music_filter', int(on))
-        if self.worker:
-            self.worker.set_music_filter(on)
-        if on:
-            self.window.show_status('Background filter on: voices are picked out from music and noise.', seconds=4)
-        else:
-            self.window.show_status('Background filter off.', seconds=3)
-
     def resize(self, step):
         size = self.settings.get('size')
         i = min(range(len(SIZES)), key=lambda k: abs(SIZES[k] - size))
@@ -638,8 +628,6 @@ class NowCaption(Adw.Application):
         # models load on the worker thread, so the window stays responsive meanwhile
         self.worker = engine.RecognitionWorker(lambda kind, value: GLib.idle_add(self.on_worker, kind, value))
         self.worker.start()
-        if self.settings.get('music_filter'):
-            self.worker.set_music_filter(True)
         GLib.timeout_add_seconds(60, self.release_memory)
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
         if shot:
@@ -720,11 +708,6 @@ class NowCaption(Adw.Application):
                 self.window.show_status(f'Could not prepare the transcript: {message}', seconds=8)
         elif kind == 'warning':
             self.window.show_status(value, seconds=6)
-        elif kind == 'music-filter':
-            action = self.lookup_action('music-filter')
-            if action and action.get_state().get_boolean() != value:  # it could not be loaded
-                action.set_state(GLib.Variant('b', value))
-                self.settings.set('music_filter', int(value))
         elif kind == 'overload':
             self.window.show_status(f'Falling behind: skipped {value:.1f} s of audio', seconds=4)
         elif kind == 'load-error':
@@ -906,12 +889,13 @@ class NowCaption(Adw.Application):
             issue_url='https://github.com/Techlm77/NowCaption/issues',
             comments='Live captions for anything your computer plays, or your microphone. '
                      'Speech is recognised on this computer; audio never leaves it.')
-        about.add_legal_section('Speech model', '© NVIDIA (stt_en_fastconformer_hybrid_large_streaming_multi)',
+        about.add_legal_section('Speech model', '© NVIDIA (stt_en_fastconformer_hybrid_large_streaming_multi); '
+                                'fine-tuned by NowCaption',
                                 Gtk.License.CUSTOM, 'Creative Commons Attribution 4.0 International (CC-BY-4.0). '
-                                'Exported to ONNX and quantized to int8 for NowCaption. '
+                                'Fine-tuned by NowCaption on CC-BY and CC0 English speech with text from NVIDIA '
+                                'Parakeet TDT 0.6B v2 (CC-BY-4.0), then exported to ONNX and quantized to int8. '
                                 'https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi')
         about.add_legal_section('Punctuation model', 'Edge-Punct-Casing by frankyoujian', Gtk.License.APACHE_2_0, None)
-        about.add_legal_section('Background filter model', 'DPDFNet2 © Ceva', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('sherpa-onnx', '© k2-fsa', Gtk.License.APACHE_2_0, None)
         about.present(None)  # its own window, not squeezed into the caption box
 

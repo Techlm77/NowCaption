@@ -7,13 +7,12 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-need="models/nowcaption-fastconformer-en-80ms-cc-by-v1/tokens.txt
-models/nowcaption-fastconformer-en-80ms-cc-by-v1/encoder.int8.onnx
-models/nowcaption-fastconformer-en-80ms-cc-by-v1/decoder.int8.onnx
-models/nowcaption-fastconformer-en-80ms-cc-by-v1/joiner.int8.onnx
+need="models/nowcaption-fastconformer-en-80ms-cc-by-v2/tokens.txt
+models/nowcaption-fastconformer-en-80ms-cc-by-v2/encoder.int8.onnx
+models/nowcaption-fastconformer-en-80ms-cc-by-v2/decoder.int8.onnx
+models/nowcaption-fastconformer-en-80ms-cc-by-v2/joiner.int8.onnx
 models/sherpa-onnx-online-punct-en-2024-08-06/model.int8.onnx
-models/sherpa-onnx-online-punct-en-2024-08-06/bpe.vocab
-models/dpdfnet2/dpdfnet2.onnx"
+models/sherpa-onnx-online-punct-en-2024-08-06/bpe.vocab"
 for f in $need; do
     if [ ! -s "$f" ]; then echo "Model files missing ($f); fetching them."; ./tools/fetch-models.sh; break; fi
 done

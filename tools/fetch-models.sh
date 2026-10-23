@@ -22,19 +22,10 @@ fetch() {  # url sha256 folder
     rm -rf "$tmp"
 }
 # Use a locally built archive (tools/export-model.py) if there is one, else the GitHub release.
-asr=nowcaption-fastconformer-en-80ms-cc-by-v1
+asr=nowcaption-fastconformer-en-80ms-cc-by-v2
 if [ -f "dist/$asr.tar.bz2" ]; then cp "dist/$asr.tar.bz2" .cache/; fi
-fetch "https://github.com/Techlm77/NowCaption/releases/download/models-v1/$asr.tar.bz2" \
-      857639f81da8a52110d659f2d1a91bc5c25f0122f46fd3358091096b74a6ce80 "$asr"
+fetch "https://github.com/Techlm77/NowCaption/releases/download/models-v2/$asr.tar.bz2" \
+      4ecb5591981f4e6bd3456d5bd1a523ae170e22465717ae59cc30c70ddf470fb8 "$asr"
 fetch https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-online-punct-en-2024-08-06.tar.bz2 \
       9f5e5a72c7d2829635bd074fce92b6bbd5b78da8a52e7ad8ed1be933f366b99d sherpa-onnx-online-punct-en-2024-08-06
-# The optional background filter is a single ONNX file rather than an archive.
-filter=.cache/dpdfnet2.onnx
-if [ -f "$filter" ] && ! echo "ce35d6025fc71df0ef10d1540e1b7916837bbfe5f6896deb744508d2cad487a9  $filter" | sha256sum -c - >/dev/null 2>&1; then
-    rm -f "$filter"
-fi
-[ -f "$filter" ] || curl -fL --retry 3 -o "$filter" \
-    https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/dpdfnet2.onnx
-echo "ce35d6025fc71df0ef10d1540e1b7916837bbfe5f6896deb744508d2cad487a9  $filter" | sha256sum -c -
-mkdir -p models/dpdfnet2 && cp "$filter" models/dpdfnet2/
 echo "Models are in ./models"
