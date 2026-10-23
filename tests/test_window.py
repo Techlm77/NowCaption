@@ -87,7 +87,41 @@ class WindowTests(unittest.TestCase):
     def test_menu_rows_survive_a_menu_rebuild(self):
         self.window.update_menu(True)
         actions = {b.get_action_name() for b in self.buttons(self.window.popover)}
-        self.assertTrue({'app.smaller', 'app.larger', 'app.lighter', 'app.darker'} <= actions)
+        self.assertTrue({'app.smaller', 'app.larger', 'app.lighter', 'app.darker', 'app.colour'} <= actions)
+
+    def test_text_colour_swatches_colour_the_captions_and_keep_the_menu_open(self):
+        w = self.window
+        self.addCleanup(self.app.activate_action, 'colour', nc.GLib.Variant('s', 'white'))
+        w.present()
+        w.popover.popup()
+        self.settle()
+        swatches = {b.get_action_target_value().get_string(): b for b in self.buttons(w.popover)
+                    if b.get_action_name() == 'app.colour'}
+        self.assertEqual(list(swatches), list(nc.COLOURS))
+        for name, button in swatches.items():
+            self.assertEqual(button.get_property('tooltip-text'), nc.COLOURS[name][0])
+        swatches['yellow'].emit('clicked')
+        self.settle()
+        self.assertEqual(self.app.settings.get('colour'), 'yellow')
+        self.assertTrue(w.popover.get_visible(), 'the menu closed after choosing a colour')
+        self.assertTrue(swatches['yellow'].get_active())
+        self.assertFalse(swatches['white'].get_active())
+        rgba = w.label.get_color()
+        self.assertEqual((rgba.red, rgba.green, rgba.blue), (1.0, 1.0, 0.0))
+        swatches['yellow'].emit('clicked')  # choosing the current colour again keeps it chosen
+        self.settle()
+        self.assertTrue(swatches['yellow'].get_active())
+        self.assertEqual(self.app.settings.get('colour'), 'yellow')
+        w.popover.popdown()
+
+    def test_a_new_window_uses_the_saved_text_colour(self):
+        self.app.settings.set('colour', 'cyan')
+        self.addCleanup(self.app.settings.set, 'colour', 'white')
+        window = nc.CaptionWindow(self.app)
+        self.addCleanup(window.destroy)
+        self.addCleanup(window.disconnect_monitors)
+        rgba = window.label.get_color()
+        self.assertEqual((rgba.red, rgba.green, rgba.blue), (0.0, 1.0, 1.0))
 
     def test_two_row_caption_renders_and_font_size_can_change(self):
         self.window.show_text('hello ' * 100)

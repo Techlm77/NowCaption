@@ -140,6 +140,8 @@ class SettingsTests(unittest.TestCase):
         kf.set_integer('main', 'rows', -3)
         kf.set_integer('main', 'width', 5)
         kf.set_string('main', 'source', 'speakers')
+        kf.set_string('main', 'colour', 'purple')
+        self.assertEqual(self.settings.get('colour'), 'white')
         self.assertEqual(self.settings.get('size'), nc.SIZES[0])
         self.assertEqual(self.settings.get('opacity'), 1.0)
         self.assertEqual(self.settings.get('rows'), 1)
@@ -151,6 +153,13 @@ class SettingsTests(unittest.TestCase):
         self.settings.set('source', 'mic')
         self.settings.set('size', 42)
         self.assertEqual((self.settings.get('source'), self.settings.get('size')), ('mic', 42))
+
+    def test_the_text_colour_is_remembered_after_a_restart(self):
+        self.settings.set('colour', 'lime')
+        again = nc.Settings()  # as NowCaption reads it the next time it starts
+        again.path = self.settings.path
+        again.kf.load_from_file(str(again.path), nc.GLib.KeyFileFlags.NONE)
+        self.assertEqual(again.get('colour'), 'lime')
 
     def test_a_settings_file_that_cannot_be_written_does_not_raise(self):
         blocker = nc.Path(tempfile.mkdtemp()) / 'not-a-folder'

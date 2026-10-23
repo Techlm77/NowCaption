@@ -32,14 +32,24 @@ Captions start straight away from whatever your computer is playing. Drag them t
 move, drag an edge to resize. **Right-click** for the menu:
 
 - **Desktop audio** or **Microphone**
-- Text size, background, position
+- Text size, text colour, background, position
 - Copy, save or clear the transcript
+
+**Text colour.** Captions are white by default. If another colour is easier for you to
+read, choose yellow, cyan or lime under **Text colour**. The captions change as soon as you
+click, so you can compare colours before closing the menu. NowCaption remembers your
+choice, like your text size, background and position, every time it starts and after
+updates.
 
 On KDE Plasma, Hyprland and Sway the captions float above all windows. On GNOME,
 press Alt+Space on the window and choose **Always on Top**.
 
 **No captions?** Make sure sound plays through your default output device. After
 switching to headphones, choose **Desktop audio** again.
+
+**First word missing?** When speech is hard to make out, such as strong accents or
+unclear recordings, the first word after a pause is the one most often missed or misheard,
+because the speech model has nothing yet to go on. Clear speech is not affected.
 
 ## Run from source
 

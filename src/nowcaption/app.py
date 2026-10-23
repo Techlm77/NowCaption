@@ -37,10 +37,14 @@ STEPPERS = {
     'background': ('Background', ('More see-through', 'app.lighter', 'value-decrease-symbolic'),
                    ('More solid', 'app.darker', 'value-increase-symbolic')),
 }
+# Caption text colours, as TV captions offer them. Their swatches in the menu are buttons too,
+# so colours can be compared on the captions before the menu closes.
+COLOURS = {'white': ('White', '#ffffff'), 'yellow': ('Yellow', '#ffff00'),
+           'cyan': ('Cyan', '#00ffff'), 'lime': ('Lime', '#00ff00')}
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
-            'width': -1, 'rows': ROWS}
+            'width': -1, 'rows': ROWS, 'colour': 'white'}
 LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100)}
-CHOICES = {'source': ('desktop', 'mic')}
+CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS)}
 
 
 class Settings:
@@ -216,7 +220,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.update_menu(self.layer and len(items) > 1)
 
     def update_menu(self, several_screens):
-        """Set the menu, with the text size and background rows as buttons that keep it open."""
+        """Set the menu, with the text size, background and text colour rows as buttons that
+        keep it open."""
         self.popover.set_menu_model(self.app.build_menu(several_screens))
         for name, (title, *buttons) in STEPPERS.items():
             row = Gtk.Box(spacing=4, margin_start=12, margin_end=6)
@@ -227,6 +232,17 @@ class CaptionWindow(Gtk.ApplicationWindow):
                 button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
                 row.append(button)
             self.popover.add_child(row, name)
+        row = Gtk.Box(spacing=4, margin_start=12, margin_end=6)
+        row.append(Gtk.Label(label='Text colour', xalign=0, hexpand=True))
+        for name, (label, _) in COLOURS.items():  # pressed in, like a radio button, when chosen
+            swatch = Gtk.Box(css_classes=['colour-swatch', f'colour-{name}'],
+                             halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
+            button = Gtk.ToggleButton(child=swatch, action_name='app.colour',
+                                      action_target=GLib.Variant('s', name), tooltip_text=label)
+            button.add_css_class('flat')
+            button.update_property([Gtk.AccessibleProperty.LABEL], [label])
+            row.append(button)
+        self.popover.add_child(row, 'text-colour')
 
     def watch_screens(self, *args):
         """Follow screens being connected or disconnected, and the current screen's geometry."""
@@ -318,13 +334,20 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     def restyle(self):
         px, alpha = self.settings.get('size'), self.settings.get('opacity')
+        colour = COLOURS[self.settings.get('colour')][1]
+        swatches = ''.join(f'window.nowcaption .colour-{name} {{ background: {rgb}; }}\n'
+                           for name, (_, rgb) in COLOURS.items())
         self.css.load_from_string(f"""
             window.nowcaption {{ background: transparent; }}
             window.nowcaption .caption-box {{ background: rgba(0, 0, 0, {alpha}); border-radius: 14px; }}
-            window.nowcaption .caption-text {{ color: #ffffff; font-size: {px}px; font-weight: 500;
+            window.nowcaption .caption-text {{ color: {colour}; font-size: {px}px; font-weight: 500;
                                               padding: {PAD_Y}px {PAD_X}px; }}
             window.nowcaption .caption-status {{ color: #cccccc; font-size: {max(14, round(px * 0.55))}px;
-                                                padding: 0 {PAD_X}px {PAD_Y}px; }}""")
+                                                padding: 0 {PAD_X}px {PAD_Y}px; }}
+            window.nowcaption .colour-swatch {{ min-width: 18px; min-height: 18px; border-radius: 9px;
+                                               border: 1px solid rgba(0, 0, 0, 0.4); }}
+            window.nowcaption button:checked .colour-swatch {{ box-shadow: 0 0 0 2px currentColor; }}
+            {swatches}""")
         # measure one row in the caption font, then fix the box at exactly ROWS rows
         probe = self.label.create_pango_layout('Ag')
         self.row_height = probe.get_pixel_size()[1]
@@ -551,7 +574,7 @@ class NowCaption(Adw.Application):
         menu.append_item(section(('Desktop audio', 'app.source::desktop', None),
                                  ('Microphone', 'app.source::mic', None)))
         steppers = Gio.Menu()  # filled with button rows by CaptionWindow.update_menu
-        for name in STEPPERS:
+        for name in (*STEPPERS, 'text-colour'):
             item = Gio.MenuItem.new(None, None)
             item.set_attribute_value('custom', GLib.Variant('s', name))
             steppers.append_item(item)
@@ -579,6 +602,10 @@ class NowCaption(Adw.Application):
                                                GLib.Variant('s', self.settings.get('source')))
         source.connect('activate', self.on_source)
         self.add_action(source)
+        colour = Gio.SimpleAction.new_stateful('colour', GLib.VariantType.new('s'),
+                                               GLib.Variant('s', self.settings.get('colour')))
+        colour.connect('activate', self.on_colour)
+        self.add_action(colour)
         act('larger', lambda: self.resize(+1), ['<Control>plus', '<Control>equal'])
         act('smaller', lambda: self.resize(-1), ['<Control>minus'])
         act('lighter', lambda: self.opacity(-0.15))
@@ -604,6 +631,14 @@ class NowCaption(Adw.Application):
             # replaces the load error until the model loads or fails again
             self.window.show_failure('model', 'Retrying the speech model…')
             self.worker.restart()
+
+    def on_colour(self, action, value):
+        if value.get_string() not in COLOURS:
+            return
+        action.set_state(value)
+        self.settings.set('colour', value.get_string())
+        if self.window:
+            self.window.restyle()
 
     def resize(self, step):
         size = self.settings.get('size')

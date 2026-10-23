@@ -21,7 +21,10 @@ LOG = logging.getLogger(__name__)
 RATE = 16000
 SILENCE_FLUSH_S = 1.0   # digital silence before the last words are flushed
 WARMUP_S = 0.96         # silence before a new stream's first audio (12 encoder steps): NowCaption's own
-                        # model shows words up to 80 ms later when speech starts on the first sample
+                        # model shows words up to 80 ms later when speech starts on the first sample.
+                        # 0.95 s would line 40 ms blocks up with the model's decodes (words 10 ms sooner)
+                        # but moves all audio 10 ms against its steps: 0.1 points more errors on
+                        # LibriSpeech test-other in 5 of 6 continuous runs, so 0.96 s stays
 PAUSE_S = 0.8           # no new words for this long starts a new caption line
 MAX_LINE = 160          # characters before a running line is split anyway
 ASR_DIR = 'nowcaption-fastconformer-en-80ms-cc-by-v2'
@@ -232,10 +235,11 @@ class Captioner:
         # number first, and the newest LIVE_LINES are still re-punctuated with the words
         # being spoken. The others are settled: their punctuation is frozen in shown (the
         # last DISPLAY_LINES of them), so text already on screen never jumps.
-        self.recent, self.first, self.settled = [], 0, 0  # (time, formatted, raw)
+        self.recent, self.first, self.settled = [], 0, 0  # (time, None, raw): see settle()
         self.shown = []
         self.live = []  # words of the live passage as last shown, for freezing its oldest line
         self.live_input = None  # exporting unchanged words reuses their on-screen punctuation
+        self.live_exact = True  # False while the last word's punctuation is copied: see caption_text()
         self.raw = [] if keep_raw else None  # the whole session's raw text, for benchmark tracing only
         self.stream = recognizer.create_stream()
         self.primed = False  # see WARMUP_S
@@ -278,7 +282,7 @@ class Captioner:
         self.store.clear()
         self.recent, self.first, self.settled = [], 0, 0
         self.shown, self.live = [], []
-        self.live_input = None
+        self.live_input, self.live_exact = None, True
         if self.raw is not None:
             self.raw = []
         self.done = 0
@@ -304,7 +308,7 @@ class Captioner:
         self.store, self.punct, self.raw = old.store, old.punct, old.raw
         self.recent, self.first, self.settled = old.recent, old.first, old.settled
         self.shown, self.live = old.shown.copy(), old.live.copy()
-        self.live_input = old.live_input
+        self.live_input, self.live_exact = old.live_input, old.live_exact
 
     @property
     def count(self):
@@ -313,7 +317,7 @@ class Captioner:
 
     def add_line(self, raw):
         """A finished line, timestamped when it started rather than when it ended."""
-        line = (self.partial_since or time.time(), self.format(raw), raw)
+        line = (self.partial_since or time.time(), None, raw)
         self.recent.append(line)
         if self.raw is not None:
             self.raw.append(raw)
@@ -373,39 +377,71 @@ class Captioner:
                 self.partial_since = time.time()
             self.partial = new
             if self.on_update:
-                self.on_update(self.caption_text())
+                self.on_update(self.caption_text(growing=not committed))
 
-    def caption_text(self):
+    def caption_text(self, growing=False):
         """The last few lines and the words still coming, punctuated together as one passage,
         so that phrases split at pauses still read as sentences. Only the newest LIVE_LINES are
         re-punctuated; older lines keep the punctuation they were last shown with, otherwise a
-        comma that comes and goes far back in the passage would re-wrap every row."""
+        comma that comes and goes far back in the passage would re-wrap every row.
+
+        growing: the words still being spoken changed. When only the last word grew (the model
+        spells long words out a piece at a time: a quarter of all updates), the punctuation
+        shown for it is reused instead of running the model again; the next new word, a
+        finished line or an export punctuates the passage properly."""
+        if not self.live_exact and self.count - self.settled > self.LIVE_LINES:
+            self.live, self.live_exact = self.punctuated(*self.live_input), True  # lines freeze as fully punctuated
         self._settle()
         context = self.recent[self.settled - 1 - self.first][2].split() if self.settled else []
         live = [r for _, _, r in self.recent[self.settled - self.first:]]
         partial = self.partial.strip()
         words = ' '.join(live + ([partial] if partial else [])).split()
         key = (tuple(context), tuple(words))
-        if key != self.live_input:
-            out = self.format(' '.join(context + words)).split() if words else []
-            if len(out) == len(context) + len(words):  # punctuation keeps one output word per input word
-                out = out[len(context):]
-            else:
-                out = self.format(' '.join(words)).split()
-            self.live, self.live_input = out, key
+        if key != self.live_input or not (growing or self.live_exact):
+            out = self.grown(key) if growing and key != self.live_input else None
+            self.live_exact = out is None
+            self.live, self.live_input = self.punctuated(*key) if out is None else out, key
         out = self.live
         oldest = self.count - self.DISPLAY_LINES  # first line still in the passage
         shown = [s for s in self.shown[max(0, oldest - (self.settled - len(self.shown))):] if s]
         return ' '.join(shown + out)
 
+    def punctuated(self, context, words):
+        """The words punctuated as they read after the context words."""
+        context, words = list(context), list(words)
+        out = self.format(' '.join(context + words)).split() if words else []
+        if len(out) == len(context) + len(words):  # punctuation keeps one output word per input word
+            return out[len(context):]
+        return self.format(' '.join(words)).split()
+
+    def grown(self, key):
+        """The passage as last shown, with its last word grown into key's last word and cased
+        and punctuated like it ("Annie." becomes "Annie's."), or None if anything else changed."""
+        old, live = self.live_input, self.live
+        if not old or not key[1] or old[0] != key[0] or len(old[1]) != len(key[1]) or old[1][:-1] != key[1][:-1]:
+            return None
+        before, after = old[1][-1], key[1][-1]
+        shown = live[-1] if len(live) == len(old[1]) else ''
+        core = shown.rstrip('.,?!')
+        if not after.startswith(before) or core.lower() != before:
+            return None
+        if core == before:
+            word = after
+        elif core == before[:1].upper() + before[1:] and before != 'i':  # "I" may grow into "it"
+            word = after[:1].upper() + after[1:]
+        else:
+            return None
+        return live[:-1] + [word + shown[len(core):]]
+
     def settle(self, line):
-        """The words of a line leaving the live passage, punctuated as they were last shown."""
+        """The words of a line leaving the live passage, punctuated as they were last shown.
+        A line that was never shown (nothing displays captions) is punctuated on its own."""
         n = len(line[2].split())
         if len(self.live) >= n:
             words, self.live = self.live[:n], self.live[n:]
             return ' '.join(words)
         self.live = []
-        return line[1]
+        return self.format(line[2])
 
     def transcript(self):
         """Every finished line since start or the last clear, plus the words still being spoken."""

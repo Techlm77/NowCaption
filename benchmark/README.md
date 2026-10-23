@@ -69,6 +69,51 @@ the word correctly.
 **CPU** is CPU seconds per second of audio, including 1.5 s of silence after each
 clip.
 
+## Continuous use (caption pipeline)
+
+The table above starts a fresh stream for every clip, as it must to compare engines.
+The app keeps one stream running, so words appear sooner than that table shows. Measured
+for 1.1.7 with the app's whole caption pipeline (punctuation, line splitting, silence
+handling), the same clips joined by 2.0–2.1 s of digital silence, three random gap patterns
+for test-clean and six for test-other, audio fed in 40 ms blocks:
+
+| | WER | Mean lag | Median lag | p90 lag |
+|---|---|---|---|---|
+| test-clean | 2.78% | 0.174 s | 0.196 s | 0.342 s |
+| test-other | 6.94% | 0.211 s | 0.235 s | 0.394 s |
+
+WER varies by ±0.3 points with the gap pattern alone. The first two words after a pause
+are wrong about twice as often as the rest on test-other (14.1% against 6.4%, 33 clips,
+three gap patterns), and no more often on test-clean (2.1% against 2.3%, 40 clips). The
+captured audio itself is intact: played through PipeWire and captured as the app captures
+it, each clip's first 300 ms match the original within 0.1 dB. Feeding extra silence before
+speech resumes, or never pausing recognition in silence, did not help.
+
+## Where the time goes
+
+Measured with timers around each stage of the caption pipeline in continuous use (one
+thread, Ryzen 7 7800X3D). CPU time per second of audio, test-clean / test-other:
+
+| Stage | ms per second of audio |
+|---|---|
+| Speech model's encoder | ≈154 / 155 |
+| Punctuation and casing | 11.7 / 11.5 (15.6 / 14.2 before 1.1.7) |
+| Reading the recognised text | 2.4 / 1.8 |
+| Audio features | 1.2 / 1.2 |
+| Greedy search (decoder and joiner) | ≈0.6 |
+| All other Python code | 0.4 |
+
+So nine tenths of the work is the speech model itself, in ONNX Runtime. A second ONNX
+Runtime thread cuts a decode from 27 to 18 ms but costs 0.57 CPU seconds per second
+of audio instead of 0.17 (its threads keep spinning between decodes), so the app uses one.
+
+The time from the end of a word to the caption event is mostly the model's design. It
+decodes 160 ms of audio at a time and needs 110 ms past each step (its 80 ms lookahead plus
+audio features), which averages 157 ms per word; the decode then takes about 26 ms, and the
+40 ms capture blocks add 10 ms. Punctuation adds about 5 ms when it runs, PipeWire up to one
+21 ms quantum, and the screen one or two frames. The worker queue and the hand-over to GTK
+take well under a millisecond.
+
 ## Everyday speech (engine-only)
 
 NowCaption 1.1.6 has its own speech model: NVIDIA's model fine-tuned on about 3,100
