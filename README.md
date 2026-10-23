@@ -81,8 +81,8 @@ the other files in [`tests/`](tests/) say what they cover.
 
 | Part | Model | License |
 |---|---|---|
-| Speech recognition | NowCaption's own fine-tune of NVIDIA [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi), int8 ONNX, 80 ms lookahead | CC-BY-4.0 |
-| Punctuation and casing | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) | Apache-2.0 |
+| Speech recognition | NowCaption's own, fine-tuned from NVIDIA's [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi) | CC-BY-4.0 |
+| Punctuation and capital letters | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) by frankyoujian | Apache-2.0 |
 
-Everything bundled is listed in [MODEL-LICENSES.md](MODEL-LICENSES.md). NowCaption's
-own code is MIT licensed.
+NowCaption's own code is MIT licensed. Everything else it ships with, and the speech its model
+was trained on, is listed in [MODEL-LICENSES.md](MODEL-LICENSES.md).
