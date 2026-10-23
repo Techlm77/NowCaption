@@ -57,6 +57,14 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.8" date="2026-10-23">
+      <description>
+        <p>
+          Quitting no longer crashes the AppImage, or NowCaption run from source with Python
+          3.12 or 3.13, while it is captioning speech.
+        </p>
+      </description>
+    </release>
     <release version="1.1.7" date="2026-10-23">
       <description>
         <p>

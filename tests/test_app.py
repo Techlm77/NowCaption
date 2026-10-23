@@ -128,6 +128,32 @@ class MenuTests(unittest.TestCase):
 
 
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))
+class MainTests(unittest.TestCase):
+    """main() leaves without finalizing Python while a thread is still in native code: Python
+    3.12 and 3.13 would end it with pthread_exit, and sherpa-onnx's C++ code then aborts."""
+
+    def run_main(self, finished):
+        from unittest.mock import patch
+        exits = []
+
+        class App:
+            def run(self, argv):
+                return 0
+
+            def threads_finished(self, timeout):
+                return finished
+
+        with patch.object(nc, 'NowCaption', App), patch.object(nc.os, '_exit', exits.append):
+            return nc.main(), exits
+
+    def test_main_returns_normally_once_the_threads_have_finished(self):
+        self.assertEqual(self.run_main(True), (0, []))
+
+    def test_main_exits_at_once_while_a_thread_is_still_busy(self):
+        self.assertEqual(self.run_main(False), (0, [0]))
+
+
+@unittest.skipIf(nc is None, globals().get('SKIP', ''))
 class SettingsTests(unittest.TestCase):
     def setUp(self):
         self.settings = nc.Settings()

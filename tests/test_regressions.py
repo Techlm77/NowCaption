@@ -30,7 +30,7 @@ def load_app_methods():
     wanted = {'on_source', 'start_capture', 'on_worker', 'clear_transcript', 'on_shutdown',
               'capture_ended', 'capture_started', 'retry_capture', 'width_for', 'watch_monitor', 'use_monitor',
               'on_monitor_geometry', 'disconnect_monitors', 'on_monitors_changed',
-              'cancel_recognition_retry', 'retry_recognition', 'request_quit', 'on_window_close',
+              'cancel_recognition_retry', 'retry_recognition', 'request_quit', 'on_window_close', 'threads_finished',
               'save_transcript', 'write_transcript', 'start_save', 'begin_save', 'finish_save',
               'show_text', 'show_status', 'show_failure', 'clear_failure', 'end_status',
               'render', 'caption_height', 'box_height'}

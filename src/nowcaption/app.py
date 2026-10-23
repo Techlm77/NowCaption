@@ -685,6 +685,15 @@ class NowCaption(Adw.Application):
         if self.worker:
             self.worker.stop()
 
+    def threads_finished(self, timeout):
+        """After the main loop, wait for the recognition worker and the capture to leave native
+        code (never from the window's shutdown: a stalled model must not freeze it). Python 3.12
+        and 3.13 end a daemon thread that is still in native code when the interpreter exits
+        with pthread_exit, and sherpa-onnx's C++ code then aborts the process."""
+        if self.worker and self.worker.is_alive():
+            self.worker.join(timeout)
+        return self.capture.wait_stopped(timeout) and not (self.worker and self.worker.is_alive())
+
     def request_quit(self):
         """Keep accepted saves alive until their snapshot and async write finish."""
         if self.pending_saves:
@@ -945,4 +954,10 @@ def main():
               f'GTK {gtk[0]}.{gtk[1]} and libadwaita {adw[0]}.{adw[1]}. The Flatpak includes both.',
               file=sys.stderr)
         return 1
-    return NowCaption().run(sys.argv)
+    app = NowCaption()
+    status = app.run(sys.argv)
+    if not app.threads_finished(3):  # still loading a model, for example: exit without finalizing
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(status)
+    return status

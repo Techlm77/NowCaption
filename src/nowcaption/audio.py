@@ -53,7 +53,7 @@ class Capture:
                 self._stop.set()
 
     def wait_stopped(self, timeout=2):
-        """For CLI tests only; window actions never wait for native capture shutdown."""
+        """At exit and in CLI tests; window actions never wait for native capture shutdown."""
         with self._lock:
             thread = self._thread
         if thread and thread is not threading.current_thread():
