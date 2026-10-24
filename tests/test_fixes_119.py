@@ -59,7 +59,7 @@ class HistoryStoreTests(unittest.TestCase):
         self.store.set_history(blocker / 'session.txt')
         self.store.append(time.time(), 'Still captioned.')
         self.assertEqual(len(self.store.lines()), 1)
-        self.assertIsNone(self.store.history)
+        self.assertEqual(self.store.history, blocker / 'session.txt')  # tried again with the next line
 
 
 class PruneTests(unittest.TestCase):

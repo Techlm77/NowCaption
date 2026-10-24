@@ -159,9 +159,14 @@ def history_files(folder=None):
     return sorted(sessions)
 
 
+def history_cutoff(days=HISTORY_DAYS, now=None):
+    """Sessions that ended (were last written) before this time are no longer kept."""
+    return (now or time.time()) - days * 86400
+
+
 def prune_history(folder=None, days=HISTORY_DAYS, now=None):
     """Delete sessions that ended (were last written) more than `days` ago."""
-    cutoff = (now or time.time()) - days * 86400
+    cutoff = history_cutoff(days, now)
     for _, path in history_files(folder):
         try:
             if path.stat().st_mtime < cutoff:
@@ -179,13 +184,17 @@ class TranscriptStore:
     exits, even after a crash. If it cannot be created or written, lines stay in memory.
 
     With history on (set_history), each line is also appended to the session's history file,
-    which only the user can read and which is only created once something is said.
+    which only the user can read and which is only created once something is said. If it cannot
+    be written, on_warning(message) says so and the next line tries the file again.
     """
 
-    def __init__(self, folder=None):
+    def __init__(self, folder=None, on_warning=None):
         self.count = self.size = 0
         self.file, self.memory = None, None
+        self.on_warning = on_warning
         self.history, self.history_fd = None, None
+        self.history_written = None  # the file this session wrote to: Clear empties it even after history is off
+        self.history_failed = False  # the last write failed, and on_warning said so
         try:
             folder = Path(folder) if folder else cache_dir()
             folder.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -216,6 +225,7 @@ class TranscriptStore:
         """Also keep finished lines in this file from now on, or stop when path is None."""
         self._close_history()
         self.history = Path(path) if path else None
+        self.history_failed = False  # turned on again: say so if it still cannot be written
 
     def lines(self):
         if self.file is None:
@@ -232,11 +242,18 @@ class TranscriptStore:
                 self._keep_in_memory(e)
         if self.memory is not None:
             self.memory = []
-        if self.history_fd is not None:
+        if self.history_written is not None:  # the session's history is cleared with it
             try:
-                os.ftruncate(self.history_fd, 0)  # the session's history is cleared with it
+                if self.history_fd is not None:
+                    os.ftruncate(self.history_fd, 0)
+                else:  # history was turned off, or back on but not written to since
+                    os.truncate(self.history_written, 0)
+            except FileNotFoundError:  # already deleted
+                pass
             except OSError as e:
-                LOG.warning('Could not clear the transcript history %s: %s', self.history, e)
+                LOG.warning('Could not clear the transcript history %s: %s', self.history_written, e)
+                if self.on_warning:
+                    self.on_warning(f'Could not clear the history: {e.strerror or e}')
 
     def __del__(self):
         if getattr(self, 'file', None) is not None:
@@ -245,17 +262,27 @@ class TranscriptStore:
             self._close_history()
 
     def _write_history(self, data):
+        written = 0
         try:
             if self.history_fd is None:
                 self.history.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                 self.history_fd = os.open(self.history, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_CLOEXEC, 0o600)
-            written = 0
+                self.history_written = self.history
             while written < len(data):
                 written += os.write(self.history_fd, data[written:])
-        except OSError as e:  # keep captioning; the history just stops here
+        except OSError as e:  # keep captioning; the next line opens the file again
             LOG.warning('Could not write the transcript history %s: %s', self.history, e)
+            if written:  # take the half line back off the end (appending leaves the offset there)
+                try:
+                    os.ftruncate(self.history_fd, os.lseek(self.history_fd, 0, os.SEEK_CUR) - written)
+                except OSError:
+                    pass
             self._close_history()
-            self.history = None
+            if not self.history_failed and self.on_warning:  # once, not for every line while it fails
+                self.on_warning(f'Could not save the history: {e.strerror or e}')
+            self.history_failed = True
+        else:
+            self.history_failed = False
 
     def _close_history(self):
         if self.history_fd is not None:
@@ -306,7 +333,8 @@ class Captioner:
                  store=None, keep_raw=False):
         self.rec, self.punct = recognizer, punctuation
         self.on_update, self.on_warning = on_update, on_warning
-        self.store = store if store is not None else TranscriptStore()  # settled lines, until cleared
+        # settled lines, until cleared
+        self.store = store if store is not None else TranscriptStore(on_warning=on_warning)
         # Only the lines the caption passage still needs stay in memory: recent[0] is line
         # number first, and the newest LIVE_LINES are still re-punctuated with the words
         # being spoken. The others are settled: their punctuation is frozen in shown (the
@@ -699,7 +727,7 @@ class RecognitionWorker(threading.Thread):
                     self._safely(self._handle, kind, value)
             elif kind in ('restart', 'source'):  # loading failed earlier: try again
                 loaded = self._load()
-        if loaded and self.captioner and not self.broken:
+        if loaded and self.captioner:  # finish() needs no native stream, so a failed one does not matter
             self._safely(self.captioner.finish)  # the last words reach the session's history
 
     def _load(self):

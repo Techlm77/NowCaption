@@ -2189,10 +2189,13 @@ class NowCaption(Adw.Application):
     def earlier_sessions(self):
         """Kept sessions before this one, oldest first, as (start time, text)."""
         sessions = []
+        cutoff = engine.history_cutoff()
         for started, path in engine.history_files():
             if path == self.history_path:
                 continue
             try:
+                if path.stat().st_mtime < cutoff:
+                    continue  # no longer kept, even if prune_history has not deleted it yet
                 text = path.read_text(errors='replace').strip()
             except OSError as e:
                 LOG.warning('Could not read the transcript %s: %s', path, e)
@@ -2281,8 +2284,11 @@ class NowCaption(Adw.Application):
             GLib.timeout_add_seconds(int(after or 20), self.window.save_png, path)
 
     def release_memory(self):
+        """Runs once a minute: gives freed memory back to the system, and deletes sessions that
+        became too old while NowCaption kept running."""
         if self.closing:
             return False
+        engine.prune_history()  # reads only file names and times: about 10 µs per kept session
         engine.release_free_memory()
         return True
 
@@ -2570,6 +2576,27 @@ class NowCaption(Adw.Application):
         about.present(None)  # its own window, not squeezed into the caption box
 
 
+def quit_on_signals(app):
+    """Quit the way Quit does on SIGTERM and SIGHUP (kill, logging out, shutting down), so the
+    newest lines still reach the history. A second signal quits without waiting for a save to
+    finish. Returns the GLib sources."""
+    import signal
+    try:
+        gi.require_version('GLibUnix', '2.0')
+        from gi.repository import GLibUnix
+        add = GLibUnix.signal_add
+    except (ValueError, ImportError):  # GLib before 2.80
+        add = GLib.unix_signal_add
+
+    def on_signal(*_):
+        if app.quit_requested or app.fading_out:
+            app.quit()
+        else:
+            app.request_quit()
+        return GLib.SOURCE_CONTINUE
+    return [add(GLib.PRIORITY_DEFAULT, signum, on_signal) for signum in (signal.SIGTERM, signal.SIGHUP)]
+
+
 def main():
     # problems are logged with details to stderr (the terminal, or the journal for the menu entry)
     logging.basicConfig(level=os.environ.get('NOWCAPTION_LOG', 'WARNING').upper(),
@@ -2581,6 +2608,7 @@ def main():
               file=sys.stderr)
         return 1
     app = NowCaption()
+    quit_on_signals(app)
     status = app.run(sys.argv)
     if not app.threads_finished(3):  # still loading a model, for example: exit without finalizing
         sys.stdout.flush()
