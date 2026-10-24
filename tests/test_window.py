@@ -213,6 +213,32 @@ class WindowTests(unittest.TestCase):
         self.new_size(+1)
         self.assertEqual(w.y, 0)
 
+    def test_rows_stay_put_when_the_passage_drops_its_oldest_line(self):
+        # The passage holds the last 60 finished lines: in a long conversation each new line
+        # dropped the oldest, the whole passage wrapped afresh, and words hopped between rows.
+        rows = self.window.caption.wrapper
+        words = [f'word{i}' if i % 3 else f'longerword{i}' for i in range(80)]
+        before = rows(words)
+        # rows wholly after the dropped words, but not the last row, which is still being written
+        finished = [row for (start, _), row in zip(rows.spans, before) if start >= 7][:-1]
+        self.assertGreater(len(finished), 2)
+        after = rows(words[7:] + ['more'])
+        self.assertEqual(after[-len(finished) - 1:-1], finished)
+
+    def test_a_comma_at_the_end_of_a_row_does_not_move_words(self):
+        rows = self.window.caption.wrapper
+        words = [f'word{i}' for i in range(60)]
+        before = rows(words)
+        end = len(before[0].split()) - 1
+        after = rows(words[:end] + [words[end] + ','] + words[end + 1:])
+        self.assertEqual(after[0], before[0] + ',')
+        self.assertEqual(after[1:], before[1:])
+
+    def test_the_last_row_keeps_filling(self):
+        rows = self.window.caption.wrapper
+        self.assertEqual(rows(['The', 'music']), ['The music'])
+        self.assertEqual(rows(['The', 'music', 'came']), ['The music came'])
+
     def test_geometry_refresh_keeps_caption_width_within_the_current_screen(self):
         if not self.window.monitor:
             self.skipTest('No monitor advertised by the display')
@@ -397,7 +423,8 @@ class AnimationTests(unittest.TestCase):
     def passage(self, rows):
         """Text that fills `rows` caption rows, and a word that starts the next row."""
         words = []
-        while len(nc.wrapped_lines(self.window.layout, ' '.join(words + [f'word{len(words)}']))) <= rows:
+        wrap = self.window.caption.wrapper.greedy
+        while len(wrap(words + [f'word{len(words)}'], 0, len(words) + 1)) <= rows:
             words.append(f'word{len(words)}')
         return ' '.join(words), f'word{len(words)}'
 

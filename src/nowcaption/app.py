@@ -1,4 +1,5 @@
 """NowCaption: on-device live captions for anything your computer plays, or your microphone."""
+import bisect
 import difflib
 import logging
 import math
@@ -118,17 +119,81 @@ class Settings:
             LOG.warning('Could not save settings to %s: %s', self.path, e)
 
 
-def wrapped_lines(layout, text):
-    """text in rows, as Pango wraps it in the caption box."""
-    layout.set_text(text, -1)
-    data = text.encode()
-    return [data[l.start_index:l.start_index + l.length].decode(errors='ignore').strip()
-            for l in layout.get_lines_readonly()]
-
-
 def bare(word):
     """A word without the punctuation and capital the punctuation model may still change."""
     return word.strip('.,?!;:"\'').lower()
+
+
+class Rows:
+    """Wraps the caption passage into rows that stay put. Rows already shown keep their breaks
+    while their words stay the same, even when the passage drops its oldest line (it holds the
+    last Captioner.DISPLAY_LINES lines) or the punctuation model changes a comma or capital.
+    Wrapping the whole passage afresh moved words between rows on screen at every finished
+    line, once a long conversation filled the passage. New rows wrap a little short of the
+    width, so that a comma or capital added later still fits."""
+
+    def __init__(self, layout, row_height):
+        self.width = layout.get_width()  # Pango units
+        self.wrap = layout.copy()
+        self.wrap.set_width(self.width - max(4, row_height // 2) * Pango.SCALE)
+        self.wrap.set_wrap(Pango.WrapMode.WORD_CHAR)
+        self.fit = layout.copy()
+        self.fit.set_width(-1)
+        self.words, self.spans = [], []  # the passage's words and each row's [start, end) in them
+
+    def __call__(self, words):
+        """The rows for the passage's words, as text."""
+        old, new = [bare(w) for w in self.words], [bare(w) for w in words]
+        d = self.dropped(old, new)
+        spans = []
+        if d is not None and self.spans:
+            same = d  # old words up to here are still the passage's, maybe punctuated anew
+            while same < len(old) and same - d < len(new) and old[same] == new[same - d]:
+                same += 1
+            first = next((i for i, (start, _) in enumerate(self.spans) if start >= d), None)
+            if first is not None:
+                pos = self.spans[first][0] - d
+                spans = self.greedy(words, 0, pos)  # what is left of a row cut by the drop
+                for start, end in self.spans[first:-1]:  # the last row is still being written
+                    row = words[start - d:end - d]
+                    if end > same or (row != self.words[start:end] and not self.fits(row)):
+                        break
+                    spans.append((start - d, end - d))
+                    pos = end - d
+                spans += self.greedy(words, pos, len(words))
+        if not spans:
+            spans = self.greedy(words, 0, len(words))
+        self.words, self.spans = list(words), spans
+        return [' '.join(words[start:end]) for start, end in spans]
+
+    @staticmethod
+    def dropped(old, new):
+        """How many words the passage lost at its start, or None if the new passage does not
+        continue the old one."""
+        key = new[:min(8, len(old))]
+        if not key:
+            return None
+        for d in range(len(old) - len(key) + 1):
+            if old[d:d + len(key)] == key:
+                return d
+        return None
+
+    def greedy(self, words, a, b):
+        """Rows for words[a:b], as Pango wraps them."""
+        if a >= b:
+            return []
+        text, starts, pos = ' '.join(words[a:b]), [], 0
+        for w in words[a:b]:
+            starts.append(pos)
+            pos += len(w.encode()) + 1
+        self.wrap.set_text(text, -1)
+        firsts = [bisect.bisect_left(starts, line.start_index) for line in self.wrap.get_lines_readonly()]
+        bounds = sorted(set(firsts + [b - a]))
+        return [(a + s, a + e) for s, e in zip(bounds, bounds[1:]) if s < e]
+
+    def fits(self, row):
+        self.fit.set_text(' '.join(row), -1)
+        return self.fit.get_size()[0] <= self.width
 
 
 def ease_out(p):
@@ -159,7 +224,7 @@ class CaptionText(Gtk.Widget):
         super().__init__(overflow=Gtk.Overflow.HIDDEN, **kwargs)
         self.label = label
         label.set_parent(self)
-        self.layout, self.rows, self.row_height = None, ROWS, 0
+        self.layout, self.rows, self.row_height, self.wrapper = None, ROWS, 0, None
         self.text, self.lines, self.words, self.status = '', [], [], False
         self.glide, self.glide_start = 0.0, 0  # rows to glide up, counted from glide_start (µs)
         self.appeared = {}  # passage word index: when it appeared (µs), while it fades in
@@ -193,8 +258,9 @@ class CaptionText(Gtk.Widget):
         self.label.allocate(width, height, -1, up)
 
     def configure(self, layout, rows, row_height):
-        """A new width, font or number of rows: the rows are shown at rest."""
+        """A new width, font or number of rows: the rows are shown at rest, wrapped afresh."""
         self.layout, self.rows, self.row_height = layout, rows, row_height
+        self.wrapper = Rows(layout, row_height)
         self.glide, self.appeared = 0.0, {}
         self.queue_resize()
 
@@ -202,8 +268,8 @@ class CaptionText(Gtk.Widget):
         """Show the passage, or with status, a status message (waiting: one that waits for
         speech, so it breathes)."""
         now = GLib.get_monotonic_time()
-        lines = wrapped_lines(self.layout, text) if text else []
         words = text.split()
+        lines = self.wrapper(words) if self.wrapper else []
         if self.get_mapped() and Adw.get_enable_animations(self):
             moved = self.moved(lines)
             if moved is None or moved > self.rows:
