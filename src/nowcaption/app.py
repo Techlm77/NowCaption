@@ -6,6 +6,7 @@ import logging
 import math
 import os
 import re
+import signal
 import sys
 import time
 import weakref
@@ -2761,7 +2762,6 @@ def quit_on_signals(app):
     """Quit the way Quit does on SIGTERM and SIGHUP (kill, logging out, shutting down), so the
     newest lines still reach the history. A second signal quits without waiting for a save to
     finish. Returns the GLib sources."""
-    import signal
     try:
         gi.require_version('GLibUnix', '2.0')
         from gi.repository import GLibUnix

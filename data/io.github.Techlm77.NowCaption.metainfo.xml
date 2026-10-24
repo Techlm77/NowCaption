@@ -57,6 +57,29 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.16" date="2026-10-24">
+      <description>
+        <p>
+          A round of fixes from a full check of NowCaption, and easier ways to reach the menu.
+        </p>
+        <ul>
+          <li>After a problem, More options has a Restart button to listen again; the messages
+            now point to it</li>
+          <li>The newest lines reach the history when you log out or shut down, not only when
+            you quit, and Clear always empties the session's history</li>
+          <li>The captions keep their width when a long message shows, keep their rows when the
+            colour or background changes, and go back to your chosen screen when it is plugged
+            in again</li>
+          <li>Pixel effects no longer jump or flicker when a new line starts, and turning off
+            animations stops all motion at once</li>
+          <li>Searching a long transcript no longer slows the captions, the transcript can be
+            selected with the keyboard, and closed windows free their memory</li>
+          <li>Touch and hold the captions to open the menu, and the app launcher offers Open
+            transcript, More options and Quit</li>
+          <li>The AppImage now includes the licence notices of the libraries it bundles</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.15" date="2026-10-24">
       <description>
         <p>

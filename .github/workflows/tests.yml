@@ -28,6 +28,7 @@ jobs:
       - run: PYTHONPATH=src python tests/test_fixes_117.py
       - run: PYTHONPATH=src python tests/test_fixes_118.py
       - run: PYTHONPATH=src python tests/test_fixes_119.py
+      - run: PYTHONPATH=src python tests/test_fixes_1116_history.py
       - run: python tests/test_version.py
       - run: python -m compileall -q src tests benchmark tools
       - run: for script in tools/*.sh tests/*.sh flatpak/*.sh; do sh -n "$script"; done
@@ -42,6 +43,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends python3-gi python3-gi-cairo python3-numpy \
             gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 \
-            xvfb xauth
+            python3-yaml dbus xvfb xauth
       - run: NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_app.py
       - run: xvfb-run -a env NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_window.py
+      - run: |
+          for t in history options effects window transcript access packaging; do
+            xvfb-run -a env NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_fixes_1116_$t.py
+          done
