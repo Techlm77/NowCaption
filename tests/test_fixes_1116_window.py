@@ -88,7 +88,18 @@ class RestyleTests(unittest.TestCase):
         self.addCleanup(self.window.disconnect_monitors)
         words = [f'word{i}' if i % 3 else f'longerword{i}' for i in range(80)]
         self.window.show_text(' '.join(words))
-        self.words = words[7:] + ['more']  # the passage dropped its oldest line
+        w = self.window
+
+        def rows(*passages):
+            wrap = nc.Rows(w.layout, w.row_height)
+            return [wrap(passage) for passage in passages][-1]
+        # The passage drops its oldest words: as many as it takes, in this display's font, for
+        # a fresh wrap to differ from the rows kept on screen.
+        drop = next((d for d in range(1, 30) if rows(words, words[d:] + ['more']) != rows(words[d:] + ['more'])),
+                    None)
+        if drop is None:
+            self.skipTest('In this font, every passage wraps the same afresh')
+        self.words = words[drop:] + ['more']
         self.window.show_text(' '.join(self.words))
 
     def test_a_new_background_or_colour_keeps_the_rows(self):

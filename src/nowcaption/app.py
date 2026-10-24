@@ -2802,9 +2802,10 @@ def quit_on_signals(app):
     try:
         gi.require_version('GLibUnix', '2.0')
         from gi.repository import GLibUnix
-        add = GLibUnix.signal_add
     except (ValueError, ImportError):  # GLib before 2.80
-        add = GLib.unix_signal_add
+        GLibUnix = None
+    # GLib 2.80's GLibUnix (Ubuntu 24.04, and so the AppImage) has only signal_add_full
+    add = getattr(GLibUnix, 'signal_add', None) or GLib.unix_signal_add
 
     def on_signal(*_):
         if app.quit_requested or app.fading_out:
