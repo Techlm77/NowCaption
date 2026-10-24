@@ -10,6 +10,9 @@ finish-args:
   - --device=dri
   # Captions are made from desktop audio (the PulseAudio/PipeWire monitor) or the microphone.
   - --socket=pulseaudio
+  # On KDE Plasma, docked captions float over a fullscreen app on their screen: a small KWin
+  # script, loaded only while they are docked, tells NowCaption when one is open.
+  - --talk-name=org.kde.KWin
 cleanup:
   - /include
   - /lib/pkgconfig

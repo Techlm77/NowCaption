@@ -28,9 +28,9 @@ To uninstall: `flatpak uninstall io.github.Techlm77.NowCaption`.
 
 **AppImage:** download `NowCaption-*-x86_64.AppImage` (or `aarch64`) from the
 [latest release](https://github.com/Techlm77/NowCaption/releases/latest), then run
-`chmod +x NowCaption-*.AppImage` and `./NowCaption-*.AppImage`. It needs a system from
-2024 or newer (glibc 2.39: Ubuntu 24.04, Debian 13, Fedora 40, Arch). Gear Lever or
-AppImageUpdate can keep it up to date.
+`chmod +x NowCaption-*.AppImage` and `./NowCaption-*.AppImage`. It runs on Ubuntu 22.04,
+Debian 12 and anything newer: on systems older than 2024 it brings its own C library.
+Gear Lever or AppImageUpdate can keep it up to date.
 
 ## Use
 
@@ -72,10 +72,13 @@ press Alt+Space on the window and choose **Always on Top**.
 **Position.** On KDE Plasma, Hyprland and Sway, the little screens under **Position** in
 the menu choose where the captions go. **Floating**, they stay wherever you drag them, over
 any window. **Docked** at the top, bottom, left or right, they take that strip of the
-screen, and maximised or snapped windows make room for them, so nothing is covered. Drag
-the edge between the captions and your windows to resize both together. Fullscreen games
-and videos still go under docked captions, like a panel. Floating captions keep their bottom
-edge in place when you change the text size.
+screen like a panel, next to any panels already there, and maximised or snapped windows
+make room for them, so nothing is covered. Drag the edge between the captions and your
+windows to resize both together. Choosing another position slides the captions into their
+edge and out of the new one, and your windows move along with them. On KDE Plasma, while a
+fullscreen game or video is open on their screen, docked captions float above it and dock
+again when it closes; elsewhere, choose **Floating** for fullscreen apps. Floating captions
+keep their bottom edge in place when you change the text size.
 
 **No captions?** Make sure sound plays through your default output device. After
 switching to headphones, choose **Desktop audio** again.

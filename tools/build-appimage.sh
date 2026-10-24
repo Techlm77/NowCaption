@@ -4,9 +4,11 @@
 # runner, or from a checkout with
 #   docker run --rm -v "$PWD:/src" -w /src ubuntu:24.04 tools/build-appimage.sh
 # The AppImage bundles Python 3.12, GTK 4, libadwaita, GStreamer, gtk4-layer-shell, sherpa-onnx,
-# NumPy and the models. glibc, graphics drivers, fonts, Wayland, X11 and PipeWire come from the
-# system, as the AppImage excludelist says, so it runs where glibc is 2.39 or newer (Ubuntu
-# 24.04, Debian 13, Fedora 40, Arch and newer).
+# NumPy and the models. Graphics drivers, fonts, Wayland, X11 and PipeWire come from the
+# system, as the AppImage excludelist says. glibc comes from the system where it is 2.39 or
+# newer; on older systems (Ubuntu 22.04, Debian 12, ...) AppRun starts Python with the glibc
+# bundled in usr/lib/compat instead, which older system libraries also work with, together
+# with the newer libstdc++ and HarfBuzz that the bundled libraries need there.
 set -eu
 cd "$(dirname "$0")/.."
 SRC=$PWD
@@ -170,6 +172,20 @@ done
 missing=$(find "$APPDIR/usr" -type f -name '*.so*' | while read -r f; do
     wheels "$f" || LD_LIBRARY_PATH= ldd "$f" | grep 'not found' || true; done)
 [ -z "$missing" ] || { echo "Unresolved libraries:" >&2; echo "$missing" >&2; exit 1; }
+
+echo "== glibc and friends, for systems whose own are older"
+# Kept out of usr/lib, so that the RUNPATHs above never pick them up: AppRun uses them only by
+# starting Python through this glibc's loader, where the system's glibc is older than this one.
+# There the system's libstdc++ and HarfBuzz are older than the bundled libraries need too
+# (Pango wants HarfBuzz 7 or newer; Ubuntu 22.04 has 2.7).
+C=$APPDIR/usr/lib/compat
+mkdir -p "$C"
+for soname in ld-linux-x86-64.so.2 ld-linux-aarch64.so.1 libc.so.6 libm.so.6 libmvec.so.1 libdl.so.2 \
+              libpthread.so.0 librt.so.1 libresolv.so.2 libutil.so.1 libanl.so.1 libstdc++.so.6 libgcc_s.so.1 \
+              libharfbuzz.so.0 libgraphite2.so.3; do
+    [ ! -e "$LIB/$soname" ] || cp -L "$LIB/$soname" "$C/"
+done
+getconf GNU_LIBC_VERSION | cut -d' ' -f2 > "$C/GLIBC_VERSION"  # for example 2.39
 
 echo "== AppImage"
 install -m755 appimage/AppRun "$APPDIR/AppRun"

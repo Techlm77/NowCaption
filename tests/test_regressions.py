@@ -76,6 +76,7 @@ def app_with_fakes():
     a.started = 1792760700.0
     a.history_path = engine.history_file(a.started)
     a.capture = NS(starts=[], start=lambda device, gen: a.capture.starts.append((device, gen)), stop=lambda: None)
+    a.fullscreen_watch = NS(stop=lambda sync=False: None)  # the KWin script is not these tests' business
     return a
 
 

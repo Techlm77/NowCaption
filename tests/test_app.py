@@ -35,6 +35,9 @@ class FakeWindow:
     def reposition(self):
         self.repositions += 1
 
+    def set_covered(self, covered):
+        self.covered = covered
+
     def show_text(self, text):
         self.text = text
 
@@ -52,6 +55,7 @@ class FakeWindow:
 class AppTests(unittest.TestCase):
     def make(self):
         a = nc.NowCaption()
+        a.fullscreen_watch.bus = None  # never load a KWin script into the desktop running the tests
         a.window = FakeWindow()
         a.capture = NS(starts=[], start=lambda device, gen: a.capture.starts.append(gen), stop=lambda: None)
         a.worker = NS(set_source=lambda gen: None, clear=lambda gen: None, restart=lambda: None)
@@ -163,6 +167,14 @@ class MenuTests(unittest.TestCase):
         self.assertEqual(a.settings.get('position'), 'bottom')
         self.assertEqual(a.window.repositions, 1)
         action.activate(nc.GLib.Variant('s', 'floating'))
+
+    def test_kwin_saying_fullscreen_reaches_the_window(self):
+        a = AppTests.make(self)
+        a.on_fullscreen_call(None, ':1.5', nc.FULLSCREEN_PATH, nc.FULLSCREEN_IFACE, 'Changed',
+                             nc.GLib.Variant('(b)', (True,)), NS(return_value=lambda value: None))
+        self.assertTrue(a.window.covered)
+        a.on_fullscreen(False)
+        self.assertFalse(a.window.covered)
 
     def test_the_history_switch_is_remembered_and_reaches_the_worker(self):
         a = AppTests.make(self)

@@ -57,6 +57,24 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.13" date="2026-10-24">
+      <description>
+        <p>
+          Changing Position now slides the captions, and docked captions behave like a panel.
+        </p>
+        <ul>
+          <li>Docked captions slide into their edge and out of the new one, and maximised
+            windows beside them grow and shrink along with the slide instead of jumping.
+            Floating captions fade</li>
+          <li>Docked captions sit next to the panels already there instead of pushing them
+            aside</li>
+          <li>On KDE Plasma, docked captions float above a fullscreen game or video on their
+            screen, and dock again when it closes</li>
+          <li>The AppImage now runs on Ubuntu 22.04, Debian 12 and newer, not only on systems
+            from 2024</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.12" date="2026-10-24">
       <description>
         <p>

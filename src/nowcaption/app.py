@@ -1,6 +1,7 @@
 """NowCaption: on-device live captions for anything your computer plays, or your microphone."""
 import bisect
 import difflib
+import json
 import logging
 import math
 import os
@@ -58,6 +59,7 @@ COLOURS = {'white': ('White', '#ffffff'), 'yellow': ('Yellow', '#ffff00'),
 # messages fade, and a message that waits for speech ("Listening…") breathes until it comes.
 FADE_IN_MS, FADE_OUT_MS = 200, 150
 GLIDE_MS, WORD_MS, STATUS_MS, CHANGE_MS, BREATH_MS = 200, 120, 150, 150, 2000
+UNDOCK_MS, DOCK_MS = 220, 260  # docked captions slide into their edge, and out of the new one
 BREATH_STEP_MS = 40  # breathing is slow and may last long: 25 steps a second, not every frame
 # Where the captions go: floating where they are dragged, or docked along an edge of the screen.
 # Docked, they reserve that strip of the screen (the layer-shell exclusive zone), so maximised and
@@ -72,6 +74,91 @@ DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 
             'position': 'floating', 'dock_rows': ROWS, 'dock_width': -1}
 LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'dock_rows': (1, 100)}
 CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS), 'position': tuple(POSITIONS)}
+
+
+# On KDE Plasma, docked captions float over a fullscreen app on their screen (which hides the
+# panels they line up with), and dock again when it leaves fullscreen. Wayland does not tell an
+# app about other windows, so a small KWin script, loaded while the captions are docked, reports
+# whether the active window on the captions' screen is fullscreen.
+FULLSCREEN_PATH = '/io/github/Techlm77/NowCaption/Fullscreen'
+FULLSCREEN_IFACE = 'io.github.Techlm77.NowCaption.Fullscreen'
+FULLSCREEN_XML = f"""<node><interface name="{FULLSCREEN_IFACE}">
+  <method name="Changed"><arg type="b" name="fullscreen" direction="in"/></method>
+</interface></node>"""
+KWIN_SCRIPT = """// NowCaption: whether the active window on the captions' screen is fullscreen.
+const OUTPUT = %s;
+let last = null;
+function update() {
+    const w = workspace.activeWindow;
+    const full = !!(w && w.fullScreen && (OUTPUT === "" || (w.output && w.output.name === OUTPUT)));
+    if (full !== last) {
+        last = full;
+        callDBus(%s, %s, %s, "Changed", full);
+    }
+}
+function watch(w) { if (w) w.fullScreenChanged.connect(update); }
+workspace.windowList().forEach(watch);
+workspace.windowAdded.connect(function (w) { watch(w); update(); });
+workspace.windowRemoved.connect(update);
+workspace.windowActivated.connect(update);
+update();
+"""
+
+
+class FullscreenWatch:
+    """Loads and unloads NowCaption's KWin script over D-Bus. Nothing happens where KWin is not
+    running: the calls just fail."""
+    NAME = 'nowcaption-fullscreen'
+
+    def __init__(self, app_id):
+        self.app_id, self.output, self.bus = app_id, None, None
+        try:
+            self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        except GLib.Error:
+            pass
+
+    def call(self, method, args, done=None, sync=False):
+        if not self.bus:
+            return
+        params = GLib.Variant(args[0], args[1]) if args else None
+        if sync:
+            try:
+                self.bus.call_sync('org.kde.KWin', '/Scripting', 'org.kde.kwin.Scripting', method, params,
+                                   None, Gio.DBusCallFlags.NO_AUTO_START, 500, None)
+            except GLib.Error:
+                pass
+            return
+
+        def finished(bus, result):
+            try:
+                bus.call_finish(result)
+            except GLib.Error:
+                return
+            if done:
+                done()
+        self.bus.call('org.kde.KWin', '/Scripting', 'org.kde.kwin.Scripting', method, params,
+                      None, Gio.DBusCallFlags.NO_AUTO_START, 2000, None, finished)
+
+    def start(self, output):
+        """Watch the screen with this connector name ('' for any)."""
+        if output == self.output or not self.bus:
+            return
+        self.output = output
+        path = Path(GLib.get_user_data_dir()) / 'nowcaption' / 'kwin-fullscreen.js'
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(KWIN_SCRIPT % tuple(map(json.dumps, (output, self.app_id, FULLSCREEN_PATH,
+                                                                   FULLSCREEN_IFACE))))
+        except OSError as e:
+            LOG.warning('Could not write the KWin script: %s', e)
+            return
+        self.call('unloadScript', ('(s)', (self.NAME,)), lambda: self.call(
+            'loadScript', ('(ss)', (str(path), self.NAME)), lambda: self.call('start', None)))
+
+    def stop(self, sync=False):
+        if self.output is not None:
+            self.output = None
+            self.call('unloadScript', ('(s)', (self.NAME,)), sync=sync)
 
 
 class Settings:
@@ -211,6 +298,53 @@ class StyledLabel(Gtk.Label):
     def do_css_changed(self, change):
         Gtk.Label.do_css_changed(self, change)
         self.styled()
+
+
+class Drawer(Gtk.Widget):
+    """Holds the caption box and can show only part of it, from the edge it is docked to:
+    `shown` px of its height (top or bottom) or width (left or right), the rest slid away into
+    that edge. The drawer keeps the box's whole size, so the window does not resize while the
+    captions slide (each resize waits for the compositor, which halved the frame rate);
+    CaptionWindow shrinks and grows only the space it reserves. shown None: all of it."""
+
+    def __init__(self, child):
+        super().__init__(overflow=Gtk.Overflow.HIDDEN)
+        self.child, self.edge, self.shown = child, None, None
+        child.set_parent(self)
+
+    def do_dispose(self):
+        if self.child.get_parent() is self:
+            self.child.unparent()
+        Gtk.Widget.do_dispose(self)
+
+    def axis(self):
+        return Gtk.Orientation.VERTICAL if self.edge in ('top', 'bottom') else Gtk.Orientation.HORIZONTAL
+
+    def show_part(self, edge, shown):
+        self.edge, self.shown = edge, None if shown is None else max(0.0, shown)
+        self.queue_allocate()
+
+    def full(self):
+        """The box's whole size across the docked edge."""
+        return self.child.measure(self.axis(), -1)[1]
+
+    def hidden(self):
+        """How far the box is slid away into its edge, in px."""
+        return 0 if self.shown is None or not self.edge else max(0, self.full() - self.shown)
+
+    def do_measure(self, orientation, for_size):
+        minimum, natural, _, _ = self.child.measure(orientation, for_size)
+        return minimum, natural, -1, -1
+
+    def do_size_allocate(self, width, height, baseline):
+        w = max(width, self.child.measure(Gtk.Orientation.HORIZONTAL, -1)[0])
+        h = max(height, self.child.measure(Gtk.Orientation.VERTICAL, w)[0])
+        away = self.hidden()
+        move = None
+        if away:
+            dx, dy = {'top': (0, -away), 'bottom': (0, away), 'left': (-away, 0), 'right': (away, 0)}[self.edge]
+            move = Gsk.Transform().translate(Graphene.Point().init(dx, dy))
+        self.child.allocate(w, h, -1, move)
 
 
 class CaptionText(Gtk.Widget):
@@ -430,6 +564,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.monitor = self.pick_monitor(self.settings.get('monitor'))
         self.box_width = self.width_for(self.monitor)
         self.edge = self.span = self.fitted = None  # see dock(), on_layout() and fit()
+        self.covered = False  # a fullscreen app on this screen: docked captions float over it
 
         self.css = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css,
@@ -452,8 +587,10 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.footer_shown = self.footer_hiding = False
         self.fades, self.faded_in = {}, False
         self.box.connect('map', self.fade_in)
+        self.drawer = Drawer(self.box)  # docked, slides the captions into their edge and out
+        self.moves, self.moving = [], 0
         self.fixed = Gtk.Fixed()  # lets the box move inside the window while it is dragged
-        self.fixed.put(self.box, 0, 0)
+        self.fixed.put(self.drawer, 0, 0)
         self.set_child(self.fixed)
 
         if self.layer:
@@ -520,9 +657,13 @@ class CaptionWindow(Gtk.ApplicationWindow):
         """Anchor the overlay for the position chosen in the menu. Floating, it covers the screen
         and the box moves inside it. Docked, it is a strip along one edge that the compositor
         keeps other windows out of, so maximised and snapped windows end where it begins."""
-        position = self.settings.get('position')
+        position = self.position()
         self.edge = None if position == 'floating' else position
         self.span = None
+        # docked, like a panel: next to the panels already there; floating, above everything,
+        # fullscreen apps included
+        LayerShell.set_layer(self, LayerShell.Layer.TOP if self.edge else LayerShell.Layer.OVERLAY)
+        self.watch_fullscreen()
         for name in ('top', 'bottom', 'left', 'right'):
             LayerShell.set_anchor(self, getattr(LayerShell.Edge, name.upper()),
                                   self.edge is None or name == self.edge or name in ALONG[self.edge])
@@ -534,6 +675,24 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.remove_css_class('docked')
         self.seat_footer()
         self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
+
+    def position(self):
+        """Where the captions go now: the menu's choice, or floating over a fullscreen app."""
+        chosen = self.settings.get('position')
+        return 'floating' if self.covered else chosen
+
+    def watch_fullscreen(self):
+        """While the captions are docked, have KWin say when an app on their screen is fullscreen."""
+        if self.settings.get('position') == 'floating':
+            self.app.fullscreen_watch.stop()
+        else:
+            self.app.fullscreen_watch.start((self.monitor.get_connector() or '') if self.monitor else '')
+
+    def set_covered(self, covered):
+        """A fullscreen app on this screen opened or closed: float over it, or dock again."""
+        if covered != self.covered and self.layer:
+            self.covered = covered
+            self.reposition()
 
     def seat_footer(self):
         """Floating, status messages get a row of their own under the captions. Docked, the strip
@@ -551,12 +710,77 @@ class CaptionWindow(Gtk.ApplicationWindow):
         (footer.add_css_class if docked else footer.remove_css_class)('corner')
 
     def reposition(self):
-        """Float or dock as the menu now says; an open menu moves along with the captions."""
-        if self.layer:
-            self.dock()
-            self.restyle()
-            if self.popover.get_visible():
-                self.point_menu(self.x + self.box_width // 2, self.y + self.box_height() // 2)
+        """Float or dock as the menu now says. Docked captions slide into their edge while the
+        space they reserve shrinks with them, so maximised windows grow along (each app redraws
+        as fast as it can and skips the sizes it misses); then they slide out of the new edge
+        the same way. Floating captions fade instead. An open menu moves with them."""
+        if not self.layer:
+            return
+        self.moving += 1
+        token = self.moving
+        for animation in self.moves:
+            animation.pause()  # a move already under way stops where it is
+        self.moves = []
+        if not (self.get_mapped() and Adw.get_enable_animations(self)):
+            self.box.set_opacity(1.0)
+            return self.arrive(slide_in=False)
+
+        def arrived():
+            if token != self.moving:
+                return
+            self.arrive(slide_in=True)
+            if self.edge:
+                self.box.set_opacity(1.0)
+                self.slide(0, self.drawer.full(), DOCK_MS, Adw.Easing.EASE_OUT_CUBIC, self.docked_fully)
+            else:
+                self.fade(self.box, 0.0, 1.0, FADE_IN_MS)
+
+        if self.edge:
+            self.drawer.edge = self.edge
+            shown = self.drawer.full() if self.drawer.shown is None else self.drawer.shown
+            self.slide(shown, 0, UNDOCK_MS, Adw.Easing.EASE_IN_CUBIC, arrived)
+        else:
+            self.fade(self.box, None, 0.0, FADE_OUT_MS, arrived)
+
+    def docked_fully(self):
+        """The slide out of the edge is over: the strip reserves its whole size again."""
+        self.drawer.show_part(None, None)
+        LayerShell.auto_exclusive_zone_enable(self)
+        self.update_input()
+
+    def arrive(self, slide_in):
+        """Anchor and fit the captions at the new position; docked, slid away into the edge
+        first when they are about to slide out of it."""
+        self.dock()
+        if self.edge and slide_in:
+            self.drawer.show_part(self.edge, 0)
+            LayerShell.set_exclusive_zone(self, 0)
+        else:
+            self.drawer.show_part(None, None)
+        self.restyle()
+        if self.popover.get_visible():
+            self.point_menu(self.x + self.box_width // 2, self.y + self.box_height() // 2)
+
+    def slide(self, start, end, ms, easing, done):
+        """Show start..end px of the docked box over ms. Each frame the space the captions
+        reserve, and the part that takes clicks, is just what shows, so maximised windows move
+        with the slide; the window itself keeps its size."""
+        def step(value):
+            self.drawer.show_part(self.edge, value)
+            LayerShell.set_exclusive_zone(self, round(value))
+            self.update_input()
+        animation = Adw.TimedAnimation.new(self, start, end, ms, Adw.CallbackAnimationTarget.new(step))
+        animation.set_easing(easing)
+        animation.connect('done', lambda *a: done())
+        self.moves.append(animation)
+        animation.play()
+
+    def docked_part(self, w, h):
+        """The part of a docked window the captions show: all of it, or during a slide only
+        what has slid out of the edge."""
+        away = self.drawer.hidden()
+        return {'top': (0, 0, w, h - away), 'bottom': (0, away, w, h - away),
+                'left': (0, 0, w - away, h), 'right': (away, 0, w - away, h)}[self.edge]
 
     def cursor(self):
         return 'default' if self.edge else 'grab'
@@ -584,6 +808,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.monitor = monitor
         self.span = None
         self.box_width = self.width_for(monitor)
+        if self.layer and monitor:
+            self.watch_fullscreen()
         self.watch_monitor()
         if self.layer and monitor:
             LayerShell.set_monitor(self, monitor)
@@ -722,19 +948,22 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if not self.layer or not self.monitor or self.edge:
             self.x = self.y = 0
             if self.edge:
-                self.fixed.move(self.box, 0, 0)
+                self.fixed.move(self.drawer, 0, 0)
                 self.update_input()
             return
         self.x, self.y = self.clamp(x, y)
-        self.fixed.move(self.box, self.x, self.y)
+        self.fixed.move(self.drawer, self.x, self.y)
         self.update_input()
 
     def update_input(self):
         """Only the caption box takes pointer input; the rest of the overlay clicks through."""
         surface = self.get_surface()
         if self.layer and surface:
-            w, h = (surface.get_width(), surface.get_height()) if self.edge else (self.box_width, self.box_height())
-            surface.set_input_region(cairo.Region(cairo.RectangleInt(self.x, self.y, w, h)))
+            if self.edge:
+                x, y, w, h = self.docked_part(surface.get_width(), surface.get_height())
+            else:
+                x, y, w, h = self.x, self.y, self.box_width, self.box_height()
+            surface.set_input_region(cairo.Region(cairo.RectangleInt(int(x), int(y), max(0, int(w)), max(0, int(h)))))
 
     def next_monitor(self):
         monitors = Gdk.Display.get_default().get_monitors()
@@ -1418,6 +1647,7 @@ class NowCaption(Adw.Application):
         self.save_queues = {}  # destination URI -> accepted writes, in snapshot order
         self.quit_requested = False
         self.fading_out = False
+        self.fullscreen_watch = FullscreenWatch(APP_ID)
         self.capture = audio.Capture(
             on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
             on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
@@ -1590,6 +1820,25 @@ class NowCaption(Adw.Application):
         self.settings.set('opacity', round(max(0.2, min(1.0, self.settings.get('opacity') + step)), 2))
         self.window.restyle()
 
+    def do_dbus_register(self, connection, object_path):
+        """Also take the KWin script's word on fullscreen apps (see FULLSCREEN_PATH)."""
+        Adw.Application.do_dbus_register(self, connection, object_path)
+        try:
+            info = Gio.DBusNodeInfo.new_for_xml(FULLSCREEN_XML).interfaces[0]
+            connection.register_object(FULLSCREEN_PATH, info, self.on_fullscreen_call, None, None)
+        except GLib.Error as e:  # captions still work, just without floating over fullscreen apps
+            LOG.warning('Could not listen for fullscreen apps: %s', e)
+        return True
+
+    def on_fullscreen_call(self, connection, sender, path, iface, method, params, invocation):
+        invocation.return_value(None)
+        if method == 'Changed':
+            self.on_fullscreen(params.unpack()[0])
+
+    def on_fullscreen(self, fullscreen):
+        if self.window:
+            self.window.set_covered(bool(fullscreen))
+
     def on_activate(self, app):
         if self.window:
             return self.window.present()
@@ -1620,6 +1869,7 @@ class NowCaption(Adw.Application):
 
     def on_shutdown(self, app):
         self.closing = True
+        self.fullscreen_watch.stop(sync=True)
         self.cancel_recognition_retry()
         if self.retry_id:
             GLib.source_remove(self.retry_id)

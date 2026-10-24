@@ -40,6 +40,7 @@ def shared_app():
         # one would have no windows of its own, and GTK crashes building one.
         app.set_flags(app.get_flags() | nc.Gio.ApplicationFlags.NON_UNIQUE)
         app.register(None)
+        app.fullscreen_watch.bus = None  # never load a KWin script into the desktop running the tests
         APP.append(app)
     return APP[0]
 
@@ -546,10 +547,13 @@ class FakeLayerShell:
         NONE, ON_DEMAND = 0, 1
 
     class Layer:
-        OVERLAY = 3
+        TOP, OVERLAY = 2, 3
 
     def __init__(self):
-        self.anchors, self.zone = {}, None
+        self.anchors, self.zone, self.layer = {}, None, None
+
+    def set_layer(self, window, layer):
+        self.layer = layer
 
     def is_supported(self):
         return True
@@ -595,6 +599,41 @@ class DockTests(unittest.TestCase):
 
     def position(self, name):
         self.app.activate_action('position', nc.GLib.Variant('s', name))
+
+    def test_docked_strips_line_up_like_panels_and_floating_stays_above_everything(self):
+        self.assertEqual(self.shell.layer, FakeLayerShell.Layer.OVERLAY)
+        self.position('bottom')
+        self.assertEqual(self.shell.layer, FakeLayerShell.Layer.TOP)
+        self.position('floating')
+        self.assertEqual(self.shell.layer, FakeLayerShell.Layer.OVERLAY)
+
+    def test_a_fullscreen_app_floats_docked_captions_until_it_closes(self):
+        w = self.window
+        self.position('bottom')
+        w.set_covered(True)
+        self.assertIsNone(w.edge)
+        self.assertTrue(all(self.shell.anchors.values()))
+        self.assertEqual((self.shell.zone, self.shell.layer), (-1, FakeLayerShell.Layer.OVERLAY))
+        self.assertEqual(self.app.settings.get('position'), 'bottom', 'the choice in the menu stays')
+        w.set_covered(False)
+        self.assertEqual(w.edge, 'bottom')
+        self.assertEqual((self.shell.zone, self.shell.layer), ('auto', FakeLayerShell.Layer.TOP))
+
+    def test_the_kwin_script_watches_the_captions_screen_while_docked(self):
+        watch = nc.FullscreenWatch('io.github.Techlm77.NowCaption')
+        calls = []
+        watch.bus = object()
+        watch.call = lambda method, args, done=None, sync=False: (calls.append((method, args)), done and done())
+        watch.start('DP-2')
+        self.assertEqual([m for m, _ in calls], ['unloadScript', 'loadScript', 'start'])
+        script = nc.Path(calls[1][1][1][0]).read_text()
+        self.assertIn('const OUTPUT = "DP-2";', script)
+        self.assertIn('"io.github.Techlm77.NowCaption"', script)
+        calls.clear()
+        watch.start('DP-2')  # already watching that screen
+        self.assertEqual(calls, [])
+        watch.stop()
+        self.assertEqual(calls, [('unloadScript', ('(s)', ('nowcaption-fullscreen',)))])
 
     def test_floating_covers_the_screen_and_reserves_nothing(self):
         self.assertTrue(all(self.shell.anchors.values()))
@@ -717,6 +756,75 @@ class DockTests(unittest.TestCase):
         self.assertEqual(menu_at(w.x + 50, w.y + 10)[0], up)
         w.place(100, 50)
         self.assertEqual(menu_at(w.x + 50, w.y + 10), (down, (50, 10, 1, 1)))
+
+    def animated(self):
+        gtk = nc.Gtk.Settings.get_default()
+        gtk.set_property('gtk-enable-animations', True)
+        self.addCleanup(gtk.set_property, 'gtk-enable-animations', False)
+        self.window.present()
+        for _ in range(200):
+            nc.GLib.MainContext.default().iteration(False)
+
+    def finish_moves(self):
+        while self.window.moves:
+            moves, self.window.moves = self.window.moves, []
+            for animation in moves:
+                animation.skip()
+
+    def test_moving_a_docked_strip_slides_it_into_its_edge_then_out_of_the_new_one(self):
+        w = self.window
+        self.position('top')
+        self.animated()
+        full = w.box.measure(nc.Gtk.Orientation.VERTICAL, -1)[1]  # the strip's whole height
+        self.position('bottom')
+        self.assertEqual(w.edge, 'top', 'moved before sliding away')
+        self.assertEqual(len(w.moves), 1)
+        w.moves[0].skip()  # slid into the top edge: now anchored at the bottom, slid away
+        self.assertEqual(w.edge, 'bottom')
+        self.assertEqual(self.shell.anchors, {'top': False, 'bottom': True, 'left': True, 'right': True})
+        self.assertEqual(w.drawer.shown, 0)
+        self.assertEqual(self.shell.zone, 0, 'reserves space before it slides in')
+        # the window keeps its size all along: only the space reserved changes
+        self.assertEqual(w.drawer.measure(nc.Gtk.Orientation.VERTICAL, -1)[1], full)
+        self.finish_moves()
+        self.assertIsNone(w.drawer.shown)
+        self.assertEqual(self.shell.zone, 'auto')
+
+    def test_only_the_part_slid_out_takes_clicks(self):
+        w = self.window
+        self.position('top')
+        full = w.box.measure(nc.Gtk.Orientation.VERTICAL, -1)[1]  # the strip's whole height
+        w.drawer.show_part('top', 40)
+        self.assertEqual(w.drawer.hidden(), full - 40)
+        self.assertEqual(w.docked_part(1920, full), (0, 0, 1920, 40))
+        self.position('bottom')
+        w.drawer.show_part('bottom', 40)
+        self.assertEqual(w.docked_part(1920, full), (0, full - 40, 1920, 40))
+        w.drawer.show_part(None, None)
+        self.assertEqual(w.docked_part(1920, full), (0, 0, 1920, full))
+
+    def test_a_new_position_during_a_move_ends_there(self):
+        w = self.window
+        self.position('top')
+        self.animated()
+        self.position('bottom')
+        self.position('left')
+        self.finish_moves()
+        self.assertEqual(w.edge, 'left')
+        self.assertIsNone(w.drawer.shown)
+        self.assertEqual(self.shell.anchors, {'top': True, 'bottom': True, 'left': True, 'right': False})
+
+    def test_floating_captions_fade_out_and_dock_by_sliding_in(self):
+        w = self.window
+        self.animated()
+        self.position('bottom')
+        self.assertIsNone(w.edge)
+        w.fades[w.box].skip()  # faded out where they floated
+        self.assertEqual(w.edge, 'bottom')
+        self.assertEqual(w.box.get_opacity(), 1.0)
+        self.assertEqual(w.drawer.shown, 0)
+        self.finish_moves()
+        self.assertIsNone(w.drawer.shown)
 
     def test_a_new_text_size_keeps_a_top_strip_at_its_rows(self):
         w = self.window

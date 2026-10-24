@@ -16,10 +16,40 @@ export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1
 # The SVG icon loader's path depends on where the AppImage is mounted.
 sed "s|@APPDIR@|$HERE|g" "$HERE/usr/lib/gdk-pixbuf-2.0/loaders.cache.in" > "$cache/pixbuf-loaders.cache" &&
     export GDK_PIXBUF_MODULE_FILE="$cache/pixbuf-loaders.cache"
-# gtk4-layer-shell must load before libwayland-client; nowcaption-appimage takes it out of
-# LD_PRELOAD again once Python has started.
-if [ -n "${WAYLAND_DISPLAY:-}" ]; then
-    export NOWCAPTION_HOST_LD_PRELOAD="${LD_PRELOAD:-}"
-    export LD_PRELOAD="$HERE/usr/lib/libgtk4-layer-shell.so.0${LD_PRELOAD:+ $LD_PRELOAD}"
+# glibc: the system's, where it is as new as the one NowCaption was built with; otherwise the
+# bundled one, by starting Python through the bundled loader. Its library path then applies to
+# NowCaption alone, not to programs it starts.
+C="$HERE/usr/lib/compat"
+system=$(getconf GNU_LIBC_VERSION 2>/dev/null | cut -d' ' -f2)
+built=$(cat "$C/GLIBC_VERSION")
+if [ -n "$system" ] && [ "$(printf '%s\n%s\n' "$system" "$built" | sort -V | head -n1)" = "$built" ]; then
+    set -- "$HERE/usr/bin/python3" "$HERE/usr/bin/nowcaption-appimage" "$@"
+    preload=
+else
+    loader=$(ls "$C"/ld-linux*.so.* | head -n1)
+    export PYTHONHOME="$HERE/usr"  # the running program is the loader, so Python cannot find its home
+    set -- "$loader" --library-path "$C" --argv0 "$HERE/usr/bin/python3" \
+        "$HERE/usr/bin/python3" "$HERE/usr/bin/nowcaption-appimage" "$@"
+    preload=bundled
 fi
-exec "$HERE/usr/bin/python3" "$HERE/usr/bin/nowcaption-appimage" "$@"
+# Without the system's GLES library, GTK's GL renderer aborts in libepoxy: draw without GL.
+has_lib() {
+    for d in "/usr/lib/$(uname -m)-linux-gnu" /usr/lib64 /usr/lib "/lib/$(uname -m)-linux-gnu"; do
+        [ -e "$d/$1" ] && return 0
+    done
+    /sbin/ldconfig -p 2>/dev/null | grep -q "$1"
+}
+has_lib libGLESv2.so.2 || export GSK_RENDERER="${GSK_RENDERER:-cairo}"
+# gtk4-layer-shell must load before libwayland-client. In the environment (with the system's
+# glibc), nowcaption-appimage takes it out of LD_PRELOAD again once Python has started; the
+# bundled loader takes it as an option instead, so programs NowCaption starts never see it.
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    if [ "$preload" = bundled ]; then
+        loader=$1; shift
+        set -- "$loader" --preload "$HERE/usr/lib/libgtk4-layer-shell.so.0" "$@"
+    else
+        export NOWCAPTION_HOST_LD_PRELOAD="${LD_PRELOAD:-}"
+        export LD_PRELOAD="$HERE/usr/lib/libgtk4-layer-shell.so.0${LD_PRELOAD:+ $LD_PRELOAD}"
+    fi
+fi
+exec "$@"
