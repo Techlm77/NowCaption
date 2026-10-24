@@ -916,6 +916,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
         click = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
         click.connect('pressed', self.on_menu)
         self.add_controller(click)
+        hold = Gtk.GestureLongPress(touch_only=True)  # a touchscreen's right-click, see on_long_press
+        hold.connect('pressed', self.on_long_press)
+        self.add_controller(hold)
         self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
 
         self.popover = Gtk.PopoverMenu()
@@ -1706,6 +1709,16 @@ class CaptionWindow(Gtk.ApplicationWindow):
         else:
             self.popover.popup()
 
+    def on_long_press(self, gesture, x, y):
+        """A finger held still on the captions opens the menu there, as a right-click does. A
+        finger that moves first drags them, or resizes them from an edge, and GTK cancels the
+        long press; taking the press here ends a move that began with it. Without layer shell
+        the window manager moves the window as soon as it is pressed, so this never fires there."""
+        if self.resizing:  # an edge took the press
+            return
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        self.on_menu(gesture, 1, x, y)
+
 
 def session_heading(started):
     """A session's heading in the transcript, such as "Thursday 23 October 2026, 14:05"."""
@@ -2117,8 +2130,14 @@ class NowCaption(Adw.Application):
     """Owns the window, the capture and the recognition worker. All methods run on the GTK
     thread; worker and capture callbacks are passed here with GLib.idle_add."""
 
+    # the desktop file's actions run `nowcaption --transcript` and so on: see on_command_line
+    LAUNCH_OPTIONS = (('transcript', 'Open the transcript'), ('options', 'Open More options'),
+                      ('quit', 'Quit NowCaption if it is running'))
+
     def __init__(self):
-        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
+        for name, description in self.LAUNCH_OPTIONS:
+            self.add_main_option(name, 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, description, None)
         self.settings = Settings()
         self.window = self.worker = None
         self.ready = self.closing = False
@@ -2140,6 +2159,7 @@ class NowCaption(Adw.Application):
             on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
             on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
             on_ended=lambda gen, reason: GLib.idle_add(self.capture_ended, gen, reason))
+        self.connect('command-line', self.on_command_line)
         self.connect('activate', self.on_activate)
         self.connect('shutdown', self.on_shutdown)
         self.add_actions()
@@ -2372,6 +2392,22 @@ class NowCaption(Adw.Application):
     def on_fullscreen(self, fullscreen):
         if self.window:
             self.window.set_covered(bool(fullscreen))
+
+    def on_command_line(self, app, command_line):
+        """Each launch, this one or a later one that GLib hands to this running NowCaption:
+        start the captions, or show them, then open what a launcher action asked for. --quit
+        quits a running NowCaption and never starts one."""
+        options = command_line.get_options_dict()
+        chosen = [name for name, _ in self.LAUNCH_OPTIONS if options.contains(name)]
+        if 'quit' in chosen:
+            if self.window:
+                self.activate_action('quit', None)
+            return 0
+        if not (self.window and chosen):  # an open window is not raised first, so the one asked for gets focus
+            self.activate()
+        for name in chosen:
+            self.activate_action(name, None)
+        return 0
 
     def on_activate(self, app):
         if self.window:

@@ -43,6 +43,10 @@ move, drag an edge to resize. **Right-click** for the menu:
 - **More options…:** what to listen to, desktop audio or your microphone, and how
   new words appear
 
+On a touchscreen, touch and hold the captions for the menu (KDE Plasma, Hyprland and
+Sway), and right-click NowCaption in your app launcher for **Open transcript**, **More
+options** and **Quit**.
+
 **Transcript.** **Open transcript** shows everything captioned, in a window you can
 scroll, select and copy from, and search with Ctrl+F. Earlier sessions are listed under
 their date, and the current one updates as each line is finished. **Copy all** and
