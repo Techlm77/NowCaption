@@ -57,6 +57,23 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.11" date="2026-10-24">
+      <description>
+        <p>
+          Dock the captions along any edge of the screen, and the caption box keeps up with
+          Text size.
+        </p>
+        <ul>
+          <li>Position, in the menu: floating, or docked at the top, bottom, left or right.
+            Docked captions take that strip of the screen and maximised or snapped windows
+            make room for them; drag the edge between them to resize both (KDE Plasma,
+            Hyprland and Sway)</li>
+          <li>The box grows and shrinks with the text on every click of Text size, instead
+            of a step behind</li>
+          <li>Floating captions keep their bottom edge in place when the text size changes</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.10" date="2026-10-24">
       <description>
         <p>

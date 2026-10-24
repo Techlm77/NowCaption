@@ -58,10 +58,19 @@ COLOURS = {'white': ('White', '#ffffff'), 'yellow': ('Yellow', '#ffff00'),
 FADE_IN_MS, FADE_OUT_MS = 200, 150
 GLIDE_MS, WORD_MS, STATUS_MS, CHANGE_MS, BREATH_MS = 200, 120, 150, 150, 2000
 BREATH_STEP_MS = 40  # breathing is slow and may last long: 25 steps a second, not every frame
+# Where the captions go: floating where they are dragged, or docked along an edge of the screen.
+# Docked, they reserve that strip of the screen (the layer-shell exclusive zone), so maximised and
+# snapped windows end where the captions begin; that needs layer shell (Plasma, Hyprland, Sway).
+POSITIONS = {'floating': 'Floating', 'top': 'Docked at the top', 'bottom': 'Docked at the bottom',
+             'left': 'Docked on the left', 'right': 'Docked on the right'}
+INNER = {'top': 's', 'bottom': 'n', 'left': 'e', 'right': 'w'}  # the edge a docked strip resizes by
+ALONG = {'top': ('left', 'right'), 'bottom': ('left', 'right'), 'left': ('top', 'bottom'),
+         'right': ('top', 'bottom')}  # the edges a docked strip also reaches
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
-            'width': -1, 'rows': ROWS, 'colour': 'white', 'history': True}
-LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100)}
-CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS)}
+            'width': -1, 'rows': ROWS, 'colour': 'white', 'history': True,
+            'position': 'floating', 'dock_rows': ROWS, 'dock_width': -1}
+LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'dock_rows': (1, 100)}
+CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS), 'position': tuple(POSITIONS)}
 
 
 class Settings:
@@ -124,6 +133,19 @@ def bare(word):
 
 def ease_out(p):
     return 1 - (1 - p) ** 3
+
+
+class StyledLabel(Gtk.Label):
+    """A Gtk.Label that calls styled() once GTK has applied new CSS to it. GTK applies a new
+    font size only when it next lays the window out, after restyle() has measured the font."""
+
+    def __init__(self, styled, **kwargs):
+        super().__init__(**kwargs)
+        self.styled = styled
+
+    def do_css_changed(self, change):
+        Gtk.Label.do_css_changed(self, change)
+        self.styled()
 
 
 class CaptionText(Gtk.Widget):
@@ -334,28 +356,30 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.set_decorated(False)
         self.set_resizable(False)
         self.layer = bool(LayerShell and LayerShell.is_supported())
-        self.dragging = self.resizing = None
+        self.dragging = self.resizing = self.held = None
         self.rows = self.settings.get('rows')
         self.text, self.status, self.status_timer = '', '', None
         self.status_sticky = False
         self.failures, self.status_scope = {}, None
         self.monitor = self.pick_monitor(self.settings.get('monitor'))
         self.box_width = self.width_for(self.monitor)
+        self.edge = self.span = self.fitted = None  # see dock(), on_layout() and fit()
 
         self.css = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css,
                                                   Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.add_css_class('nowcaption')
-        self.label = Gtk.Label(xalign=0, yalign=0, wrap=False, single_line_mode=False,
-                               accessible_role=Gtk.AccessibleRole.STATUS)
+        self.label = StyledLabel(self.on_fonts, xalign=0, yalign=0, wrap=False, single_line_mode=False,
+                                 accessible_role=Gtk.AccessibleRole.STATUS)
         self.label.add_css_class('caption-text')
         self.caption = CaptionText(self.label, margin_start=PAD_X, margin_end=PAD_X,
                                    margin_top=PAD_Y, margin_bottom=PAD_Y)
+        self.rows_area = Gtk.Overlay(child=self.caption)  # docked, status messages show over it
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.box.add_css_class('caption-box')
-        self.box.append(self.caption)
-        self.status_label = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END,
-                                      single_line_mode=True, accessible_role=Gtk.AccessibleRole.STATUS)
+        self.box.append(self.rows_area)
+        self.status_label = StyledLabel(self.on_fonts, xalign=0, ellipsize=Pango.EllipsizeMode.END,
+                                        single_line_mode=True, accessible_role=Gtk.AccessibleRole.STATUS)
         self.status_label.add_css_class('caption-status')
         self.status_label.set_visible(False)
         self.box.append(self.status_label)
@@ -371,12 +395,11 @@ class CaptionWindow(Gtk.ApplicationWindow):
             LayerShell.set_layer(self, LayerShell.Layer.OVERLAY)
             LayerShell.set_namespace(self, 'nowcaption')
             LayerShell.set_keyboard_mode(self, LayerShell.KeyboardMode.NONE)
-            LayerShell.set_exclusive_zone(self, -1)
             if self.monitor:
                 LayerShell.set_monitor(self, self.monitor)
-            for edge in (LayerShell.Edge.TOP, LayerShell.Edge.BOTTOM, LayerShell.Edge.LEFT, LayerShell.Edge.RIGHT):
-                LayerShell.set_anchor(self, edge, True)
-            self.connect('realize', lambda *a: self.get_surface().connect('layout', lambda *a: self.update_input()))
+            self.set_resizable(True)  # or the compositor cannot stretch it across the edges it is anchored to
+            self.dock()
+            self.connect('realize', lambda *a: self.get_surface().connect('layout', self.on_layout))
         self.restyle()
 
         drag = Gtk.GestureDrag()  # primary button
@@ -390,7 +413,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         click = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
         click.connect('pressed', self.on_menu)
         self.add_controller(click)
-        self.set_cursor(Gdk.Cursor.new_from_name('grab', None))
+        self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
 
         self.popover = Gtk.PopoverMenu()
         self.update_menu(self.layer and self.monitor_count() > 1)
@@ -427,9 +450,73 @@ class CaptionWindow(Gtk.ApplicationWindow):
         geo = monitor.get_geometry() if monitor else None
         return min(1000, int(geo.width * 0.7)) if geo else 1000
 
+    def dock(self):
+        """Anchor the overlay for the position chosen in the menu. Floating, it covers the screen
+        and the box moves inside it. Docked, it is a strip along one edge that the compositor
+        keeps other windows out of, so maximised and snapped windows end where it begins."""
+        position = self.settings.get('position')
+        self.edge = None if position == 'floating' else position
+        self.span = None
+        for name in ('top', 'bottom', 'left', 'right'):
+            LayerShell.set_anchor(self, getattr(LayerShell.Edge, name.upper()),
+                                  self.edge is None or name == self.edge or name in ALONG[self.edge])
+        if self.edge:
+            LayerShell.auto_exclusive_zone_enable(self)
+            self.add_css_class('docked')
+        else:
+            LayerShell.set_exclusive_zone(self, -1)  # float over everything, panels too
+            self.remove_css_class('docked')
+        self.seat_footer()
+        self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
+
+    def seat_footer(self):
+        """Floating, status messages get a row of their own under the captions. Docked, the strip
+        must keep its size (the windows beside it would resize), so they show over its corner."""
+        footer, docked = self.status_label, bool(self.edge)
+        if docked and footer.get_parent() is self.box:
+            self.box.remove(footer)
+            self.rows_area.add_overlay(footer)
+        elif not docked and footer.get_parent() is self.rows_area:
+            self.rows_area.remove_overlay(footer)
+            self.box.append(footer)
+        footer.set_halign(Gtk.Align.END if docked else Gtk.Align.FILL)
+        footer.set_valign(Gtk.Align.START if docked else Gtk.Align.FILL)
+        footer.set_max_width_chars(48 if docked else -1)
+        (footer.add_css_class if docked else footer.remove_css_class)('corner')
+
+    def reposition(self):
+        """Float or dock as the menu now says; an open menu moves along with the captions."""
+        if self.layer:
+            self.dock()
+            self.restyle()
+            if self.popover.get_visible():
+                self.point_menu(self.x + self.box_width // 2, self.y + self.box_height() // 2)
+
+    def cursor(self):
+        return 'default' if self.edge else 'grab'
+
+    def dock_span(self):
+        """The docked strip's length along its edge: what the compositor gave it beside any
+        panels, or until it says, the whole screen's."""
+        if self.span:
+            return self.span
+        geo = self.monitor.get_geometry() if self.monitor else None
+        if not geo:
+            return 1000
+        return geo.width if self.edge in ('top', 'bottom') else geo.height
+
+    def on_layout(self, surface, width, height):
+        """The compositor sized the window. Docked, fit the captions to the strip it gave them."""
+        span = (width if self.edge in ('top', 'bottom') else height) if self.edge else None
+        if span and span != self.span and not self.resizing:
+            self.span = span
+            self.fit()
+        self.update_input()
+
     def use_monitor(self, monitor):
         """Move to monitor, resizing the box and its text wrapping to fit it."""
         self.monitor = monitor
+        self.span = None
         self.box_width = self.width_for(monitor)
         self.watch_monitor()
         if self.layer and monitor:
@@ -447,7 +534,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         """Set the menu, with the text size, background and text colour rows as buttons that
         keep it open. The size and background rows show their value between their buttons; the
         colour row shows the chosen colour's name, with a line of colour dots under it."""
-        self.popover.set_menu_model(self.app.build_menu(several_screens))
+        self.popover.set_menu_model(self.app.build_menu(several_screens, self.layer))
         self.values = {}
         for name, (title, *buttons) in STEPPERS.items():
             row = Gtk.Box(spacing=2, margin_start=MENU_INDENT, margin_end=6)
@@ -479,7 +566,37 @@ class CaptionWindow(Gtk.ApplicationWindow):
             dots.append(button)
         box.append(dots)
         self.popover.add_child(box, 'text-colour')
+        if self.layer:  # elsewhere the window manager places the window
+            self.popover.add_child(self.position_row(), 'position')
         self.show_values()
+
+    def position_row(self):
+        """The Position row: the chosen position's name, and a little screen for each position
+        showing where the captions go; like the colour dots, they keep the menu open."""
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_start=MENU_INDENT,
+                      margin_end=6, margin_top=6, margin_bottom=4)
+        row = Gtk.Box()
+        row.append(Gtk.Label(label='Position', xalign=0, hexpand=True))
+        self.values['position'] = Gtk.Label(css_classes=['dim-label'], margin_end=6)
+        row.append(self.values['position'])
+        box.append(row)
+        icons = Gtk.Box(spacing=2)
+        for name, label in POSITIONS.items():
+            screen = Gtk.Box(css_classes=['screen'], halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
+            strip = Gtk.Box(css_classes=['strip', 'across' if name in ('top', 'bottom') else
+                                         'down' if name in ('left', 'right') else 'floating'],
+                            hexpand=True, vexpand=name in ('left', 'right'),
+                            halign={'left': Gtk.Align.START, 'right': Gtk.Align.END,
+                                    'floating': Gtk.Align.CENTER}.get(name, Gtk.Align.FILL),
+                            valign={'top': Gtk.Align.START, 'left': Gtk.Align.FILL,
+                                    'right': Gtk.Align.FILL}.get(name, Gtk.Align.END))
+            screen.append(strip)
+            button = Gtk.ToggleButton(child=screen, action_name='app.position', tooltip_text=label,
+                                      action_target=GLib.Variant('s', name), css_classes=['flat', 'position'])
+            button.update_property([Gtk.AccessibleProperty.LABEL], [label])
+            icons.append(button)
+        box.append(icons)
+        return box
 
     def show_values(self):
         values = getattr(self, 'values', None)
@@ -487,6 +604,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
             values['text-size'].set_label(f"{self.settings.get('size')} px")
             values['background'].set_label(f"{round(self.settings.get('opacity') * 100)}%")
             values['text-colour'].set_label(COLOURS[self.settings.get('colour')][0])
+            if 'position' in values:
+                values['position'].set_label(POSITIONS[self.settings.get('position')])
 
     def watch_screens(self, *args):
         """Follow screens being connected or disconnected, and the current screen's geometry."""
@@ -517,7 +636,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self._monitors_handler = None
 
     def box_height(self):
-        return self.caption_height() + (self.status_height if self.text and self.status else 0)
+        if self.edge in ('left', 'right'):  # the column runs the strip's whole height
+            return self.dock_span()
+        return self.caption_height() + (self.status_height if self.text and self.status and not self.edge else 0)
 
     def caption_height(self):
         return self.rows * self.row_height + 2 * PAD_Y
@@ -531,9 +652,12 @@ class CaptionWindow(Gtk.ApplicationWindow):
         return max(0, min(int(x), geo.width - w)), max(0, min(int(y), geo.height - h))
 
     def place(self, x=None, y=None):
-        """Put the caption box at x, y on its monitor."""
-        if not self.layer or not self.monitor:
+        """Put the caption box at x, y on its monitor (docked, it fills the strip)."""
+        if not self.layer or not self.monitor or self.edge:
             self.x = self.y = 0
+            if self.edge:
+                self.fixed.move(self.box, 0, 0)
+                self.update_input()
             return
         self.x, self.y = self.clamp(x, y)
         self.fixed.move(self.box, self.x, self.y)
@@ -543,8 +667,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         """Only the caption box takes pointer input; the rest of the overlay clicks through."""
         surface = self.get_surface()
         if self.layer and surface:
-            surface.set_input_region(cairo.Region(cairo.RectangleInt(
-                self.x, self.y, self.box_width, self.box_height())))
+            w, h = (surface.get_width(), surface.get_height()) if self.edge else (self.box_width, self.box_height())
+            surface.set_input_region(cairo.Region(cairo.RectangleInt(self.x, self.y, w, h)))
 
     def next_monitor(self):
         monitors = Gdk.Display.get_default().get_monitors()
@@ -563,10 +687,15 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.place()
 
     def reset_size(self):
-        self.settings.set('width', -1)
-        self.settings.set('rows', ROWS)
-        self.rows = ROWS
-        self.box_width = self.width_for(self.monitor)
+        """The floating box's size, or docked, the strip's."""
+        if self.edge:
+            self.settings.set('dock_rows', ROWS)
+            self.settings.set('dock_width', -1)
+        else:
+            self.settings.set('width', -1)
+            self.settings.set('rows', ROWS)
+            self.rows = ROWS
+            self.box_width = self.width_for(self.monitor)
         self.restyle()
 
     def max_rows(self):
@@ -574,7 +703,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         geo = self.monitor.get_geometry() if self.monitor else None
         if not geo:
             return 20
-        return max(1, (geo.height - 2 * PAD_Y - self.status_height) // max(1, self.row_height))
+        height = geo.height // 2 if self.edge in ('top', 'bottom') else geo.height  # a strip leaves room for windows
+        return max(1, (height - 2 * PAD_Y - self.status_height) // max(1, self.row_height))
 
     def restyle(self):
         px, alpha = self.settings.get('size'), self.settings.get('opacity')
@@ -589,6 +719,18 @@ class CaptionWindow(Gtk.ApplicationWindow):
                                               transition: color {CHANGE_MS}ms ease-out; }}
             window.nowcaption .caption-status {{ color: #cccccc; font-size: {max(14, round(px * 0.55))}px;
                                                 padding: 0 {PAD_X}px {PAD_Y}px; }}
+            window.nowcaption.docked .caption-box {{ border-radius: 0; }}
+            window.nowcaption .caption-status.corner {{ background: rgba(0, 0, 0, 0.85); border-radius: 8px;
+                                                       padding: 2px 10px; margin: 6px; }}
+            window.nowcaption .screen {{ min-width: 22px; min-height: 15px; border-radius: 3px;
+                                        border: 1.5px solid alpha(currentColor, 0.7); }}
+            window.nowcaption .screen .strip {{ background: currentColor; border-radius: 1px; }}
+            window.nowcaption .screen .strip.across {{ min-height: 4px; }}
+            window.nowcaption .screen .strip.down {{ min-width: 5px; }}
+            window.nowcaption .screen .strip.floating {{ min-width: 11px; min-height: 4px; margin-bottom: 2px; }}
+            window.nowcaption button.position {{ padding: 5px 7px; min-height: 0; min-width: 0; }}
+            window.nowcaption button.position:checked {{ background: alpha(@accent_bg_color, 0.25); }}
+            window.nowcaption button.position:checked .screen {{ color: @accent_color; }}
             window.nowcaption .colour-swatch {{ min-width: 18px; min-height: 18px; border-radius: 99px;
                                                border: 1px solid rgba(0, 0, 0, 0.4); }}
             window.nowcaption button.colour-dot {{ padding: 3px; min-width: 0; min-height: 0;
@@ -598,20 +740,57 @@ class CaptionWindow(Gtk.ApplicationWindow):
                 box-shadow: 0 0 0 2px @popover_bg_color, 0 0 0 3px currentColor; }}
             {swatches}""")
         self.show_values()
-        # measure one row in the caption font, then fix the box at exactly ROWS rows
-        probe = self.label.create_pango_layout('Ag')
-        self.row_height = probe.get_pixel_size()[1]
-        self.status_height = self.status_label.create_pango_layout('Ag').get_pixel_size()[1] + PAD_Y
-        # a size the user dragged to, kept within the current screen
+        self.fit()
+
+    def font_heights(self):
+        """The height of a caption row and of the status row, in the fonts the labels have now."""
+        return (self.label.create_pango_layout('Ag').get_pixel_size()[1],
+                self.status_label.create_pango_layout('Ag').get_pixel_size()[1] + PAD_Y)
+
+    def on_fonts(self):
+        """GTK applied new CSS to a label. A new text size reaches the labels only now, a frame
+        after restyle() measured them, so size the box again if the fonts measure differently."""
+        if hasattr(self, 'status_height') and self.font_heights() != (self.row_height, self.status_height):
+            self.fit()
+
+    def fit(self):
+        """Size the box for the caption font and the position. Floating: exactly self.rows rows at
+        its width and place, and a new text size keeps its bottom edge where it was. Docked at
+        the top or bottom: the strip's rows across the whole edge. Docked at a side: a column of
+        its width with as many rows as the strip's height holds."""
+        before = self.fitted
+        self.row_height, self.status_height = self.font_heights()
         geo = self.monitor.get_geometry() if self.monitor else None
-        width = self.settings.get('width')
-        if width > 0:
-            self.box_width = min(width, geo.width) if geo else width
-        self.rows = max(1, min(self.rows, self.max_rows()))
+        if self.edge in ('top', 'bottom'):
+            self.box_width = self.dock_span()
+            self.rows = max(1, min(self.settings.get('dock_rows'), self.max_rows()))
+        elif self.edge:
+            width = self.settings.get('dock_width')
+            self.box_width = width if width > 0 else self.dock_width_for(self.monitor)
+            self.rows = max(1, (self.dock_span() - 2 * PAD_Y) // max(1, self.row_height))
+        else:  # a size the user dragged to, kept within the current screen
+            width = self.settings.get('width')
+            if width > 0:
+                self.box_width = min(width, geo.width) if geo else width
+            elif before and before[0]:  # back from docked
+                self.box_width = self.width_for(self.monitor)
+            self.rows = max(1, min(self.settings.get('rows'), self.max_rows()))
         self.relayout()
         x, y = self.settings.get('x'), self.settings.get('y')
-        self.place(x if x >= 0 else None, y if y >= 0 else None)
+        floated = before and before[0] is None and self.edge is None  # floating before and now
+        grown = self.caption_height() - before[1] if self.layer and floated else 0
+        if grown and y >= 0:  # the default place keeps its bottom edge already
+            self.place(x if x >= 0 else None, self.y - grown)
+            self.settings.set('y', self.y)
+        else:
+            self.place(x if x >= 0 else None, y if y >= 0 else None)
+        self.fitted = (self.edge, self.caption_height())
         self.render()
+
+    @staticmethod
+    def dock_width_for(monitor):
+        geo = monitor.get_geometry() if monitor else None
+        return max(MIN_WIDTH, min(480, geo.width // 4)) if geo else 480
 
     def relayout(self):
         """Wrap the text to the box width and fix the caption at exactly self.rows rows."""
@@ -620,7 +799,10 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.layout.set_wrap(Pango.WrapMode.WORD_CHAR)
         self.caption.set_size_request(self.box_width - 2 * PAD_X, -1)
         self.caption.configure(self.layout, self.rows, self.row_height)
-        self.status_label.set_size_request(self.box_width, -1)
+        self.status_label.set_size_request(-1 if self.edge else self.box_width, -1)
+        self.box.set_size_request(-1, self.dock_span() if self.edge in ('left', 'right') else -1)
+        if self.edge:  # let the strip shrink with the box too, not only grow
+            self.set_default_size(1, 1)
 
     # --- text -----------------------------------------------------------------------------
 
@@ -740,7 +922,13 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     def edges_at(self, x, y):
         """Which edges of the box the pointer is on, as 'n', 'se', ...; '' inside it.
-        A normal window cannot move itself, so there only the right and bottom edges resize."""
+        A normal window cannot move itself, so there only the right and bottom edges resize.
+        Docked, only the edge between the captions and the windows beside them resizes."""
+        if self.edge:
+            w, h = self.get_width(), self.get_height()
+            inner = INNER[self.edge]
+            near = {'n': y < EDGE, 's': y >= h - EDGE, 'w': x < EDGE, 'e': x >= w - EDGE}[inner]
+            return inner if near and 0 <= x < w and 0 <= y < h else ''
         bx, by = (self.x, self.y) if self.layer else (0, 0)
         x, y = x - bx, y - by
         w, h = self.box_width, self.box_height()
@@ -752,15 +940,34 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     def on_motion(self, controller, x, y):
         if not (self.dragging or self.resizing):
-            self.set_cursor(Gdk.Cursor.new_from_name(CURSORS.get(self.edges_at(x, y), 'grab'), None))
+            self.set_cursor(Gdk.Cursor.new_from_name(CURSORS.get(self.edges_at(x, y), self.cursor()), None))
+
+    def hold_cursor(self, x, y, name):
+        """Show cursor name until the drag ends. Once the pointer leaves the widget it pressed,
+        GTK shows that widget's own cursor rather than the window's, and a docked strip moves
+        under the pointer as it resizes, so the pressed widget gets the same cursor."""
+        cursor = Gdk.Cursor.new_from_name(name, None)
+        self.set_cursor(cursor)
+        self.held = self.pick(x, y, Gtk.PickFlags.DEFAULT)
+        if self.held is self:
+            self.held = None
+        if self.held:
+            self.held.set_cursor(cursor)
 
     def on_drag_begin(self, gesture, x, y):
         edges = self.edges_at(x, y)
+        if self.edge:  # docked: only the inner edge resizes, and nothing moves
+            if edges:
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+                self.resizing = (edges,)
+                self.hold_cursor(x, y, CURSORS[edges])
+            return
         if edges:  # remember which edges, and where the box's edges were
             gesture.set_state(Gtk.EventSequenceState.CLAIMED)
             self.resizing = (edges, self.x, self.y, self.x + self.box_width, self.y + self.caption_height())
+            self.hold_cursor(x, y, CURSORS[edges])
             return
-        self.set_cursor(Gdk.Cursor.new_from_name('grabbing', None))
+        self.hold_cursor(x, y, 'grabbing')
         if self.layer:  # x, y are overlay (monitor) coordinates; remember where the box was grabbed
             self.dragging = (x - self.x, y - self.y)
             return
@@ -771,6 +978,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
                                gesture.get_current_event_time())
 
     def on_drag_update(self, gesture, dx, dy):
+        if self.resizing and self.edge:
+            ok, px, py = gesture.get_point(None)
+            return ok and self.resize_dock(px, py)
         if self.resizing:
             return self.resize_by(dx, dy)
         if not self.dragging:
@@ -801,8 +1011,37 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.y = int(bottom - self.caption_height() if 'n' in edges else top)
         self.render()
 
+    def resize_dock(self, x, y):
+        """Docked: the inner edge follows the pointer at x, y in the strip; the edge against the
+        screen stays, and the windows beside the captions follow. Measured from that outer edge
+        each time, since the strip itself moves under the pointer as it grows."""
+        w, h = self.get_width(), self.get_height()
+        if self.edge in ('top', 'bottom'):
+            height = y if self.edge == 'top' else h - y
+            rows = max(1, min(round((height - 2 * PAD_Y) / max(1, self.row_height)), self.max_rows()))
+            if rows != self.rows:
+                self.rows = rows
+                self.relayout()
+        else:
+            geo = self.monitor.get_geometry() if self.monitor else None
+            width = max(MIN_WIDTH, min(int(x if self.edge == 'left' else w - x), int(geo.width * 0.6) if geo else 2000))
+            if width != self.box_width:
+                self.box_width = width
+                self.relayout()
+        self.render()
+
     def on_drag_end(self, gesture, dx, dy):
-        self.set_cursor(Gdk.Cursor.new_from_name('grab', None))
+        self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
+        if self.held:
+            self.held.set_cursor(None)
+            self.held = None
+        if self.resizing and self.edge:
+            self.resizing = None
+            if self.edge in ('top', 'bottom'):
+                self.settings.set('dock_rows', self.rows)
+            else:
+                self.settings.set('dock_width', self.box_width)
+            return
         if self.resizing:
             self.resizing = None
             self.settings.set('width', self.box_width)
@@ -818,13 +1057,34 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if os.environ.get('NOWCAPTION_DEBUG_DRAG'):
             print('drag end', self.x, self.y, flush=True)
 
+    def point_menu(self, x, y):
+        """Point the menu at x, y in the window, opening toward the room on the screen: away
+        from a docked strip's edge, beside a docked column, and upwards from captions low on
+        the screen. KWin squeezes a layer-shell menu that does not fit, or lets it run off the
+        screen, rather than flipping it."""
+        rect = Gdk.Rectangle()  # the menu belongs to the box, so use box coordinates
+        w, h = self.box_width, self.box_height()
+        side = Gtk.PositionType.BOTTOM
+        if self.edge == 'bottom':
+            side, (rect.x, rect.y, rect.width, rect.height) = Gtk.PositionType.TOP, (int(x), 0, 1, 1)
+        elif self.edge == 'top':
+            rect.x, rect.y, rect.width, rect.height = int(x), h - 1, 1, 1
+        elif self.edge in ('left', 'right'):
+            side = Gtk.PositionType.RIGHT if self.edge == 'left' else Gtk.PositionType.LEFT
+            rect.x, rect.y, rect.width, rect.height = w - 1 if self.edge == 'left' else 0, 0, 1, h
+        else:
+            bx, by = (self.x, self.y) if self.layer else (0, 0)
+            geo = self.monitor.get_geometry() if self.layer and self.monitor else None
+            if geo and y > geo.height / 2:  # the overlay covers the screen, so y is on it
+                side = Gtk.PositionType.TOP
+            rect.x, rect.y, rect.width, rect.height = int(x - bx), int(y - by), 1, 1
+        self.popover.set_position(side)
+        self.popover.set_pointing_to(rect)
+
     def on_menu(self, gesture, n, x, y):
         if self.layer:  # let the menu take keyboard input while it is open
             LayerShell.set_keyboard_mode(self, LayerShell.KeyboardMode.ON_DEMAND)
-        rect = Gdk.Rectangle()  # the menu belongs to the box, so use box coordinates
-        bx, by = (self.x, self.y) if self.layer else (0, 0)
-        rect.x, rect.y, rect.width, rect.height = int(x - bx), int(y - by), 1, 1
-        self.popover.set_pointing_to(rect)
+        self.point_menu(x, y)
         if self.layer:  # let the compositor apply the keyboard mode first, or KWin closes the menu at once
             GLib.timeout_add(60, lambda: self.popover.popup() and False)
         else:
@@ -1100,7 +1360,7 @@ class NowCaption(Adw.Application):
         self.connect('shutdown', self.on_shutdown)
         self.add_actions()
 
-    def build_menu(self, several_screens=False):
+    def build_menu(self, several_screens=False, layer=False):
         """The caption box's menu, in labelled sections: what to listen to, how captions look,
         the transcript, the box's place, and the app. CaptionWindow.update_menu fills the
         'custom' items with rows of buttons that keep the menu open."""
@@ -1124,6 +1384,8 @@ class NowCaption(Adw.Application):
                                  item(f'Keep {engine.HISTORY_DAYS} days of history', 'app.history'),
                                  item('Clear this session', 'app.clear')))
         place = [item('Reset position and size', 'app.reset')]
+        if layer:  # elsewhere the window manager places the window
+            place.insert(0, custom('position'))
         if several_screens:
             place.append(item('Move to next screen', 'app.next-screen'))
         menu.append_item(section(None, *place))
@@ -1150,6 +1412,10 @@ class NowCaption(Adw.Application):
         act('smaller', lambda: self.resize(-1), ['<Control>minus'])
         act('lighter', lambda: self.opacity(-0.15))
         act('darker', lambda: self.opacity(+0.15))
+        position = Gio.SimpleAction.new_stateful('position', GLib.VariantType.new('s'),
+                                                 GLib.Variant('s', self.settings.get('position')))
+        position.connect('activate', self.on_position)
+        self.add_action(position)
         history = Gio.SimpleAction.new_stateful('history', None, GLib.Variant('b', self.settings.get('history')))
         history.connect('activate', self.on_history)
         self.add_action(history)
@@ -1176,6 +1442,14 @@ class NowCaption(Adw.Application):
             # replaces the load error until the model loads or fails again
             self.window.show_failure('model', 'Retrying the speech model…')
             self.worker.restart()
+
+    def on_position(self, action, value):
+        if value.get_string() not in POSITIONS:
+            return
+        action.set_state(value)
+        self.settings.set('position', value.get_string())
+        if self.window:
+            self.window.reposition()
 
     def on_history(self, action, value):
         keep = not action.get_state().get_boolean()

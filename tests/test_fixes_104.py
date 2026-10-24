@@ -246,6 +246,7 @@ class NotificationTests(unittest.TestCase):
         window.caption = NS(show=lambda text, status=False, waiting=False: setattr(window, 'visible', text or ' '))
         window.fade = lambda widget, start, end, ms, done=None: done and done()
         window.footer_shown = window.footer_hiding = False
+        window.edge = None  # floating: status messages get their own row
         window.status_label = NS(
             set_text=lambda text: setattr(window, 'notice', text),
             set_tooltip_text=lambda text: setattr(window, 'tooltip', text),

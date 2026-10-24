@@ -30,6 +30,10 @@ except (ImportError, ValueError) as e:
 class FakeWindow:
     def __init__(self):
         self.text, self.statuses = '', []
+        self.repositions = 0
+
+    def reposition(self):
+        self.repositions += 1
 
     def show_text(self, text):
         self.text = text
@@ -135,6 +139,30 @@ class MenuTests(unittest.TestCase):
             self.assertIn(label, labels)
         self.assertNotIn('Copy transcript', labels)
         self.assertNotIn('Move to next screen', list(self.labels(a.build_menu(False))))
+
+    def customs(self, model):
+        for i in range(model.get_n_items()):
+            name = model.get_item_attribute_value(i, 'custom', nc.GLib.VariantType.new('s'))
+            if name:
+                yield name.get_string()
+            section = model.get_item_link(i, 'section')
+            if section:
+                yield from self.customs(section)
+
+    def test_the_position_row_shows_where_nowcaption_places_its_box_and_floats_by_default(self):
+        a = AppTests.make(self)
+        self.assertIn('position', list(self.customs(a.build_menu(False, True))))
+        self.assertNotIn('position', list(self.customs(a.build_menu(False, False))))
+        self.assertNotIn('Grow upwards', list(self.labels(a.build_menu(False, True))))
+        action = a.lookup_action('position')
+        self.assertEqual(action.get_state().get_string(), 'floating')
+        action.activate(nc.GLib.Variant('s', 'bottom'))
+        self.assertEqual(a.settings.get('position'), 'bottom')
+        self.assertEqual(a.window.repositions, 1)
+        action.activate(nc.GLib.Variant('s', 'sideways'))
+        self.assertEqual(a.settings.get('position'), 'bottom')
+        self.assertEqual(a.window.repositions, 1)
+        action.activate(nc.GLib.Variant('s', 'floating'))
 
     def test_the_history_switch_is_remembered_and_reaches_the_worker(self):
         a = AppTests.make(self)

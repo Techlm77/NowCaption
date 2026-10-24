@@ -40,7 +40,7 @@ move, drag an edge to resize. **Right-click** for the menu:
 - **Listen to:** desktop audio or your microphone
 - **Appearance:** text size, background and text colour
 - **Transcript:** open the transcript, keep history, or clear this session
-- Reset the captions' position and size
+- **Position:** floating, or docked along an edge of the screen; reset the position and size
 
 **Transcript.** **Open transcript** shows everything captioned, in a window you can
 scroll, select and copy from, and search with Ctrl+F. Earlier sessions are listed under
@@ -68,6 +68,14 @@ Animation**) and NowCaption follows.
 
 On KDE Plasma, Hyprland and Sway the captions float above all windows. On GNOME,
 press Alt+Space on the window and choose **Always on Top**.
+
+**Position.** On KDE Plasma, Hyprland and Sway, the little screens under **Position** in
+the menu choose where the captions go. **Floating**, they stay wherever you drag them, over
+any window. **Docked** at the top, bottom, left or right, they take that strip of the
+screen, and maximised or snapped windows make room for them, so nothing is covered. Drag
+the edge between the captions and your windows to resize both together. Fullscreen games
+and videos still go under docked captions, like a panel. Floating captions keep their bottom
+edge in place when you change the text size.
 
 **No captions?** Make sure sound plays through your default output device. After
 switching to headphones, choose **Desktop audio** again.
