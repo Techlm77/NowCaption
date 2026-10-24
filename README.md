@@ -88,6 +88,13 @@ fullscreen game or video is open on their screen, docked captions float above it
 again when it closes; elsewhere, choose **Floating** for fullscreen apps. Floating captions
 keep their bottom edge in place when you change the text size.
 
+**KWin permission.** On KDE Plasma, the Flatpak may talk to KWin, so docked captions can
+float over fullscreen apps. That lets it load a KWin script: NowCaption loads a small one
+while the captions are docked, to learn when a fullscreen app opens on their screen. If
+you'd rather not allow it, run
+`flatpak override --user --no-talk-name=org.kde.KWin io.github.Techlm77.NowCaption`;
+docked captions then stay docked under fullscreen apps.
+
 **No captions?** Make sure sound plays through your default output device. After
 switching to headphones, choose **Desktop audio** again under **More options…** and
 press **Apply**.

@@ -2,15 +2,10 @@
 import os
 import sys
 
-# AppRun preloaded gtk4-layer-shell; programs started from NowCaption (a browser opened from
-# About) must not load it too.
-host = os.environ.pop('NOWCAPTION_HOST_LD_PRELOAD', None)
-if host is not None:
-    if host:
-        os.environ['LD_PRELOAD'] = host
-    else:
-        os.environ.pop('LD_PRELOAD', None)
-os.environ['NOWCAPTION_REEXEC'] = '1'  # already loaded: launch.py must not re-exec with LD_PRELOAD
+# AppRun preloaded gtk4-layer-shell: launch.py must not re-exec with LD_PRELOAD, and it takes
+# gtk4-layer-shell out of LD_PRELOAD again (NOWCAPTION_HOST_LD_PRELOAD), so programs started
+# from NowCaption (a browser opened from About) do not load it too.
+os.environ['NOWCAPTION_REEXEC'] = '1'
 
 from nowcaption.launch import main  # noqa: E402
 

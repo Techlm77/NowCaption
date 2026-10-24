@@ -22,13 +22,19 @@ details.
 | [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) | k2-fsa | Apache-2.0 |
 | [ONNX Runtime](https://github.com/microsoft/onnxruntime), inside sherpa-onnx | Microsoft | MIT |
 | [NumPy](https://numpy.org) | NumPy developers | BSD-3-Clause |
-| [gtk4-layer-shell](https://github.com/wmww/gtk4-layer-shell) | William Wold | MIT |
+| [gtk4-layer-shell](https://github.com/wmww/gtk4-layer-shell) | Sophie Winter | MIT |
 
 The AppImage also contains Python 3.12, GTK 4, libadwaita, GStreamer, PyGObject, the Adwaita
 icons and the libraries they need, taken from Ubuntu 24.04. Each keeps its own license, such as
 Python's PSF license and the LGPL for GLib, GTK, libadwaita and GStreamer; their source is
 available from [Ubuntu](https://packages.ubuntu.com/noble/). The Flatpak gets these from the
 GNOME runtime instead.
+
+Inside the AppImage (see it with `./NowCaption-*.AppImage --appimage-extract`),
+`usr/share/licenses/<package>/copyright` has the copyright and license notice of each Ubuntu
+package it contains files from, `usr/share/licenses/ubuntu-packages.txt` lists those packages
+with their exact versions and source packages, and `usr/share/licenses/gtk4-layer-shell` has
+gtk4-layer-shell's license.
 
 ## Speech the model was trained on
 

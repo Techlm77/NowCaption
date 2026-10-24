@@ -37,6 +37,11 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git fetch --depth 1 origin "refs/tags/$TAG:refs/tags/$TAG"
           git checkout "$TAG" -- src data pyproject.toml LICENSE MODEL-LICENSES.md
+      - name: Check the tag matches the version
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
+          test "$TAG" = "v$version" ||
+            { echo "::error::Tag $TAG is not v + the version in pyproject.toml ($version)"; exit 1; }
       - run: tools/build-appimage.sh
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
