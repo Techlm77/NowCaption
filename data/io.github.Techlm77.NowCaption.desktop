@@ -9,3 +9,16 @@ Terminal=false
 Categories=Utility;Accessibility;
 Keywords=captions;subtitles;transcription;speech;deaf;hard of hearing;accessibility;speech-to-text;
 StartupNotify=true
+Actions=transcript;options;quit;
+
+[Desktop Action transcript]
+Name=Open transcript
+Exec=nowcaption --transcript
+
+[Desktop Action options]
+Name=More options
+Exec=nowcaption --options
+
+[Desktop Action quit]
+Name=Quit
+Exec=nowcaption --quit
