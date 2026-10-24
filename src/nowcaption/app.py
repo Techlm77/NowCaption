@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import time
+import weakref
 from pathlib import Path
 
 import gi
@@ -1878,7 +1879,7 @@ class Preview(Gtk.Box):
         super().__init__(css_classes=['caption-preview'], halign=Gtk.Align.CENTER,
                          accessible_role=Gtk.AccessibleRole.PRESENTATION)
         self.update_state([Gtk.AccessibleState.HIDDEN], [True])  # sample text, not captions
-        self.label = StyledLabel(self.fit, xalign=0, yalign=0, wrap=False, single_line_mode=False)
+        self.label = StyledLabel(weakly(self.fit), xalign=0, yalign=0, wrap=False, single_line_mode=False)
         self.label.add_css_class('caption-text')
         self.caption = CaptionText(self.label, margin_start=PAD_X, margin_end=PAD_X,
                                    margin_top=PAD_Y, margin_bottom=PAD_Y)
@@ -1886,9 +1887,15 @@ class Preview(Gtk.Box):
         self.caption.set_effect(*app.word_effect())
         self.append(self.caption)
         self.shown, self.row_height, self.timer = 0, None, 0
-        self.connect('map', lambda *a: self.play(True))
-        self.connect('unmap', lambda *a: self.play(False))
         self.fit()
+
+    def do_map(self):
+        Gtk.Box.do_map(self)
+        self.play(True)
+
+    def do_unmap(self):
+        self.play(False)
+        Gtk.Box.do_unmap(self)
 
     def fit(self):
         """Wrap the sample to the preview, in the font GTK has applied to it."""
@@ -1917,6 +1924,18 @@ class Preview(Gtk.Box):
         return GLib.SOURCE_CONTINUE
 
 
+def weakly(method):
+    """method, as a handler GTK can hold without keeping method's object alive. Python's garbage
+    collector cannot see GTK's references, so a cycle through one, such as a window's button that
+    calls the window, would keep a closed window forever."""
+    ref = weakref.WeakMethod(method)
+
+    def call(*args):
+        live = ref()
+        return live(*args) if live else None
+    return call
+
+
 class OptionsWindow(Adw.Window):
     """More options, for what the caption box's menu has no room for: what to listen to, and
     how new words arrive (with a sample caption showing it) and how fast. Choices show in the
@@ -1931,13 +1950,19 @@ class OptionsWindow(Adw.Window):
         for name, key in self.SETTINGS.items():
             action = Gio.SimpleAction.new_stateful(name, GLib.VariantType.new('s'),
                                                    GLib.Variant('s', app.settings.get(key)))
-            action.connect('activate', self.on_choice)
+            action.connect('activate', weakly(self.on_choice))
             self.chosen.add_action(action)
         self.insert_action_group('options', self.chosen)
         page = Adw.PreferencesPage()
         listen = Adw.PreferencesGroup(title='Listen to')
         self.choices(listen, 'options.source', (('desktop', 'Desktop audio', 'Everything your computer plays'),
                                                 ('mic', 'Microphone', 'Your microphone, for the people around you')))
+        # an action, not a choice: it listens again at once, without Apply
+        restart = Gtk.Button(label='Restart', action_name='app.restart-listening', valign=Gtk.Align.CENTER)
+        again = Adw.ActionRow(title='Start again', subtitle='After a problem, or when you change sound devices',
+                              activatable_widget=restart)
+        again.add_suffix(restart)
+        listen.add(again)
         page.add(listen)
         self.preview = Preview(app)
         sample = Adw.PreferencesGroup(title='New words', description='How each new word appears in the captions')
@@ -1959,7 +1984,7 @@ class OptionsWindow(Adw.Window):
         page.add(motion)
         self.apply_button = Gtk.Button(label='Apply', css_classes=['suggested-action'],
                                        tooltip_text='Use these choices for the captions')
-        self.apply_button.connect('clicked', lambda *a: self.apply())
+        self.apply_button.connect('clicked', weakly(self.apply))
         header = Adw.HeaderBar()
         header.pack_end(self.apply_button)
         view = Adw.ToolbarView(content=page)
@@ -1988,7 +2013,7 @@ class OptionsWindow(Adw.Window):
         self.speed.set_sensitive(effect != 'none')  # no speed for words that appear at once
         self.apply_button.set_sensitive(bool(self.changed()))
 
-    def apply(self):
+    def apply(self, button=None):
         for name in self.changed():  # only those, so the same source does not restart capture
             self.app.lookup_action(name).activate(GLib.Variant('s', self.choice(name)))
         self.show_choices()
@@ -2105,6 +2130,7 @@ class NowCaption(Adw.Application):
         self.add_action(history)
         act('transcript', self.open_transcript, ['<Control>t'])
         act('options', self.open_options, ['<Control>comma'])
+        act('restart-listening', self.restart_listening)
         act('reset', lambda: (self.window.reset_position(), self.window.reset_size()))
         act('reset-position', lambda: self.window.reset_position())
         act('reset-size', lambda: self.window.reset_size())
@@ -2127,6 +2153,12 @@ class NowCaption(Adw.Application):
             # replaces the load error until the model loads or fails again
             self.window.show_failure('model', 'Retrying the speech model…')
             self.worker.restart()
+
+    def restart_listening(self):
+        """Choose the same sound source again, which starts capture again, or loads the speech
+        model again if it failed: More options' Restart, after a problem or a change of devices."""
+        source = self.lookup_action('source')
+        source.activate(source.get_state())
 
     def on_position(self, action, value):
         if value.get_string() not in POSITIONS:
@@ -2381,7 +2413,7 @@ class NowCaption(Adw.Application):
             self.window.show_status(f'Falling behind: skipped {value:.1f} s of audio', seconds=4)
         elif kind == 'load-error':
             self.ready = False
-            self.window.show_failure('model', f'{value} Right-click and choose a sound source to try again.')
+            self.window.show_failure('model', f'{value} To try again, open More options and press Restart.')
         elif kind == 'error':
             source_gen, stream_gen, message = value
             if (source_gen != self.source_gen or
@@ -2396,7 +2428,8 @@ class NowCaption(Adw.Application):
                 self.recognition_retry_id = GLib.timeout_add_seconds(
                     delay, self.retry_recognition, self.recognition_retry_token, self.source_gen)
             else:
-                self.window.show_failure('recognition', f'{message}. Right-click and choose a sound source to try again.')
+                self.window.show_failure('recognition',
+                                         f'{message}. To try again, open More options and press Restart.')
         return False
 
     # --- capture ----------------------------------------------------------------------------
