@@ -1,0 +1,28 @@
+name: Keep the app release Latest
+# GitHub marks a newly published release "Latest". The speech model has releases of its own
+# (models-v2, ...), but AppImage updates look in the Latest release for their .zsync file
+# (gh-releases-zsync ... latest, in tools/build-appimage.sh) and the README's download links
+# go to it, so it must always be the newest app release. When anything other than an app
+# release (v*) is published, this hands Latest back to the newest app release.
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+jobs:
+  keep-latest:
+    if: ${{ !startsWith(github.event.release.tag_name, 'v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Mark the newest app release Latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          app=$(gh release list --exclude-drafts --exclude-pre-releases --limit 200 --json tagName \
+                  --jq '.[].tagName' | grep '^v[0-9]' | sort -V | tail -n 1)
+          test -n "$app"
+          gh release edit "$app" --latest

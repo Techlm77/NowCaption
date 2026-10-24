@@ -232,6 +232,25 @@ class ReleaseWorkflowTests(unittest.TestCase):
         for image in images:
             self.assertRegex(image, r'@sha256:[0-9a-f]{64}$')
 
+    def test_a_model_release_hands_latest_back_to_the_newest_app_release(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/keep-latest.yml').read_text())
+        on = workflow.get('on', workflow.get(True))  # YAML 1.1 reads a bare on as true
+        self.assertEqual(on, {'release': {'types': ['published']}})
+        [job] = workflow['jobs'].values()
+        self.assertIn("!startsWith(github.event.release.tag_name, 'v')", job['if'])  # never for app releases
+        [step] = job['steps']
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+        tags = 'models-v3\nv1.1.16\nmodels-v2\nv1.1.9\nv1.1.10\n'
+        executable(root / 'bin/gh', '#!/bin/sh\necho "$*" >> "$GH_LOG"\n'
+                   f'case "$*" in "release list"*) printf \'{tags}\' ;; esac\n')
+        env = dict(os.environ, PATH=f'{root / "bin"}:{os.environ["PATH"]}', GH_LOG=str(root / 'gh.log'))
+        result = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', step['run']], env=env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        log = (root / 'gh.log').read_text().splitlines()
+        self.assertEqual(log[-1], 'release edit v1.1.16 --latest')  # by version, not by list order
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
