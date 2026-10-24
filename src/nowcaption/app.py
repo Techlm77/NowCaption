@@ -1748,6 +1748,8 @@ class TranscriptWindow(Adw.Window):
         self.app, self.closed = app, False
         self.block, self.current = [], None  # this session's lines as shown (heading first), and its start
         self.matches, self.match, self.refresh_id = [], -1, None
+        self.searched = ''  # the search text the matches are of
+        self.handlers = []  # (object, handler id) for handlers that refer back to this window, until it closes
 
         self.buffer = Gtk.TextBuffer()
         self.time_tag = self.buffer.create_tag('time')
@@ -1756,7 +1758,8 @@ class TranscriptWindow(Adw.Window):
         self.match_tag = self.buffer.create_tag('match', background_rgba=rgba('rgba(246, 211, 45, 0.45)'))
         self.current_tag = self.buffer.create_tag('current-match', background_rgba=rgba('rgba(255, 140, 0, 0.75)'))
         self.end = self.buffer.create_mark('end', self.buffer.get_end_iter(), False)
-        self.view = Gtk.TextView(buffer=self.buffer, editable=False, cursor_visible=False,
+        # The caret shows, so the keyboard (Shift+arrows) can select, and screen readers can follow it
+        self.view = Gtk.TextView(buffer=self.buffer, editable=False,
                                  wrap_mode=Gtk.WrapMode.WORD_CHAR, left_margin=18, right_margin=18,
                                  top_margin=6, bottom_margin=18)
         self.scroller = Gtk.ScrolledWindow(child=self.view, vexpand=True)
@@ -1774,15 +1777,15 @@ class TranscriptWindow(Adw.Window):
         for icon, tooltip, step in (('go-up-symbolic', 'Previous match', -1), ('go-down-symbolic', 'Next match', 1)):
             button = Gtk.Button(icon_name=icon, tooltip_text=tooltip)
             button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
-            button.connect('clicked', lambda b, step=step: self.step(step))
+            self.connect_to(button, 'clicked', lambda b, step=step: self.step(step))
             bar.append(button)
         self.search = Gtk.SearchBar(child=Adw.Clamp(child=bar, maximum_size=560), show_close_button=True)
         self.search.connect_entry(self.entry)
         self.search.set_key_capture_widget(self)  # typing anywhere starts a search
-        self.entry.connect('search-changed', lambda e: self.find())
-        self.entry.connect('activate', lambda e: self.step(1))
-        self.entry.connect('next-match', lambda e: self.step(1))
-        self.entry.connect('previous-match', lambda e: self.step(-1))
+        self.connect_to(self.entry, 'search-changed', lambda e: self.find())
+        self.connect_to(self.entry, 'activate', lambda e: self.step(1))
+        self.connect_to(self.entry, 'next-match', lambda e: self.step(1))
+        self.connect_to(self.entry, 'previous-match', lambda e: self.step(-1))
 
         header = Adw.HeaderBar()
         self.title = Adw.WindowTitle(title='Transcript')
@@ -1797,21 +1800,42 @@ class TranscriptWindow(Adw.Window):
                                       ('edit-copy-symbolic', 'Copy all', self.copy_all)):
             button = Gtk.Button(icon_name=icon, tooltip_text=tooltip)
             button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
-            button.connect('clicked', lambda b, action=action: action())
+            self.connect_to(button, 'clicked', lambda b, action=action: action())
             header.pack_end(button)
         page = Adw.ToolbarView(content=self.toasts)
         page.add_top_bar(header)
         page.add_top_bar(self.search)
         self.set_content(page)
 
-        keys = Gtk.ShortcutController()
-        for trigger, action in (('<Control>f', lambda: self.search.set_search_mode(True)), ('<Control>w', self.close)):
+        keys = Gtk.ShortcutController()  # each action is given the window (w), so GTK holds nothing that holds it
+        for trigger, action in (('<Control>f', lambda w: w.search.set_search_mode(True)),
+                                ('<Control>w', lambda w: w.close())):
             keys.add_shortcut(Gtk.Shortcut(trigger=Gtk.ShortcutTrigger.parse_string(trigger),
-                                           action=Gtk.CallbackAction.new(lambda w, a, action=action: action() or True)))
+                                           action=Gtk.CallbackAction.new(lambda w, a, call=action: call(w) or True)))
         self.add_controller(keys)
-        Adw.StyleManager.get_default().connect('notify::dark', lambda *a: GLib.idle_add(self.restyle))
+        self.connect_to(Adw.StyleManager.get_default(), 'notify::dark', lambda *a: GLib.idle_add(self.restyle))
+        self.connect('close-request', self.on_close)
         self.restyle()
         self.reload()
+
+    def connect_to(self, obj, signal, handler):
+        """Connect handler to obj's signal until this window closes."""
+        self.handlers.append((obj, obj.connect(signal, handler)))
+
+    def on_close(self, window):
+        """Let go of what GTK holds that refers back to this window: the handlers and the refresh
+        timer. Python's garbage collector cannot see those cycles, so otherwise the closed window and
+        the whole history in it would never be freed, and it would still follow the theme."""
+        self.closed = True
+        for obj, handler in self.handlers:
+            obj.disconnect(handler)
+        self.handlers = []
+        if self.refresh_id is not None:
+            GLib.source_remove(self.refresh_id)
+            self.refresh_id = None
+        self.matches, self.match = [], -1
+        GLib.idle_add(self.buffer.set_text, '')  # after the window has gone, or its view starts scrolling as it closes
+        return False
 
     def restyle(self):
         colour = self.view.get_color()  # the text colour, dimmed for the times
@@ -1833,6 +1857,7 @@ class TranscriptWindow(Adw.Window):
             self.add_lines([session_heading(started)] + text.splitlines())
         self.current = self.buffer.create_mark(None, self.buffer.get_end_iter(), True)  # stays before this session
         self.block = []
+        self.find(keep=True)  # the old matches went with the text
         self.show_title()
         self.show_page()
         self.refresh()
@@ -1883,7 +1908,7 @@ class TranscriptWindow(Adw.Window):
         self.block = block
         self.show_page()
         if self.entry.get_text():
-            self.find(keep=True)
+            self.find(keep=True, since=start)
         if follow:
             GLib.idle_add(self.scroll_to_end)
 
@@ -1898,16 +1923,23 @@ class TranscriptWindow(Adw.Window):
     def show_page(self):
         self.stack.set_visible_child_name('text' if self.buffer.get_char_count() else 'empty')
 
-    def find(self, keep=False):
-        """Highlight every match of the search text and go to the newest (or keep the place)."""
-        start, end = self.buffer.get_bounds()
-        self.buffer.remove_tag(self.match_tag, start, end)
-        self.buffer.remove_tag(self.current_tag, start, end)
-        for a, b in self.matches:
+    def find(self, keep=False, since=0):
+        """Highlight every match of the search text and go to the newest (or keep the place).
+        Matches before offset since are kept: apply() passes where its new lines begin, so live
+        captions search only those again, however long the history is."""
+        text = self.entry.get_text()
+        if '\n' in text or text != self.searched:  # other text, or pasted lines whose match could begin before since
+            since = 0
+        self.searched = text
+        # Matches in the lines apply() replaced had their start marks left at since (they keep to the left)
+        kept = bisect.bisect_left(self.matches, since, key=lambda m: self.buffer.get_iter_at_mark(m[0]).get_offset())
+        where, end = self.buffer.get_iter_at_offset(since), self.buffer.get_end_iter()
+        self.buffer.remove_tag(self.match_tag, where, end)
+        self.buffer.remove_tag(self.current_tag, *self.buffer.get_bounds())
+        for a, b in self.matches[kept:]:
             self.buffer.delete_mark(a)
             self.buffer.delete_mark(b)
-        self.matches = []
-        text, where = self.entry.get_text(), start
+        del self.matches[kept:]
         while text:
             found = where.forward_search(text, Gtk.TextSearchFlags.CASE_INSENSITIVE, None)
             if found and len(found) == 3:  # (found, start, end) in older PyGObject
@@ -1940,6 +1972,7 @@ class TranscriptWindow(Adw.Window):
             self.buffer.apply_tag(self.current_tag, self.buffer.get_iter_at_mark(a), self.buffer.get_iter_at_mark(b))
             self.count.set_label(f'{self.match + 1} of {len(self.matches)}')
             if scroll:
+                self.buffer.place_cursor(self.buffer.get_iter_at_mark(a))  # the arrow keys go on from the match
                 self.view.scroll_to_mark(a, 0.1, True, 0, 0.3)
 
     def copy_all(self):
@@ -2314,8 +2347,7 @@ class NowCaption(Adw.Application):
         self.transcript.present()
 
     def on_transcript_closed(self, window):
-        window.closed = True
-        self.transcript = None
+        self.transcript = None  # the window lets go of the rest itself (TranscriptWindow.on_close)
         return False
 
     def earlier_sessions(self):
