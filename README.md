@@ -89,8 +89,8 @@ again when it closes; elsewhere, choose **Floating** for fullscreen apps. Floati
 keep their bottom edge in place when you change the text size.
 
 **No captions?** Make sure sound plays through your default output device. After
-switching to headphones, choose **Desktop audio** again under **More options…** and
-press **Apply**.
+switching to headphones, or after a problem, open **More options…** and press
+**Restart**.
 
 **First word missing?** When speech is hard to make out, such as strong accents or
 unclear recordings, the first word after a pause is the one most often missed or misheard,

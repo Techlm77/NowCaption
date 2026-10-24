@@ -85,7 +85,7 @@ class RecoveryTests(unittest.TestCase):
                 self.assertEqual(self.app.recognition_failures, failure)
         self.assertEqual(self.timers.delays, [2, 4, 8])
         self.assertEqual(self.timers.pending, {})
-        self.assertIn('choose a sound source', self.app.window.statuses[-1])
+        self.assertIn('press Restart', self.app.window.statuses[-1])
 
     def test_replayed_old_words_do_not_reset_the_failure_count(self):
         rec = FakeRecognizer(['already recognised '])
