@@ -57,6 +57,14 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.14" date="2026-10-24">
+      <description>
+        <p>
+          Captions docked on the left or right no longer cover a panel at the top or bottom
+          of the screen: they now stop at the panel, like other docked captions.
+        </p>
+      </description>
+    </release>
     <release version="1.1.13" date="2026-10-24">
       <description>
         <p>

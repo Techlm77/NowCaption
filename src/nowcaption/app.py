@@ -300,6 +300,42 @@ class StyledLabel(Gtk.Label):
         self.styled()
 
 
+class Stage(Gtk.Widget):
+    """The window's content. Floating, it holds the caption box at x, y at the box's own size,
+    inside an overlay covering the screen. Docked, the box fills the window, whose size along
+    the docked edge the compositor sets from the room beside any panels: the window must not
+    ask for more, or it would cover them."""
+
+    def __init__(self, child):
+        super().__init__()
+        self.child, self.x, self.y, self.fill = child, 0, 0, False
+        child.set_parent(self)
+
+    def do_dispose(self):
+        if self.child.get_parent() is self:
+            self.child.unparent()
+        Gtk.Widget.do_dispose(self)
+
+    def move(self, x, y):
+        self.x, self.y = x, y
+        self.queue_allocate()
+
+    def do_measure(self, orientation, for_size):
+        minimum, natural, _, _ = self.child.measure(orientation, -1)
+        at = 0 if self.fill else (self.x if orientation == Gtk.Orientation.HORIZONTAL else self.y)
+        return minimum + at, natural + at, -1, -1
+
+    def do_size_allocate(self, width, height, baseline):
+        w_min, w_nat, _, _ = self.child.measure(Gtk.Orientation.HORIZONTAL, -1)
+        if self.fill:
+            w = max(width, w_min)
+            self.child.allocate(w, max(height, self.child.measure(Gtk.Orientation.VERTICAL, w)[0]), -1, None)
+            return
+        h_nat = self.child.measure(Gtk.Orientation.VERTICAL, w_nat)[1]
+        at = Gsk.Transform().translate(Graphene.Point().init(self.x, self.y))
+        self.child.allocate(w_nat, h_nat, -1, at)
+
+
 class Drawer(Gtk.Widget):
     """Holds the caption box and can show only part of it, from the edge it is docked to:
     `shown` px of its height (top or bottom) or width (left or right), the rest slid away into
@@ -359,6 +395,7 @@ class CaptionText(Gtk.Widget):
         self.label = label
         label.set_parent(self)
         self.layout, self.rows, self.row_height, self.wrapper = None, ROWS, 0, None
+        self.flexible = False  # docked at a side, the compositor's height decides the rows
         self.text, self.lines, self.words, self.status = '', [], [], False
         self.glide, self.glide_start = 0.0, 0  # rows to glide up, counted from glide_start (µs)
         self.appeared = {}  # passage word index: when it appeared (µs), while it fades in
@@ -382,7 +419,7 @@ class CaptionText(Gtk.Widget):
     def do_measure(self, orientation, for_size):
         if orientation == Gtk.Orientation.VERTICAL:
             height = self.rows * self.row_height
-            return height, height, -1, -1
+            return self.row_height if self.flexible else height, height, -1, -1
         return 0, self.label.measure(orientation, -1)[1], -1, -1
 
     def do_size_allocate(self, width, height, baseline):
@@ -391,9 +428,9 @@ class CaptionText(Gtk.Widget):
         up = Gsk.Transform().translate(Graphene.Point().init(0, -self.offset)) if self.offset else None
         self.label.allocate(width, height, -1, up)
 
-    def configure(self, layout, rows, row_height):
+    def configure(self, layout, rows, row_height, flexible=False):
         """A new width, font or number of rows: the rows are shown at rest, wrapped afresh."""
-        self.layout, self.rows, self.row_height = layout, rows, row_height
+        self.layout, self.rows, self.row_height, self.flexible = layout, rows, row_height, flexible
         self.wrapper = Rows(layout, row_height)
         self.glide, self.appeared = 0.0, {}
         self.queue_resize()
@@ -589,9 +626,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.box.connect('map', self.fade_in)
         self.drawer = Drawer(self.box)  # docked, slides the captions into their edge and out
         self.moves, self.moving = [], 0
-        self.fixed = Gtk.Fixed()  # lets the box move inside the window while it is dragged
-        self.fixed.put(self.drawer, 0, 0)
-        self.set_child(self.fixed)
+        self.stage = Stage(self.drawer)  # floating, the box moves inside the window while dragged
+        self.set_child(self.stage)
 
         if self.layer:
             LayerShell.init_for_window(self)
@@ -948,11 +984,11 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if not self.layer or not self.monitor or self.edge:
             self.x = self.y = 0
             if self.edge:
-                self.fixed.move(self.drawer, 0, 0)
+                self.stage.move(0, 0)
                 self.update_input()
             return
         self.x, self.y = self.clamp(x, y)
-        self.fixed.move(self.drawer, self.x, self.y)
+        self.stage.move(self.x, self.y)
         self.update_input()
 
     def update_input(self):
@@ -1092,10 +1128,13 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.layout = self.label.create_pango_layout('')
         self.layout.set_width((self.box_width - 2 * PAD_X) * Pango.SCALE)
         self.layout.set_wrap(Pango.WrapMode.WORD_CHAR)
-        self.caption.set_size_request(self.box_width - 2 * PAD_X, -1)
-        self.caption.configure(self.layout, self.rows, self.row_height)
+        # Docked, the compositor sets the length along the edge (what panels leave): wrap to it,
+        # but never ask for it, or the strip would reach under the panels.
+        across = self.edge in ('top', 'bottom')
+        self.caption.set_size_request(-1 if across else self.box_width - 2 * PAD_X, -1)
+        self.caption.configure(self.layout, self.rows, self.row_height, flexible=self.edge in ('left', 'right'))
         self.status_label.set_size_request(-1 if self.edge else self.box_width, -1)
-        self.box.set_size_request(-1, self.dock_span() if self.edge in ('left', 'right') else -1)
+        self.stage.fill = bool(self.edge)
         if self.edge:  # let the strip shrink with the box too, not only grow
             self.set_default_size(1, 1)
 
