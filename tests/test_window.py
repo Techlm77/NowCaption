@@ -462,6 +462,19 @@ class AnimationTests(unittest.TestCase):
         self.assertEqual(w.caption.offset, 0)
         self.assertIsNone(w.label.get_attributes())
 
+    def test_a_glide_ends_exactly_where_the_rows_come_to_rest(self):
+        w = self.window
+        text, word = self.passage(3)
+        w.show_text(text)
+        self.at(500)
+        w.show_text(f'{text} {word}')
+        self.at(nc.GLIDE_MS - 1)  # the glide's last moment, a row up
+        layout = w.label.get_layout()
+        first, second = (layout.index_to_pos(line.start_index).y / nc.Pango.SCALE
+                         for line in layout.get_lines_readonly()[:2])
+        # moved up by exactly one line of the label, so dropping that line at the end moves nothing
+        self.assertAlmostEqual(w.caption.offset, second - first, delta=0.01)
+
     def test_without_animations_the_rows_jump_and_words_appear_at_once(self):
         self.gtk.set_property('gtk-enable-animations', False)
         w = self.window
@@ -808,14 +821,21 @@ class DockTests(unittest.TestCase):
         calls = []
         watch.bus = object()
         watch.call = lambda method, args, done=None, sync=False: (calls.append((method, args)), done and done())
-        watch.start('DP-2')
+        watch.start('DP-2', (0, 0, 1920, 1080))
         self.assertEqual([m for m, _ in calls], ['unloadScript', 'loadScript', 'start'])
         script = nc.Path(calls[1][1][1][0]).read_text()
-        self.assertIn('const OUTPUT = "DP-2";', script)
+        self.assertIn('var OUTPUT = "DP-2";', script)
+        self.assertIn('var AREA = [0, 0, 1920, 1080];', script)  # for KWin 5, which names no screens
         self.assertIn('"io.github.Techlm77.NowCaption"', script)
+        for kwin5 in ('clientList', 'activeClient', 'clientAdded', 'clientRemoved', 'clientActivated'):
+            self.assertIn(kwin5, script)  # Plasma 5.27's names (Kubuntu 24.04), beside KWin 6's
+        self.assertNotRegex(script, r'\b(const|let)\b|=>')  # KWin 5's script engine predates them
         calls.clear()
-        watch.start('DP-2')  # already watching that screen
+        watch.start('DP-2', (0, 0, 1920, 1080))  # already watching that screen
         self.assertEqual(calls, [])
+        watch.start('DP-2', (0, 0, 2560, 1440))  # a new resolution: KWin 5 needs the new area
+        self.assertEqual([m for m, _ in calls], ['unloadScript', 'loadScript', 'start'])
+        calls.clear()
         watch.stop()
         self.assertEqual(calls, [('unloadScript', ('(s)', ('nowcaption-fullscreen',)))])
 

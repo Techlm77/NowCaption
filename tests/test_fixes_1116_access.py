@@ -141,6 +141,58 @@ class LongPressTests(unittest.TestCase):
         w.on_drag_end(None, 0, 0)
 
 
+
+@unittest.skipIf(nc is None, SKIP)
+class LongPressWithoutLayerShellTests(unittest.TestCase):
+    """Without layer shell (GNOME), where the window manager moves the captions' window: a
+    finger moves it only once it travels, so holding it still can open the menu."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = shared_app()
+
+    def setUp(self):
+        self.window = nc.CaptionWindow(self.app)
+        self.app.window = self.window
+        self.addCleanup(self.window.destroy)
+        self.addCleanup(self.window.disconnect_monitors)
+        self.addCleanup(setattr, self.app, 'window', None)
+        if self.window.layer:
+            self.skipTest('This display has layer shell')
+        self.moves = []
+        self.window.begin_move = lambda gesture, x, y: self.moves.append((round(x), round(y)))
+        self.window.present()
+
+    def finger(self, touch=True):
+        gesture = press()
+        gesture.get_current_sequence = lambda: object() if touch else None
+        return gesture
+
+    def test_a_finger_held_still_opens_the_menu_and_never_moves_the_window(self):
+        w, gesture = self.window, self.finger()
+        w.on_drag_begin(gesture, 100, 30)
+        w.on_drag_update(gesture, 2, 1)  # a finger never holds perfectly still
+        self.assertEqual(self.moves, [])
+        with patch.object(w, 'on_menu') as menu:
+            w.on_long_press(press(), 100, 30)
+        menu.assert_called_once()
+        w.on_drag_end(gesture, 2, 1)  # GTK ends the drag once the long press takes the press
+        self.assertIsNone(w.move_from)
+        self.assertEqual(self.moves, [])
+
+    def test_a_finger_that_travels_moves_the_window_from_where_it_is(self):
+        w, gesture = self.window, self.finger()
+        w.on_drag_begin(gesture, 100, 30)
+        far = w.get_settings().props.gtk_dnd_drag_threshold
+        w.on_drag_update(gesture, far, 0)
+        self.assertEqual(self.moves, [(100 + far, 30)])
+        w.on_drag_update(gesture, far + 5, 0)  # the window manager has it now
+        self.assertEqual(len(self.moves), 1)
+
+    def test_the_mouse_still_moves_the_window_at_once(self):
+        self.window.on_drag_begin(self.finger(touch=False), 100, 30)
+        self.assertEqual(self.moves, [(100, 30)])
+
 @unittest.skipIf(nc is None, SKIP)
 class LaunchTests(unittest.TestCase):
     """`nowcaption --transcript` and so on, as the desktop file's actions run it."""

@@ -103,21 +103,33 @@ FULLSCREEN_XML = f"""<node><interface name="{FULLSCREEN_IFACE}">
   <method name="Changed"><arg type="b" name="fullscreen" direction="in"/></method>
 </interface></node>"""
 KWIN_SCRIPT = """// NowCaption: whether the active window on the captions' screen is fullscreen.
-const OUTPUT = %s;
-let last = null;
+// KWin 6 has windows that name their output; KWin 5.27 (Plasma 5) has clients and only screen
+// numbers, so there the screen is found by its area. var and plain functions suit both engines.
+var OUTPUT = %s;  // the screen's connector name, "" for any screen
+var AREA = %s;  // the screen's x, y, width and height, or null
+var last = null;
+function windows() { return workspace.windowList ? workspace.windowList() : workspace.clientList(); }
+function onScreen(w) {
+    if (OUTPUT === "") return true;
+    if (w.output) return w.output.name === OUTPUT;
+    var g = w.frameGeometry;
+    if (!AREA || !g) return true;
+    var x = g.x + g.width / 2, y = g.y + g.height / 2;
+    return x >= AREA[0] && x < AREA[0] + AREA[2] && y >= AREA[1] && y < AREA[1] + AREA[3];
+}
 function update() {
-    const w = workspace.activeWindow;
-    const full = !!(w && w.fullScreen && (OUTPUT === "" || (w.output && w.output.name === OUTPUT)));
+    var w = workspace.windowList ? workspace.activeWindow : workspace.activeClient;
+    var full = !!(w && w.fullScreen && onScreen(w));
     if (full !== last) {
         last = full;
         callDBus(%s, %s, %s, "Changed", full);
     }
 }
 function watch(w) { if (w) w.fullScreenChanged.connect(update); }
-workspace.windowList().forEach(watch);
-workspace.windowAdded.connect(function (w) { watch(w); update(); });
-workspace.windowRemoved.connect(update);
-workspace.windowActivated.connect(update);
+windows().forEach(watch);
+(workspace.windowAdded || workspace.clientAdded).connect(function (w) { watch(w); update(); });
+(workspace.windowRemoved || workspace.clientRemoved).connect(update);
+(workspace.windowActivated || workspace.clientActivated).connect(update);
 update();
 """
 
@@ -156,15 +168,16 @@ class FullscreenWatch:
         self.bus.call('org.kde.KWin', '/Scripting', 'org.kde.kwin.Scripting', method, params,
                       None, Gio.DBusCallFlags.NO_AUTO_START, 2000, None, finished)
 
-    def start(self, output):
-        """Watch the screen with this connector name ('' for any)."""
-        if output == self.output or not self.bus:
+    def start(self, output, area=None):
+        """Watch the screen with this connector name ('' for any), whose area (x, y, width,
+        height) finds it on KWin 5, which names no screens."""
+        if (output, area) == self.output or not self.bus:
             return
-        self.output = output
+        self.output = output, area
         path = Path(GLib.get_user_data_dir()) / 'nowcaption' / 'kwin-fullscreen.js'
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(KWIN_SCRIPT % tuple(map(json.dumps, (output, self.app_id, FULLSCREEN_PATH,
+            path.write_text(KWIN_SCRIPT % tuple(map(json.dumps, (output, area, self.app_id, FULLSCREEN_PATH,
                                                                    FULLSCREEN_IFACE))))
         except OSError as e:
             LOG.warning('Could not write the KWin script: %s', e)
@@ -563,6 +576,7 @@ class CaptionText(Gtk.Widget):
         self.label = label
         label.set_parent(self)
         self.layout, self.rows, self.row_height, self.wrapper = None, ROWS, 0, None
+        self.pitch = 0.0  # how far apart the label's lines are, px (see configure)
         self.flexible = False  # docked at a side, the compositor's height decides the rows
         self.text, self.lines, self.words, self.status = '', [], [], False
         self.glide, self.glide_start = 0.0, 0  # rows to glide up, counted from glide_start (µs)
@@ -624,6 +638,10 @@ class CaptionText(Gtk.Widget):
     def configure(self, layout, rows, row_height, flexible=False):
         """A new width, font or number of rows: the rows are shown at rest, wrapped afresh."""
         self.layout, self.rows, self.row_height, self.flexible = layout, rows, row_height, flexible
+        # The label's lines are this far apart: a fraction of a pixel less than the whole-pixel
+        # row height, as fonts go. Gliding by it ends exactly where the rows come to rest.
+        one, two = (self.label.create_pango_layout(text).get_size()[1] for text in ('Ag', 'Ag\nAg'))
+        self.pitch = (two - one) / Pango.SCALE or row_height
         self.wrapper = Rows(layout, row_height)
         self.glide, self.appeared, self.pieces = 0.0, {}, {}
         self.queue_resize()
@@ -717,7 +735,7 @@ class CaptionText(Gtk.Widget):
         text = '\n'.join(lines) if lines else ' '
         if self.label.get_text() != text:
             self.label.set_text(text)
-        offset = (extra - min(glide, extra)) * self.row_height
+        offset = (extra - min(glide, extra)) * self.pitch
         if offset != self.offset:
             self.offset = offset
             self.queue_allocate()
@@ -858,6 +876,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.set_resizable(False)
         self.layer = bool(LayerShell and LayerShell.is_supported())
         self.dragging = self.resizing = self.held = None
+        self.move_from = None  # without layer shell: where a finger pressed, until it travels (on_drag_update)
         self.rows = self.settings.get('rows')
         self.text, self.status, self.status_timer = '', '', None
         self.status_sticky = False
@@ -992,8 +1011,11 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if self.settings.get('position') == 'floating':
             self.app.fullscreen_watch.stop()
             self.covered = False
+        elif self.monitor:
+            g = self.monitor.get_geometry()
+            self.app.fullscreen_watch.start(self.monitor.get_connector() or '', (g.x, g.y, g.width, g.height))
         else:
-            self.app.fullscreen_watch.start((self.monitor.get_connector() or '') if self.monitor else '')
+            self.app.fullscreen_watch.start('')
 
     def set_covered(self, covered):
         """A fullscreen app on this screen opened or closed: float over it, or dock again."""
@@ -1230,6 +1252,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if monitor == self.monitor:
             self.box_width = self.width_for(monitor)
             self.restyle()
+            if self.layer:  # KWin 5 finds the screen by its area
+                self.watch_fullscreen()
 
     def disconnect_monitors(self, *args):
         for monitor, handler in self._monitor_handlers:
@@ -1591,13 +1615,25 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if self.layer:  # x, y are overlay (monitor) coordinates; remember where the box was grabbed
             self.dragging = (x - self.x, y - self.y)
             return
-        surface = self.get_surface()  # the window manager moves normal windows
-        if isinstance(surface, Gdk.Toplevel):
-            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-            surface.begin_move(gesture.get_device(), gesture.get_current_button(), x, y,
-                               gesture.get_current_event_time())
+        if isinstance(self.get_surface(), Gdk.Toplevel):  # the window manager moves normal windows
+            if gesture.get_current_sequence() is not None:  # a finger: held still, it opens the menu instead
+                self.move_from = (x, y)
+                return
+            self.begin_move(gesture, x, y)
+
+    def begin_move(self, gesture, x, y):
+        """Have the window manager move the window from (x, y), where the press is now."""
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        self.get_surface().begin_move(gesture.get_device(), gesture.get_current_button(), x, y,
+                                      gesture.get_current_event_time())
 
     def on_drag_update(self, gesture, dx, dy):
+        if self.move_from:  # a finger moves the window once it travels as far as a drag must
+            if math.hypot(dx, dy) >= self.get_settings().props.gtk_dnd_drag_threshold:
+                x, y = self.move_from
+                self.move_from = None
+                self.begin_move(gesture, x + dx, y + dy)
+            return
         if self.resizing and self.edge:
             ok, px, py = gesture.get_point(None)
             return ok and self.resize_dock(px, py)
@@ -1651,6 +1687,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.render()
 
     def on_drag_end(self, gesture, dx, dy):
+        self.move_from = None
         self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
         if self.held:
             self.held.set_cursor(None)
@@ -1713,8 +1750,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
     def on_long_press(self, gesture, x, y):
         """A finger held still on the captions opens the menu there, as a right-click does. A
         finger that moves first drags them, or resizes them from an edge, and GTK cancels the
-        long press; taking the press here ends a move that began with it. Without layer shell
-        the window manager moves the window as soon as it is pressed, so this never fires there."""
+        long press; taking the press here ends a move that began with it. Without layer shell,
+        the window manager moves the window only once the finger travels (on_drag_update)."""
         if self.resizing:  # an edge took the press
             return
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)

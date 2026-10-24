@@ -43,9 +43,8 @@ move, drag an edge to resize. **Right-click** for the menu:
 - **More options…:** what to listen to, desktop audio or your microphone, and how
   new words appear
 
-On a touchscreen, touch and hold the captions for the menu (KDE Plasma, Hyprland and
-Sway), and right-click NowCaption in your app launcher for **Open transcript**, **More
-options** and **Quit**.
+On a touchscreen, touch and hold the captions for the menu, and right-click NowCaption in
+your app launcher for **Open transcript**, **More options** and **Quit**.
 
 **Transcript.** **Open transcript** shows everything captioned, in a window you can
 scroll, select and copy from, and search with Ctrl+F. Earlier sessions are listed under
@@ -87,10 +86,10 @@ any window. **Docked** at the top, bottom, left or right, they take that strip o
 screen like a panel, next to any panels already there, and maximised or snapped windows
 make room for them, so nothing is covered. Drag the edge between the captions and your
 windows to resize both together. Choosing another position slides the captions into their
-edge and out of the new one, and your windows move along with them. On KDE Plasma, while a
-fullscreen game or video is open on their screen, docked captions float above it and dock
-again when it closes; elsewhere, choose **Floating** for fullscreen apps. Floating captions
-keep their bottom edge in place when you change the text size.
+edge and out of the new one, and your windows move along with them. On KDE Plasma 5.27
+and 6, while a fullscreen game or video is open on their screen, docked captions float
+above it and dock again when it closes; elsewhere, choose **Floating** for fullscreen apps.
+Floating captions keep their bottom edge in place when you change the text size.
 
 **KWin permission.** On KDE Plasma, the Flatpak may talk to KWin, so docked captions can
 float over fullscreen apps. That lets it load a KWin script: NowCaption loads a small one

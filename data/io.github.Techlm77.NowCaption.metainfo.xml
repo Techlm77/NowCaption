@@ -70,8 +70,10 @@
           <li>The captions keep their width when a long message shows, keep their rows when the
             colour or background changes, and go back to your chosen screen when it is plugged
             in again</li>
-          <li>Pixel effects no longer jump or flicker when a new line starts, and turning off
-            animations stops all motion at once</li>
+          <li>Pixel effects no longer jump or flicker when a new line starts, new lines glide up
+            without a final nudge, and turning off animations stops all motion at once</li>
+          <li>On KDE Plasma 5.27 (such as Kubuntu 24.04), docked captions now float over fullscreen
+            apps too</li>
           <li>Searching a long transcript no longer slows the captions, the transcript can be
             selected with the keyboard, and closed windows free their memory</li>
           <li>Touch and hold the captions to open the menu, and the app launcher offers Open
