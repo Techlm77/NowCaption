@@ -1,0 +1,16 @@
+#!/bin/sh
+# GIO starts the programs NowCaption opens (a browser for a link in About, where no desktop
+# portal opens it) through this, in place of GLib's own gio-launch-desktop, which the system
+# may keep somewhere else. It gives them the system's values of the variables AppRun set for
+# NowCaption, which AppRun kept as NOWCAPTION_HOST_<name>.
+for v in $NOWCAPTION_HOST_VARS; do
+    if eval "[ -n \"\${NOWCAPTION_HOST_$v+set}\" ]"; then
+        eval "export $v=\"\$NOWCAPTION_HOST_$v\""
+    else
+        unset "$v"
+    fi
+    unset "NOWCAPTION_HOST_$v"
+done
+unset NOWCAPTION_HOST_VARS
+export GIO_LAUNCHED_DESKTOP_FILE_PID=$$  # as GLib's does
+exec "$@"

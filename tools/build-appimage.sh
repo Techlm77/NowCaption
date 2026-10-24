@@ -71,6 +71,7 @@ echo "== Python and NowCaption $VERSION"
 cp -L /usr/bin/python3.12 "$APPDIR/usr/bin/"
 ln -s python3.12 "$APPDIR/usr/bin/python3"
 install -m644 appimage/nowcaption-appimage "$APPDIR/usr/bin/"
+install -m755 appimage/gio-launch-desktop "$APPDIR/usr/bin/"  # see AppRun
 mkdir -p "$APPDIR/usr/lib/python3.12"
 tar cf - -C /usr/lib/python3.12 --exclude=__pycache__ --exclude=test --exclude=idlelib \
     --exclude=tkinter --exclude=turtledemo --exclude=lib2to3 --exclude=ensurepip \
@@ -186,6 +187,36 @@ for soname in ld-linux-x86-64.so.2 ld-linux-aarch64.so.1 libc.so.6 libm.so.6 lib
     [ ! -e "$LIB/$soname" ] || cp -L "$LIB/$soname" "$C/"
 done
 getconf GNU_LIBC_VERSION | cut -d' ' -f2 > "$C/GLIBC_VERSION"  # for example 2.39
+
+echo "== Licenses"
+# The copyright file of every Ubuntu package that bundled files came from goes in
+# usr/share/licenses/<package>, and the packages' exact versions in ubuntu-packages.txt there.
+L=$APPDIR/usr/share/licenses
+install -Dm644 "$WORK/gls/LICENSE" -t "$L/gtk4-layer-shell"
+find "$APPDIR/usr" -type f | while read -r f; do  # libraries, plugins, Python and typelibs, by name
+    wheels "$f" && continue
+    case $f in
+        */libgtk4-layer-shell.so.0|*/Gtk4LayerShell-1.0.typelib) continue ;;  # built above
+        *.typelib|*/schemas/*.xml) ;;
+        *) file -b "$f" | grep -q '^ELF' || continue ;;
+    esac
+    case $f in "$APPDIR/usr/bin/"*) echo "/usr/bin/${f##*/}" ;; *) echo "*/${f##*/}" ;; esac
+done > "$WORK/bundled"
+# The data copied above, by where it came from.
+printf '%s\n' /usr/lib/python3.12 /usr/lib/python3/dist-packages/gi /usr/lib/python3/dist-packages/cairo \
+    /usr/share/icons/Adwaita /usr/share/icons/hicolor/index.theme /usr/share/mime >> "$WORK/bundled"
+packages=$(xargs -d '\n' dpkg-query -S < "$WORK/bundled" 2> "$WORK/unowned" | grep -v '^diversion ' |
+    sed 's/: .*//' | tr ',' '\n' | sed 's/^ *//; s/:.*//' | sort -u)
+[ ! -s "$WORK/unowned" ] || { echo "Bundled files from no Ubuntu package:" >&2; cat "$WORK/unowned" >&2; exit 1; }
+for p in $packages; do
+    install -Dm644 "/usr/share/doc/$p/copyright" -t "$L/$p"
+done
+{
+    echo "# The Ubuntu 24.04 packages bundled here, with their source packages, whose code is at"
+    echo "# https://packages.ubuntu.com/noble/ (or: apt-get source <source>=<version>)."
+    echo "# package version source source-version"
+    dpkg-query -W -f='${Package} ${Version} ${source:Package} ${source:Version}\n' $packages
+} > "$L/ubuntu-packages.txt"
 
 echo "== AppImage"
 install -m755 appimage/AppRun "$APPDIR/AppRun"

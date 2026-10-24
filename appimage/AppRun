@@ -4,8 +4,19 @@
 HERE=$(dirname "$(readlink -f "$0")")
 cache=${XDG_CACHE_HOME:-$HOME/.cache}/nowcaption
 mkdir -p "$cache"
+# Programs NowCaption starts (a browser opened from About) get the system's values of the
+# variables set below back from usr/bin/gio-launch-desktop: NOWCAPTION_HOST_<name> keeps each
+# one the system has.
+export NOWCAPTION_HOST_VARS='NOWCAPTION_MODELS GI_TYPELIB_PATH GIO_MODULE_DIR GIO_LAUNCH_DESKTOP
+ GST_PLUGIN_SYSTEM_PATH_1_0 GST_PLUGIN_PATH_1_0 GST_REGISTRY_1_0 GST_REGISTRY_FORK XDG_DATA_DIRS
+ PYTHONNOUSERSITE PYTHONDONTWRITEBYTECODE GDK_PIXBUF_MODULE_FILE PYTHONHOME PYTHONPATH GSK_RENDERER'
+for v in $NOWCAPTION_HOST_VARS; do
+    eval "[ -z \"\${$v+set}\" ] || export \"NOWCAPTION_HOST_$v=\$$v\""
+done
+unset PYTHONPATH PYTHONHOME  # the bundled Python uses its own modules, never the system's
 
 export NOWCAPTION_MODELS="$HERE/usr/share/nowcaption/models"
+export GIO_LAUNCH_DESKTOP="$HERE/usr/bin/gio-launch-desktop"
 export GI_TYPELIB_PATH="$HERE/usr/lib/girepository-1.0"
 export GIO_MODULE_DIR="$HERE/usr/lib/gio/modules"
 export GST_PLUGIN_SYSTEM_PATH_1_0="$HERE/usr/lib/gstreamer-1.0" GST_PLUGIN_PATH_1_0=
@@ -41,7 +52,7 @@ has_lib() {
 }
 has_lib libGLESv2.so.2 || export GSK_RENDERER="${GSK_RENDERER:-cairo}"
 # gtk4-layer-shell must load before libwayland-client. In the environment (with the system's
-# glibc), nowcaption-appimage takes it out of LD_PRELOAD again once Python has started; the
+# glibc), launch.py takes it out of LD_PRELOAD again once Python has started; the
 # bundled loader takes it as an option instead, so programs NowCaption starts never see it.
 if [ -n "${WAYLAND_DISPLAY:-}" ]; then
     if [ "$preload" = bundled ]; then
