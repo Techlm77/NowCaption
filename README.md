@@ -55,10 +55,16 @@ the menu to stop keeping it. **Clear this session** also removes the current ses
 from the history.
 
 **Text colour.** Captions are white by default. If another colour is easier for you to
-read, choose yellow, cyan or lime under **Text colour**. The captions change as soon as you
-click, so you can compare colours before closing the menu. NowCaption remembers your
-choice, like your text size, background and position, every time it starts and after
-updates.
+read, pick one of the dots under **Text colour**: yellow, lime, cyan, orange, pink,
+lavender, brown or red. The captions change as soon as you click, so you can compare
+colours before closing the menu. NowCaption remembers your choice, like your text size,
+background and position, every time it starts and after updates.
+
+**Motion.** New lines glide up instead of jumping, and new words fade in. The captions
+fade in when NowCaption starts and out when it quits, and "Listening…" gently pulses
+while NowCaption waits for speech. For no motion at all, turn animations off for your
+desktop (on Plasma, set **Animation speed** to **Instant**; on GNOME, turn on **Reduce
+Animation**) and NowCaption follows.
 
 On KDE Plasma, Hyprland and Sway the captions float above all windows. On GNOME,
 press Alt+Space on the window and choose **Always on Top**.

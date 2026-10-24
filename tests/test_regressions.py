@@ -34,7 +34,7 @@ def load_app_methods():
               'save_transcript', 'write_transcript', 'start_save', 'begin_save', 'finish_save',
               'full_transcript', 'earlier_sessions',
               'show_text', 'show_status', 'show_failure', 'clear_failure', 'end_status',
-              'render', 'caption_height', 'box_height'}
+              'render', 'show_footer', 'caption_height', 'box_height'}
     classes = []
     for node in tree.body:
         if isinstance(node, ast.ClassDef) and node.name in ('NowCaption', 'CaptionWindow'):
@@ -46,7 +46,7 @@ def load_app_methods():
                'LOG': __import__('logging').getLogger('nowcaption'),
                'GLib': NS(timeout_add_seconds=lambda *a: 1, source_remove=lambda *a: None),
                'LayerShell': NS(set_monitor=lambda *a: None),
-               'ROWS': 2, 'PAD_Y': 12, 'last_rows': lambda layout, text, rows: text}
+               'ROWS': 2, 'PAD_Y': 12, 'STATUS_MS': 150}
     exec(compile(ast.fix_missing_locations(ast.Module(body=classes, type_ignores=[])),
                  str(ROOT / 'src/nowcaption/app.py'), 'exec'), context)
     return context

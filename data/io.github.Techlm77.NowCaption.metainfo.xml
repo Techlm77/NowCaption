@@ -57,6 +57,25 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.10" date="2026-10-24">
+      <description>
+        <p>
+          Nine text colours, and captions that move gently. When a line fills up, the text
+          glides up instead of jumping, and new words fade in, so your eyes can follow it.
+        </p>
+        <ul>
+          <li>Five more text colours: orange, pink, lavender, brown and red, picked from a
+            row of dots under Text colour</li>
+          <li>New lines glide up and new words fade in</li>
+          <li>The captions fade in when NowCaption starts and out when it quits</li>
+          <li>A new text colour or background blends in</li>
+          <li>Status messages fade in and out, and "Listening…" gently pulses while
+            NowCaption waits for speech</li>
+          <li>All of it follows your desktop's animation setting: turn animations off there
+            for no motion</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.9" date="2026-10-23">
       <description>
         <p>

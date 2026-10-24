@@ -1,5 +1,7 @@
 """NowCaption: on-device live captions for anything your computer plays, or your microphone."""
+import difflib
 import logging
+import math
 import os
 import re
 import sys
@@ -11,7 +13,9 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 import cairo  # noqa: E402
 gi.require_version('Pango', '1.0')
-from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango  # noqa: E402
+gi.require_version('Gsk', '4.0')
+gi.require_version('Graphene', '1.0')
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
 try:
     gi.require_version('Gtk4LayerShell', '1.0')
@@ -43,7 +47,17 @@ MENU_INDENT = 34  # button rows start where the menu's item labels do, after the
 # Caption text colours, as TV captions offer them. Their swatches in the menu are buttons too,
 # so colours can be compared on the captions before the menu closes.
 COLOURS = {'white': ('White', '#ffffff'), 'yellow': ('Yellow', '#ffff00'),
-           'cyan': ('Cyan', '#00ffff'), 'lime': ('Lime', '#00ff00')}
+           'lime': ('Lime', '#00ff00'), 'cyan': ('Cyan', '#00ffff'),
+           'orange': ('Orange', '#ff9900'), 'pink': ('Pink', '#ff7ad9'),
+           'lavender': ('Lavender', '#c8a2ff'), 'brown': ('Brown', '#d2a26e'),
+           'red': ('Red', '#ff5050')}
+# Animations, in ms. All are instant when the desktop turns animations off. The caption box
+# fades in when NowCaption starts and out when it quits; the rows glide up a row instead of
+# jumping; new words fade in; text colour and background blend into a new choice; status
+# messages fade, and a message that waits for speech ("Listening…") breathes until it comes.
+FADE_IN_MS, FADE_OUT_MS = 200, 150
+GLIDE_MS, WORD_MS, STATUS_MS, CHANGE_MS, BREATH_MS = 200, 120, 150, 150, 2000
+BREATH_STEP_MS = 40  # breathing is slow and may last long: 25 steps a second, not every frame
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
             'width': -1, 'rows': ROWS, 'colour': 'white', 'history': True}
 LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100)}
@@ -95,13 +109,212 @@ class Settings:
             LOG.warning('Could not save settings to %s: %s', self.path, e)
 
 
-def last_rows(layout, text, rows):
-    """The last `rows` wrapped lines of text, as Pango lays them out."""
+def wrapped_lines(layout, text):
+    """text in rows, as Pango wraps it in the caption box."""
     layout.set_text(text, -1)
     data = text.encode()
-    lines = [data[l.start_index:l.start_index + l.length].decode(errors='ignore').strip()
-             for l in layout.get_lines_readonly()]
-    return '\n'.join(lines[-rows:])
+    return [data[l.start_index:l.start_index + l.length].decode(errors='ignore').strip()
+            for l in layout.get_lines_readonly()]
+
+
+def bare(word):
+    """A word without the punctuation and capital the punctuation model may still change."""
+    return word.strip('.,?!;:"\'').lower()
+
+
+def ease_out(p):
+    return 1 - (1 - p) ** 3
+
+
+class CaptionText(Gtk.Widget):
+    """The caption rows: a Gtk.Label, which screen readers read, clipped to exactly the rows.
+    When the passage moves up, the rows glide up instead of jumping (the label then shows the
+    rows on their way out too, moved up by self.offset). New words fade in. A status message
+    shown in place of captions fades in, and breathes while it waits for speech. Without
+    animations, the label shows just the last rows."""
+
+    def __init__(self, label, **kwargs):
+        super().__init__(overflow=Gtk.Overflow.HIDDEN, **kwargs)
+        self.label = label
+        label.set_parent(self)
+        self.layout, self.rows, self.row_height = None, ROWS, 0
+        self.text, self.lines, self.words, self.status = '', [], [], False
+        self.glide, self.glide_start = 0.0, 0  # rows to glide up, counted from glide_start (µs)
+        self.appeared = {}  # passage word index: when it appeared (µs), while it fades in
+        self.shown_at = self.breath_start = None  # status message: when it appeared, began breathing
+        self.offset, self.tick, self.breath_timer, self.attributed = 0.0, 0, 0, False
+
+    def do_dispose(self):
+        self.stop()
+        if self.label.get_parent() is self:
+            self.label.unparent()
+        Gtk.Widget.do_dispose(self)
+
+    def do_map(self):
+        Gtk.Widget.do_map(self)
+        self.start()
+
+    def do_unmap(self):
+        self.stop()
+        Gtk.Widget.do_unmap(self)
+
+    def do_measure(self, orientation, for_size):
+        if orientation == Gtk.Orientation.VERTICAL:
+            height = self.rows * self.row_height
+            return height, height, -1, -1
+        return 0, self.label.measure(orientation, -1)[1], -1, -1
+
+    def do_size_allocate(self, width, height, baseline):
+        width = max(width, self.label.measure(Gtk.Orientation.HORIZONTAL, -1)[0])
+        height = max(height, self.label.measure(Gtk.Orientation.VERTICAL, width)[0])
+        up = Gsk.Transform().translate(Graphene.Point().init(0, -self.offset)) if self.offset else None
+        self.label.allocate(width, height, -1, up)
+
+    def configure(self, layout, rows, row_height):
+        """A new width, font or number of rows: the rows are shown at rest."""
+        self.layout, self.rows, self.row_height = layout, rows, row_height
+        self.glide, self.appeared = 0.0, {}
+        self.queue_resize()
+
+    def show(self, text, status=False, waiting=False):
+        """Show the passage, or with status, a status message (waiting: one that waits for
+        speech, so it breathes)."""
+        now = GLib.get_monotonic_time()
+        lines = wrapped_lines(self.layout, text) if text else []
+        words = text.split()
+        if self.get_mapped() and Adw.get_enable_animations(self):
+            moved = self.moved(lines)
+            if moved is None or moved > self.rows:
+                self.glide = 0.0
+            elif moved:
+                self.glide, self.glide_start = self.gliding(now) + moved, now
+            self.appeared = {} if status else self.carry(words, now, fresh=self.status or not self.words)
+            if not (status and text):
+                self.shown_at = None
+            elif not self.status or text != self.text:
+                self.shown_at = now
+            self.breath_start = (self.breath_start or now) if waiting else None
+        else:
+            self.glide, self.appeared, self.shown_at, self.breath_start = 0.0, {}, None, None
+        self.text, self.lines, self.words, self.status = text, lines, words, status
+        self.start(now)
+
+    def moved(self, lines):
+        """How many rows the passage moved up, judged by the row that was on top: None when
+        that row is gone (the rows wrapped differently, or the passage changed)."""
+        if not self.lines or not lines or self.status:
+            return 0
+        line = lambda row: ' '.join(bare(w) for w in row.split())
+        top = line(self.lines[max(0, len(self.lines) - self.rows)])
+        rest = max(0, len(lines) - self.rows)  # the top row once the passage is at rest
+        for moved in range(min(rest, self.rows) + 1):
+            if line(lines[rest - moved]) == top:
+                return moved
+        return None
+
+    def carry(self, words, now, fresh):
+        """When each of the passage's words appeared: words already shown keep their time,
+        even with new punctuation, and words added appear now. fresh: no captions were shown
+        before (a status message, or an empty box), so every word is new."""
+        if fresh:
+            return {i: now for i in range(len(words))}
+        a, b = max(0, len(self.words) - 80), max(0, len(words) - 80)  # only the end changes
+        old, new = [bare(w) for w in self.words[a:]], [bare(w) for w in words[b:]]
+        appeared = {}
+        for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, old, new, autojunk=False).get_opcodes():
+            same = 0 if tag in ('insert', 'delete') else min(i2 - i1, j2 - j1)  # kept, or reworded
+            for d in range(same):
+                if a + i1 + d in self.appeared:
+                    appeared[b + j1 + d] = self.appeared[a + i1 + d]
+            for j in range(j1 + same, j2):
+                appeared[b + j] = now
+        return appeared
+
+    def gliding(self, now):
+        """Rows still to glide up at time now (µs)."""
+        if not self.glide:
+            return 0.0
+        p = (now - self.glide_start) / (GLIDE_MS * 1000)
+        if p >= 1:
+            self.glide = 0.0
+            return 0.0
+        return self.glide * (1 - ease_out(max(0.0, p)))
+
+    def update(self, now):
+        """Show the rows, the words fading in and the status message as of now (µs). True
+        while the rows, words or a status message's fade still move (breathing is timed by
+        breathe instead)."""
+        glide = self.gliding(now)
+        extra = min(math.ceil(glide), max(0, len(self.lines) - self.rows))
+        lines = self.lines[-(self.rows + extra):]
+        text = '\n'.join(lines) if lines else ' '
+        if self.label.get_text() != text:
+            self.label.set_text(text)
+        offset = (extra - min(glide, extra)) * self.row_height
+        if offset != self.offset:
+            self.offset = offset
+            self.queue_allocate()
+        self.appeared = {i: t for i, t in self.appeared.items() if now - t < WORD_MS * 1000}
+        if self.appeared or self.attributed:
+            self.label.set_attributes(self.fading(text, now) if self.appeared else None)
+            self.attributed = bool(self.appeared)
+        opacity = 1.0
+        if self.shown_at is not None:
+            p = (now - self.shown_at) / (STATUS_MS * 1000)
+            if p >= 1:
+                self.shown_at = None
+            else:
+                opacity = ease_out(max(0.0, p))
+        if self.breath_start is not None:  # 1, down to 0.55, and back every BREATH_MS
+            opacity *= 1 - 0.225 * (1 - math.cos(2 * math.pi * (now - self.breath_start) / (BREATH_MS * 1000)))
+        self.label.set_opacity(opacity)
+        return bool(self.glide or self.appeared or self.shown_at is not None)
+
+    def fading(self, text, now):
+        """Pango attributes that fade in the words that just appeared, in the shown text."""
+        spans = [m.span() for m in re.finditer(r'\S+', text)]
+        first = len(self.words) - len(spans)  # the passage index of the first word shown
+        attrs = Pango.AttrList()
+        for i, t in self.appeared.items():
+            if 0 <= i - first < len(spans):
+                start, end = spans[i - first]
+                p = min(1.0, max(0.0, (now - t) / (WORD_MS * 1000)))
+                alpha = Pango.attr_foreground_alpha_new(max(1, int(65535 * p)))  # 0 means opaque
+                alpha.start_index, alpha.end_index = len(text[:start].encode()), len(text[:end].encode())
+                attrs.insert(alpha)
+        return attrs
+
+    def start(self, now=None):
+        """Show the current state, and keep updating it while anything moves."""
+        moving = self.update(GLib.get_monotonic_time() if now is None else now)
+        if not self.get_mapped():
+            return
+        if moving and not self.tick:
+            self.tick = self.add_tick_callback(self.on_tick)
+        if self.breath_start is not None and not self.breath_timer:
+            self.breath_timer = GLib.timeout_add(BREATH_STEP_MS, self.breathe)
+
+    def stop(self):
+        if self.tick:
+            self.remove_tick_callback(self.tick)
+            self.tick = 0
+        if self.breath_timer:
+            GLib.source_remove(self.breath_timer)
+            self.breath_timer = 0
+
+    def breathe(self):
+        if self.breath_start is None:
+            self.breath_timer = 0
+            return GLib.SOURCE_REMOVE
+        if not self.tick:  # otherwise the frames update it anyway
+            self.update(GLib.get_monotonic_time())
+        return GLib.SOURCE_CONTINUE
+
+    def on_tick(self, widget, clock):
+        if self.update(clock.get_frame_time()):
+            return GLib.SOURCE_CONTINUE
+        self.tick = 0
+        return GLib.SOURCE_REMOVE
 
 
 class CaptionWindow(Gtk.ApplicationWindow):
@@ -136,14 +349,19 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.label = Gtk.Label(xalign=0, yalign=0, wrap=False, single_line_mode=False,
                                accessible_role=Gtk.AccessibleRole.STATUS)
         self.label.add_css_class('caption-text')
+        self.caption = CaptionText(self.label, margin_start=PAD_X, margin_end=PAD_X,
+                                   margin_top=PAD_Y, margin_bottom=PAD_Y)
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.box.add_css_class('caption-box')
-        self.box.append(self.label)
+        self.box.append(self.caption)
         self.status_label = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END,
                                       single_line_mode=True, accessible_role=Gtk.AccessibleRole.STATUS)
         self.status_label.add_css_class('caption-status')
         self.status_label.set_visible(False)
         self.box.append(self.status_label)
+        self.footer_shown = self.footer_hiding = False
+        self.fades, self.faded_in = {}, False
+        self.box.connect('map', self.fade_in)
         self.fixed = Gtk.Fixed()  # lets the box move inside the window while it is dragged
         self.fixed.put(self.box, 0, 0)
         self.set_child(self.fixed)
@@ -227,7 +445,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     def update_menu(self, several_screens):
         """Set the menu, with the text size, background and text colour rows as buttons that
-        keep it open. The size and background rows show their value between their buttons."""
+        keep it open. The size and background rows show their value between their buttons; the
+        colour row shows the chosen colour's name, with a line of colour dots under it."""
         self.popover.set_menu_model(self.app.build_menu(several_screens))
         self.values = {}
         for name, (title, *buttons) in STEPPERS.items():
@@ -242,24 +461,32 @@ class CaptionWindow(Gtk.ApplicationWindow):
                     self.values[name] = Gtk.Label(width_chars=5, css_classes=['dim-label', 'numeric'])
                     row.append(self.values[name])
             self.popover.add_child(row, name)
-        self.show_values()
-        row = Gtk.Box(spacing=4, margin_start=MENU_INDENT, margin_end=6)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_start=MENU_INDENT,
+                      margin_end=6, margin_top=6, margin_bottom=4)
+        row = Gtk.Box()
         row.append(Gtk.Label(label='Text colour', xalign=0, hexpand=True))
-        for name, (label, _) in COLOURS.items():  # pressed in, like a radio button, when chosen
+        self.values['text-colour'] = Gtk.Label(css_classes=['dim-label'], margin_end=6)
+        row.append(self.values['text-colour'])
+        box.append(row)
+        dots = Gtk.Box(spacing=1)
+        for name, (label, _) in COLOURS.items():  # ringed, like a radio button, when chosen
             swatch = Gtk.Box(css_classes=['colour-swatch', f'colour-{name}'],
                              halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
             button = Gtk.ToggleButton(child=swatch, action_name='app.colour',
-                                      action_target=GLib.Variant('s', name), tooltip_text=label)
-            button.add_css_class('flat')
+                                      action_target=GLib.Variant('s', name), tooltip_text=label,
+                                      css_classes=['flat', 'colour-dot'])
             button.update_property([Gtk.AccessibleProperty.LABEL], [label])
-            row.append(button)
-        self.popover.add_child(row, 'text-colour')
+            dots.append(button)
+        box.append(dots)
+        self.popover.add_child(box, 'text-colour')
+        self.show_values()
 
     def show_values(self):
         values = getattr(self, 'values', None)
         if values:
             values['text-size'].set_label(f"{self.settings.get('size')} px")
             values['background'].set_label(f"{round(self.settings.get('opacity') * 100)}%")
+            values['text-colour'].set_label(COLOURS[self.settings.get('colour')][0])
 
     def watch_screens(self, *args):
         """Follow screens being connected or disconnected, and the current screen's geometry."""
@@ -356,14 +583,19 @@ class CaptionWindow(Gtk.ApplicationWindow):
                            for name, (_, rgb) in COLOURS.items())
         self.css.load_from_string(f"""
             window.nowcaption {{ background: transparent; }}
-            window.nowcaption .caption-box {{ background: rgba(0, 0, 0, {alpha}); border-radius: 14px; }}
+            window.nowcaption .caption-box {{ background: rgba(0, 0, 0, {alpha}); border-radius: 14px;
+                                             transition: background-color {CHANGE_MS}ms ease-out; }}
             window.nowcaption .caption-text {{ color: {colour}; font-size: {px}px; font-weight: 500;
-                                              padding: {PAD_Y}px {PAD_X}px; }}
+                                              transition: color {CHANGE_MS}ms ease-out; }}
             window.nowcaption .caption-status {{ color: #cccccc; font-size: {max(14, round(px * 0.55))}px;
                                                 padding: 0 {PAD_X}px {PAD_Y}px; }}
-            window.nowcaption .colour-swatch {{ min-width: 18px; min-height: 18px; border-radius: 9px;
+            window.nowcaption .colour-swatch {{ min-width: 18px; min-height: 18px; border-radius: 99px;
                                                border: 1px solid rgba(0, 0, 0, 0.4); }}
-            window.nowcaption button:checked .colour-swatch {{ box-shadow: 0 0 0 2px currentColor; }}
+            window.nowcaption button.colour-dot {{ padding: 3px; min-width: 0; min-height: 0;
+                                                  border-radius: 99px; }}
+            window.nowcaption button.colour-dot:checked {{ background: none; }}
+            window.nowcaption button.colour-dot:checked .colour-swatch {{
+                box-shadow: 0 0 0 2px @popover_bg_color, 0 0 0 3px currentColor; }}
             {swatches}""")
         self.show_values()
         # measure one row in the caption font, then fix the box at exactly ROWS rows
@@ -386,7 +618,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.layout = self.label.create_pango_layout('')
         self.layout.set_width((self.box_width - 2 * PAD_X) * Pango.SCALE)
         self.layout.set_wrap(Pango.WrapMode.WORD_CHAR)
-        self.label.set_size_request(self.box_width, self.caption_height())
+        self.caption.set_size_request(self.box_width - 2 * PAD_X, -1)
+        self.caption.configure(self.layout, self.rows, self.row_height)
         self.status_label.set_size_request(self.box_width, -1)
 
     # --- text -----------------------------------------------------------------------------
@@ -439,13 +672,59 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     def render(self):
         # the text flows on; only the last rows show, so the newest words are always visible
-        text = self.text or self.status
-        self.label.set_text(last_rows(self.layout, text, self.rows) if text else ' ')
-        self.status_label.set_text(self.status)
-        self.status_label.set_tooltip_text(self.status or None)
-        self.status_label.set_visible(bool(self.text and self.status))
+        waiting = not self.text and self.status.endswith('…') and self.status not in self.failures.values()
+        self.caption.show(self.text or self.status, status=not self.text, waiting=waiting)
+        self.show_footer(self.status if self.text else '')
         # The optional status row participates in overlay clamping and pointer input.
         self.place(self.x, self.y)
+
+    def show_footer(self, message):
+        """The status row under the captions. It fades in, and fades out before the box shrinks."""
+        footer = self.status_label
+        if message:
+            footer.set_text(message)
+            footer.set_tooltip_text(message)
+            footer.set_visible(True)
+            if not self.footer_shown:
+                self.fade(footer, None if self.footer_hiding else 0.0, 1.0, STATUS_MS)
+            self.footer_hiding = False
+        elif self.footer_shown:
+            def hidden():
+                self.footer_hiding = False
+                footer.set_visible(False)
+                self.place(self.x, self.y)
+            self.footer_hiding = True
+            self.fade(footer, None, 0.0, STATUS_MS, hidden)
+        elif not self.footer_hiding:
+            footer.set_visible(False)
+        self.footer_shown = bool(message)
+
+    def fade(self, widget, start, end, ms, done=None):
+        """Fade widget's opacity from start (None: from where it is) to end, then call done.
+        Instant while the widget is hidden or the desktop turns animations off."""
+        old = self.fades.pop(widget, None)
+        if old:
+            old.pause()  # replaced: its done never runs
+        if start is not None:
+            widget.set_opacity(start)
+        animation = Adw.TimedAnimation.new(widget, widget.get_opacity(), end, ms,
+                                           Adw.PropertyAnimationTarget.new(widget, 'opacity'))
+        animation.set_easing(Adw.Easing.EASE_OUT_CUBIC if end > widget.get_opacity() else Adw.Easing.EASE_IN_CUBIC)
+
+        def finished(animation):
+            if self.fades.get(widget) is animation:
+                del self.fades[widget]
+            if done:
+                done()
+        animation.connect('done', finished)
+        self.fades[widget] = animation
+        animation.play()
+
+    def fade_in(self, box):
+        """The caption box fades in when it first appears, not when it moves to another screen."""
+        if not self.faded_in:
+            self.faded_in = True
+            self.fade(box, 0.0, 1.0, FADE_IN_MS)
 
     def save_png(self, path):
         """Render the window exactly as drawn, for store screenshots."""
@@ -812,6 +1091,7 @@ class NowCaption(Adw.Application):
         self.transcript = None  # the transcript window, while it is open
         self.save_queues = {}  # destination URI -> accepted writes, in snapshot order
         self.quit_requested = False
+        self.fading_out = False
         self.capture = audio.Capture(
             on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
             on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
@@ -1025,6 +1305,17 @@ class NowCaption(Adw.Application):
                 self.window.show_status('Finishing transcript save before quitting…', sticky=True)
             return
         self.quit()
+
+    def quit(self):
+        """Fade the caption box out, then quit. A second request, or a fade that stalls
+        because the screen stopped drawing, quits at once."""
+        if self.window and not self.fading_out:
+            self.fading_out = True
+            GLib.timeout_add(FADE_OUT_MS + 350, self.quit)
+            self.window.fade(self.window.box, None, 0.0, FADE_OUT_MS, self.quit)
+            return False
+        Adw.Application.quit(self)
+        return False
 
     def on_window_close(self, window):
         self.request_quit()

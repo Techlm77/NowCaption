@@ -242,7 +242,10 @@ class NotificationTests(unittest.TestCase):
         window.x = window.y = 0
         window.row_height, window.status_height, window.rows = 30, 24, 2
         window.layout = None
-        window.label = NS(set_text=lambda text: setattr(window, 'visible', text))
+        # The caption rows and fades are GTK's; these tests are about which text goes where.
+        window.caption = NS(show=lambda text, status=False, waiting=False: setattr(window, 'visible', text or ' '))
+        window.fade = lambda widget, start, end, ms, done=None: done and done()
+        window.footer_shown = window.footer_hiding = False
         window.status_label = NS(
             set_text=lambda text: setattr(window, 'notice', text),
             set_tooltip_text=lambda text: setattr(window, 'tooltip', text),

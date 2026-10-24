@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nowcaption"
-version = "1.1.9"
+version = "1.1.10"
 description = "On-device live captions for Linux desktop audio or the microphone"
 readme = "README.md"
 license = "MIT"

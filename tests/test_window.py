@@ -9,6 +9,7 @@ import os
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 CONFIG = tempfile.TemporaryDirectory()
 os.environ['XDG_CONFIG_HOME'] = CONFIG.name
@@ -22,6 +23,8 @@ except (ImportError, ValueError, RuntimeError) as e:
     if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
         raise
     nc, SKIP = None, str(e)
+if nc:  # results show at once, except in AnimationTests
+    nc.Gtk.Settings.get_default().set_property('gtk-enable-animations', False)
 
 
 APP = []
@@ -117,6 +120,7 @@ class WindowTests(unittest.TestCase):
         self.assertTrue(w.popover.get_visible(), 'the menu closed after choosing a colour')
         self.assertTrue(swatches['yellow'].get_active())
         self.assertFalse(swatches['white'].get_active())
+        self.assertEqual(w.values['text-colour'].get_label(), 'Yellow')
         rgba = w.label.get_color()
         self.assertEqual((rgba.red, rgba.green, rgba.blue), (1.0, 1.0, 0.0))
         swatches['yellow'].emit('clicked')  # choosing the current colour again keeps it chosen
@@ -287,6 +291,163 @@ class TranscriptWindowTests(unittest.TestCase):
         self.assertEqual(len(cleared), 1)
         self.assertEqual(sent, [self.app.history_path])
         self.assertEqual(self.text(), '')
+
+
+@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+class AnimationTests(unittest.TestCase):
+    """With the desktop's animations on, on a window that is shown. Frames come too slowly on
+    a headless display to wait for them, so the caption rows are shown as of a chosen time,
+    and fades are checked started, then skipped to their end."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = shared_app()
+
+    def setUp(self):
+        self.gtk = nc.Gtk.Settings.get_default()
+        self.gtk.set_property('gtk-enable-animations', True)
+        self.addCleanup(self.gtk.set_property, 'gtk-enable-animations', False)
+        self.app.settings.set('size', 30)
+        self.window = nc.CaptionWindow(self.app)
+        self.app.window = self.window
+        self.window.present()
+        self.settle()
+        self.finish(self.window.box)
+
+    def tearDown(self):
+        self.window.disconnect_monitors()
+        self.window.destroy()
+        self.app.window = None
+
+    def settle(self):
+        context = nc.GLib.MainContext.default()
+        for _ in range(50):
+            while context.pending():
+                context.iteration(False)
+
+    def finish(self, widget):
+        """Skip a running fade to its end."""
+        animation = self.window.fades.get(widget)
+        if animation:
+            animation.skip()
+
+    def at(self, ms):
+        """Show the caption rows as they are ms after now."""
+        self.window.caption.update(nc.GLib.get_monotonic_time() + ms * 1000)
+
+    def passage(self, rows):
+        """Text that fills `rows` caption rows, and a word that starts the next row."""
+        words = []
+        while len(nc.wrapped_lines(self.window.layout, ' '.join(words + [f'word{len(words)}']))) <= rows:
+            words.append(f'word{len(words)}')
+        return ' '.join(words), f'word{len(words)}'
+
+    def test_the_caption_box_fades_in_when_it_first_appears(self):
+        window = nc.CaptionWindow(self.app)
+        self.addCleanup(window.destroy)
+        self.addCleanup(window.disconnect_monitors)
+        window.present()
+        self.settle()
+        self.assertIn(window.box, window.fades)
+        self.assertLess(window.box.get_opacity(), 1.0)
+        window.fades[window.box].skip()
+        self.assertEqual(window.box.get_opacity(), 1.0)
+
+    def test_a_new_row_glides_up_and_its_first_word_fades_in(self):
+        w = self.window
+        text, word = self.passage(3)
+        w.show_text(text)
+        self.at(500)
+        rows = w.label.get_text().splitlines()
+        self.assertEqual(len(rows), w.rows)
+        w.show_text(f'{text} {word}')
+        # the rows stay where they were, with the new row waiting below them
+        self.assertEqual(w.label.get_text().splitlines(), rows + [word])
+        self.assertEqual(w.caption.offset, 0)
+        spans = [(a.start_index, a.end_index) for a in w.label.get_attributes().get_attributes()]
+        shown = w.label.get_text().encode()
+        self.assertEqual([shown[s:e] for s, e in spans], [word.encode()])
+        self.at(nc.GLIDE_MS / 2)
+        self.assertGreater(w.caption.offset, 0)
+        self.assertLess(w.caption.offset, w.row_height)
+        self.at(nc.GLIDE_MS + 50)
+        self.assertEqual(w.label.get_text().splitlines(), rows[1:] + [word])
+        self.assertEqual(w.caption.offset, 0)
+        self.assertIsNone(w.label.get_attributes())
+
+    def test_without_animations_the_rows_jump_and_words_appear_at_once(self):
+        self.gtk.set_property('gtk-enable-animations', False)
+        w = self.window
+        text, word = self.passage(3)
+        w.show_text(text)
+        rows = w.label.get_text().splitlines()
+        w.show_text(f'{text} {word}')
+        self.assertEqual(w.label.get_text().splitlines(), rows[1:] + [word])
+        self.assertEqual(w.caption.offset, 0)
+        self.assertIsNone(w.label.get_attributes())
+
+    def test_corrected_punctuation_does_not_fade_words_again(self):
+        w = self.window
+        w.show_text('so we took the long road back')
+        self.at(500)
+        w.show_text('So we took the long road back,')
+        self.assertIsNone(w.label.get_attributes())
+
+    def test_the_status_row_fades_out_before_the_box_shrinks(self):
+        w = self.window
+        w.show_text('Words that stay')
+        w.show_status('Transcript copied.')
+        self.assertLess(w.status_label.get_opacity(), 1.0)
+        self.finish(w.status_label)
+        self.assertEqual(w.status_label.get_opacity(), 1.0)
+        w.end_status()
+        self.assertTrue(w.status_label.get_visible())
+        self.finish(w.status_label)
+        self.assertFalse(w.status_label.get_visible())
+        self.assertEqual(w.box_height(), w.caption_height())
+
+    def test_a_message_returning_while_the_row_fades_out_stays(self):
+        w = self.window
+        w.show_text('Words that stay')
+        w.show_status('Transcript copied.')
+        self.finish(w.status_label)
+        w.end_status()
+        w.show_status('Transcript copied.')
+        self.finish(w.status_label)
+        self.assertTrue(w.status_label.get_visible())
+        self.assertEqual(w.status_label.get_opacity(), 1.0)
+
+    def test_listening_breathes_until_captions_start(self):
+        w = self.window
+        w.show_status('Listening to desktop audio…')
+        self.at(nc.BREATH_MS / 2)
+        self.assertLess(w.label.get_opacity(), 0.6)
+        w.show_text('first words')
+        self.assertEqual(w.label.get_opacity(), 1.0)
+        w.show_text('')
+        w.show_failure('capture', 'Device unavailable. Restarting in 2 s…')
+        self.at(nc.BREATH_MS / 2)
+        self.assertEqual(w.label.get_opacity(), 1.0, 'a problem breathed like a wait')
+
+    def test_a_new_text_colour_blends_in(self):
+        end = time.monotonic() + 0.5  # CSS transitions start once the label has been drawn
+        while time.monotonic() < end:
+            nc.GLib.MainContext.default().iteration(False)
+            time.sleep(0.005)
+        self.addCleanup(self.app.activate_action, 'colour', nc.GLib.Variant('s', 'white'))
+        self.app.activate_action('colour', nc.GLib.Variant('s', 'yellow'))
+        self.assertGreater(self.window.label.get_color().blue, 0.0, 'the colour changed at once')
+
+    def test_quitting_fades_the_box_out_first(self):
+        self.addCleanup(setattr, self.app, 'fading_out', False)
+        with patch.object(nc.Adw.Application, 'quit') as quit:
+            self.app.quit()
+            self.assertEqual(quit.call_count, 0)
+            self.finish(self.window.box)
+            self.assertEqual(self.window.box.get_opacity(), 0.0)
+            self.assertEqual(quit.call_count, 1)
+            self.app.quit()  # the safety timer, or a second Quit, while the box is gone
+            self.assertEqual(quit.call_count, 2)
 
 
 if __name__ == '__main__':
