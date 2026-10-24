@@ -436,7 +436,11 @@ class Stage(Gtk.Widget):
     """The window's content. Floating, it holds the caption box at x, y at the box's own size,
     inside an overlay covering the screen. Docked, the box fills the window, whose size along
     the docked edge the compositor sets from the room beside any panels: the window must not
-    ask for more, or it would cover them."""
+    ask for more, or it would cover them.
+
+    Floating, the box's width is the width it is set to (its minimum): its natural width can
+    be far wider, the whole of an ellipsized status message or a word wider than the box, and
+    the box then ran off the screen, past the part that takes clicks, with no ellipsis shown."""
 
     def __init__(self, child):
         super().__init__()
@@ -454,18 +458,20 @@ class Stage(Gtk.Widget):
 
     def do_measure(self, orientation, for_size):
         minimum, natural, _, _ = self.child.measure(orientation, -1)
+        if orientation == Gtk.Orientation.HORIZONTAL and not self.fill:
+            natural = minimum  # the box's set width (a normal window takes its natural size)
         at = 0 if self.fill else (self.x if orientation == Gtk.Orientation.HORIZONTAL else self.y)
         return minimum + at, natural + at, -1, -1
 
     def do_size_allocate(self, width, height, baseline):
-        w_min, w_nat, _, _ = self.child.measure(Gtk.Orientation.HORIZONTAL, -1)
+        w_min = self.child.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
         if self.fill:
             w = max(width, w_min)
             self.child.allocate(w, max(height, self.child.measure(Gtk.Orientation.VERTICAL, w)[0]), -1, None)
             return
-        h_nat = self.child.measure(Gtk.Orientation.VERTICAL, w_nat)[1]
+        h_nat = self.child.measure(Gtk.Orientation.VERTICAL, w_min)[1]
         at = Gsk.Transform().translate(Graphene.Point().init(self.x, self.y))
-        self.child.allocate(w_nat, h_nat, -1, at)
+        self.child.allocate(w_min, h_nat, -1, at)
 
 
 class Drawer(Gtk.Widget):
@@ -916,9 +922,12 @@ class CaptionWindow(Gtk.ApplicationWindow):
         return 'floating' if self.covered else chosen
 
     def watch_fullscreen(self):
-        """While the captions are docked, have KWin say when an app on their screen is fullscreen."""
+        """While the captions are docked, have KWin say when an app on their screen is fullscreen.
+        Once it stops, what it said no longer holds: docked again later, the captions would float
+        over an app that may have closed meanwhile, until the new watch said otherwise."""
         if self.settings.get('position') == 'floating':
             self.app.fullscreen_watch.stop()
+            self.covered = False
         else:
             self.app.fullscreen_watch.start((self.monitor.get_connector() or '') if self.monitor else '')
 
@@ -1050,10 +1059,15 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.restyle()
 
     def on_monitors_changed(self, monitors, position, removed, added):
-        """A screen was connected or disconnected: stay on a screen that exists, update the menu."""
+        """A screen was connected or disconnected: stay on a screen that exists, go back to the
+        chosen screen when it is plugged in again (a laptop docked again), update the menu."""
         items = [monitors.get_item(i) for i in range(monitors.get_n_items())]
-        if self.monitor not in items:
-            self.use_monitor(self.pick_monitor(self.settings.get('monitor')))
+        connector = self.settings.get('monitor')
+        chosen = next((m for m in items if connector and m.get_connector() == connector), None)
+        if chosen and chosen != self.monitor:
+            self.use_monitor(chosen)
+        elif self.monitor not in items:
+            self.use_monitor(self.pick_monitor(connector))
         self.update_menu(self.layer and len(items) > 1)
 
     def update_menu(self, several_screens):
@@ -1236,8 +1250,13 @@ class CaptionWindow(Gtk.ApplicationWindow):
         return max(1, (height - 2 * PAD_Y - self.status_height) // max(1, self.row_height))
 
     def restyle(self):
+        """Apply the text size, background and text colour, and fit the box. A new background or
+        colour on its own moves nothing, so the box is not fitted again: that wrapped the rows
+        afresh, moving words between them, and stopped the glide and the words arriving."""
         px, alpha = self.settings.get('size'), self.settings.get('opacity')
         colour = COLOURS[self.settings.get('colour')][1]
+        before, self.look = getattr(self, 'look', None), (px, alpha, colour)
+        recoloured = before is not None and before[0] == px and before != self.look
         swatches = ''.join(f'window.nowcaption .colour-{name} {{ background: {rgb}; }}\n'
                            for name, (_, rgb) in COLOURS.items())
         self.css.load_from_string(f"""
@@ -1272,7 +1291,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
                 box-shadow: 0 0 0 2px @popover_bg_color, 0 0 0 3px currentColor; }}
             {swatches}""")
         self.show_values()
-        self.fit()
+        if not recoloured:
+            self.fit()
 
     def font_heights(self):
         """The height of a caption row and of the status row, in the fonts the labels have now."""
@@ -1296,9 +1316,10 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if self.edge in ('top', 'bottom'):
             self.box_width = self.dock_span()
             self.rows = max(1, min(self.settings.get('dock_rows'), self.max_rows()))
-        elif self.edge:
+        elif self.edge:  # a width edited by hand is kept to what dragging the edge allows
             width = self.settings.get('dock_width')
-            self.box_width = width if width > 0 else self.dock_width_for(self.monitor)
+            widest = int(geo.width * 0.6) if geo else 2000
+            self.box_width = max(MIN_WIDTH, min(width, widest)) if width > 0 else self.dock_width_for(self.monitor)
             self.rows = max(1, (self.dock_span() - 2 * PAD_Y) // max(1, self.row_height))
         else:  # a size the user dragged to, kept within the current screen
             width = self.settings.get('width')
