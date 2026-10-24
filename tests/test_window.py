@@ -536,6 +536,190 @@ class AnimationTests(unittest.TestCase):
             self.app.quit()  # the safety timer, or a second Quit, while the box is gone
             self.assertEqual(quit.call_count, 2)
 
+    def effect(self, effect, speed='normal'):
+        for name, value, default in (('word-effect', effect, 'fade'), ('word-speed', speed, 'normal')):
+            self.app.lookup_action(name).activate(nc.GLib.Variant('s', value))
+            self.addCleanup(self.app.lookup_action(name).activate, nc.GLib.Variant('s', default))
+
+    def alphas(self):
+        """The label's arriving words, with their alpha (1 is hidden, 65535 opaque)."""
+        shown, attrs = self.window.label.get_text().encode(), self.window.label.get_attributes()
+        return [(shown[a.start_index:a.end_index].decode(), a.as_int().value)
+                for a in attrs.get_attributes()] if attrs else []
+
+    def test_a_pixel_effect_draws_the_new_word_in_pieces_until_they_land(self):
+        self.effect('assemble')
+        w = self.window
+        w.show_text('so we took the long road')
+        self.at(1000)
+        w.show_text('so we took the long road back')
+        self.at(nc.PIXEL_MS / 2)
+        self.assertEqual(self.alphas(), [('back', 1)])  # hidden in the label, drawn as pieces
+        [(pieces, p)] = w.caption.drawing
+        self.assertGreater(len(pieces.x), 20)
+        self.assertAlmostEqual(p, 0.5, delta=0.1)
+        self.at(nc.PIXEL_MS + 50)
+        self.assertIsNone(w.label.get_attributes())
+        self.assertEqual(w.caption.drawing, [])
+
+    def test_a_whole_passage_at_once_fades_in_instead_of_flying_in_pieces(self):
+        self.effect('rain')
+        w = self.window
+        w.show_text(' '.join(f'w{i}' for i in range(nc.PIXEL_WORDS + 1)))
+        self.at(nc.PIXEL_MS / 2)
+        self.assertEqual(w.caption.drawing, [])
+        alphas = self.alphas()
+        self.assertEqual(len(alphas), nc.PIXEL_WORDS + 1)
+        self.assertTrue(all(1 < alpha < 65535 for _, alpha in alphas))
+
+    def test_mosaic_blends_into_the_label_at_the_end(self):
+        self.effect('mosaic')
+        w = self.window
+        w.show_text('so we took the long road')
+        self.at(1000)
+        w.show_text('so we took the long road back')
+        self.at(nc.PIXEL_MS * 0.4)
+        self.assertEqual(self.alphas(), [('back', 1)])
+        self.at(nc.PIXEL_MS * 0.9)
+        [(word, alpha)] = self.alphas()
+        self.assertTrue(1 < alpha < 65535)
+        self.assertEqual(len(w.caption.drawing), 1)
+
+    def test_none_shows_new_words_at_once(self):
+        self.effect('none')
+        w = self.window
+        w.show_text('so we took the long road')
+        self.at(1000)
+        w.show_text('so we took the long road back')
+        self.assertIsNone(w.label.get_attributes())
+        self.assertEqual((w.caption.appeared, w.caption.drawing), ({}, []))
+        self.assertIn('back', w.label.get_text())
+
+    def test_the_speed_scales_how_long_new_words_take(self):
+        self.effect('dissolve', 'slow')
+        self.assertEqual(self.window.caption.word_us(), nc.PIXEL_MS * 1.75 * 1000)
+        self.effect('fade', 'fast')
+        self.assertEqual(self.window.caption.word_us(), nc.WORD_MS * 0.6 * 1000)
+        self.effect('fade')
+        self.assertEqual(self.window.caption.word_us(), nc.WORD_MS * 1000)  # as before effects
+
+    def test_landed_pieces_are_exactly_the_word(self):
+        label = self.window.label
+        layout = label.create_pango_layout('so we took')
+        pieces = nc.Pieces(layout, label.get_color(), (25.3, 0, 40, 30), 1, 36)
+
+        def image(effect, p):
+            surface = nc.cairo.ImageSurface(nc.cairo.FORMAT_ARGB32, 200, 140)
+            cr = nc.cairo.Context(surface)
+            if effect:
+                pieces.draw(cr, effect, p, 50, 50)
+            else:
+                cr.set_source_surface(pieces.surface, 50 + pieces.left, 50 + pieces.top)
+                cr.paint()
+            surface.flush()
+            return bytes(surface.get_data())
+
+        word = image(None, 1)
+        self.assertNotEqual(word, bytes(len(word)))
+        for effect in ('assemble', 'dissolve', 'rain'):
+            self.assertEqual(image(effect, 0.999), word, effect)
+            self.assertNotEqual(image(effect, 0.3), word, effect)
+
+    def test_pixel_effects_make_a_word_readable_in_under_half_their_time(self):
+        label = self.window.label
+        layout = label.create_pango_layout('headlights')
+        w, h = layout.get_pixel_size()
+        pieces = nc.Pieces(layout, label.get_color(), (0.3, 0, w, h), 1, 40)
+        for effect in ('assemble', 'dissolve', 'rain'):
+            shown, ox, oy, alpha = pieces.state(effect, 0.5)  # 90% in place, at least half opaque
+            self.assertGreaterEqual((shown & (nc.np.hypot(ox, oy) <= 1) & (alpha >= 0.5)).mean(), 0.9, effect)
+            shown, ox, oy, alpha = pieces.state(effect, 0.75)  # and all of it well before the label
+            self.assertTrue(shown.all() and not ox.any() and not oy.any() and (alpha == 1).all(), effect)
+        self.assertGreaterEqual(nc.MOSAIC[int(0.33 / nc.Pieces.SHARP * len(nc.MOSAIC))], 0.36)  # mosaic: a third
+
+@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+class OptionsWindowTests(unittest.TestCase):
+    def setUp(self):
+        self.app = shared_app()
+        self.app.open_options()
+        self.window = self.app.options
+        self.addCleanup(lambda: self.app.options and self.app.options.close())
+        for name, default in (('word-effect', 'fade'), ('word-speed', 'normal'), ('source', 'desktop')):
+            self.addCleanup(self.app.lookup_action(name).change_state, nc.GLib.Variant('s', default))
+            self.addCleanup(self.app.settings.set, name.replace('-', '_'), default)
+
+    def find(self, widget, kind):
+        child = widget.get_first_child()
+        while child:
+            if isinstance(child, kind):
+                yield child
+            yield from self.find(child, kind)
+            child = child.get_next_sibling()
+
+    def checks(self):
+        return {c.get_action_target_value().get_string(): c for c in self.find(self.window, nc.Gtk.CheckButton)}
+
+    def test_choices_show_in_the_sample_and_reach_the_captions_only_with_apply(self):
+        checks = self.checks()
+        self.assertEqual(set(checks), set(nc.WORD_EFFECTS) | {'desktop', 'mic'})
+        self.assertFalse(self.window.apply_button.get_sensitive())
+        checks['assemble'].activate()
+        speeds = {b.get_label(): b for b in self.find(self.window, nc.Gtk.ToggleButton)
+                  if b.get_action_name() == 'options.word-speed'}
+        self.assertEqual(set(speeds), {'Fast', 'Normal', 'Slow'})
+        speeds['Slow'].emit('clicked')  # activate() clicks only after the press animation
+        self.assertEqual((self.window.preview.caption.effect, self.window.preview.caption.speed), ('assemble', 1.75))
+        self.assertEqual((self.app.settings.get('word_effect'), self.app.settings.get('word_speed')),
+                         ('fade', 'normal'))
+        self.assertTrue(self.window.apply_button.get_sensitive())
+        self.window.apply_button.emit('clicked')
+        self.assertEqual((self.app.settings.get('word_effect'), self.app.settings.get('word_speed')),
+                         ('assemble', 'slow'))
+        self.assertEqual(self.app.lookup_action('word-effect').get_state().get_string(), 'assemble')
+        self.assertFalse(self.window.apply_button.get_sensitive())
+
+    def test_closing_without_apply_drops_the_choices(self):
+        self.checks()['rain'].activate()
+        self.checks()['mic'].activate()
+        self.window.close()
+        self.assertIsNone(self.app.options)
+        self.assertEqual((self.app.settings.get('word_effect'), self.app.settings.get('source')), ('fade', 'desktop'))
+        self.app.open_options()  # opens again with what the captions use
+        self.window = self.app.options
+        self.assertTrue(self.checks()['fade'].get_active())
+        self.assertTrue(self.checks()['desktop'].get_active())
+
+    def test_listen_to_lives_here_and_waits_for_apply_too(self):
+        checks = self.checks()
+        self.assertTrue(checks['desktop'].get_active())
+        checks['mic'].activate()
+        self.assertEqual(self.app.settings.get('source'), 'desktop')
+        self.window.apply_button.emit('clicked')
+        self.assertEqual(self.app.settings.get('source'), 'mic')
+
+    def test_speed_is_greyed_out_for_words_that_appear_at_once(self):
+        [speed] = [row for row in self.find(self.window, nc.Adw.ActionRow) if row.get_title() == 'Speed']
+        self.assertTrue(speed.get_sensitive())
+        self.checks()['none'].activate()
+        self.assertFalse(speed.get_sensitive())
+        self.checks()['rain'].activate()
+        self.assertTrue(speed.get_sensitive())
+
+    def test_the_sample_keeps_adding_words_and_starts_again(self):
+        preview = self.window.preview
+        preview.play(False)
+        preview.shown = 0
+        preview.next_word()
+        preview.next_word()
+        self.assertEqual(preview.caption.words, nc.Preview.SAMPLE[:2])
+        preview.shown = len(nc.Preview.SAMPLE)
+        preview.next_word()
+        self.assertEqual(preview.caption.words, nc.Preview.SAMPLE[:1])
+
+    def test_closing_forgets_the_window(self):
+        self.window.close()
+        self.assertIsNone(self.app.options)
+
 
 class FakeLayerShell:
     """Records what NowCaption asks of gtk4-layer-shell; the test display has none."""

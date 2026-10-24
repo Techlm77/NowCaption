@@ -37,10 +37,11 @@ Gear Lever or AppImageUpdate can keep it up to date.
 Captions start straight away from whatever your computer is playing. Drag them to
 move, drag an edge to resize. **Right-click** for the menu:
 
-- **Listen to:** desktop audio or your microphone
 - **Appearance:** text size, background and text colour
-- **Transcript:** open the transcript, keep history, or clear this session
 - **Position:** floating, or docked along an edge of the screen; reset the position and size
+- **Transcript:** open the transcript, keep history, or clear this session
+- **More options…:** what to listen to, desktop audio or your microphone, and how
+  new words appear
 
 **Transcript.** **Open transcript** shows everything captioned, in a window you can
 scroll, select and copy from, and search with Ctrl+F. Earlier sessions are listed under
@@ -60,7 +61,14 @@ lavender, brown or red. The captions change as soon as you click, so you can com
 colours before closing the menu. NowCaption remembers your choice, like your text size,
 background and position, every time it starts and after updates.
 
-**Motion.** New lines glide up instead of jumping, and new words fade in. The captions
+**New words.** New words fade in by default. Under **More options…** they can appear at
+once instead, or arrive as pixels: **Pixel assemble** flies them together from left to
+right, **Pixel dissolve** switches them on bit by bit, **Mosaic sharpen** brings them into
+focus from big blocks, and **Pixel rain** drops them into place, each at a fast, normal or
+slow speed. A sample caption in that window shows each one as you pick it, and **Apply**
+uses your choices for the captions.
+
+**Motion.** New lines glide up instead of jumping. The captions
 fade in when NowCaption starts and out when it quits, and "Listening…" gently pulses
 while NowCaption waits for speech. For no motion at all, turn animations off for your
 desktop (on Plasma, set **Animation speed** to **Instant**; on GNOME, turn on **Reduce
@@ -81,7 +89,8 @@ again when it closes; elsewhere, choose **Floating** for fullscreen apps. Floati
 keep their bottom edge in place when you change the text size.
 
 **No captions?** Make sure sound plays through your default output device. After
-switching to headphones, choose **Desktop audio** again.
+switching to headphones, choose **Desktop audio** again under **More options…** and
+press **Apply**.
 
 **First word missing?** When speech is hard to make out, such as strong accents or
 unclear recordings, the first word after a pause is the one most often missed or misheard,

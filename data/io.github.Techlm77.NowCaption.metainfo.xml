@@ -57,6 +57,24 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.1.15" date="2026-10-24">
+      <description>
+        <p>
+          Choose how new words appear, and a new More options window for the settings the menu
+          has no room for.
+        </p>
+        <ul>
+          <li>New words can appear at once, fade in, or arrive as pixels: Pixel assemble,
+            Pixel dissolve, Mosaic sharpen or Pixel rain, at a fast, normal or slow speed</li>
+          <li>The pixel effects are cut from the text itself, so each word lands exactly as it
+            reads</li>
+          <li>More options shows a sample caption, so you can see each effect before you press
+            Apply</li>
+          <li>Listen to (desktop audio or microphone) moved to More options; the menu now shows
+            Appearance, Position, Transcript, then More options</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.14" date="2026-10-24">
       <description>
         <p>

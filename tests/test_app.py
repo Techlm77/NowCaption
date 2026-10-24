@@ -31,6 +31,8 @@ class FakeWindow:
     def __init__(self):
         self.text, self.statuses = '', []
         self.repositions = 0
+        self.caption = NS(effects=[])
+        self.caption.set_effect = lambda effect, speed: self.caption.effects.append((effect, speed))
 
     def reposition(self):
         self.repositions += 1
@@ -131,18 +133,37 @@ class MenuTests(unittest.TestCase):
     def test_the_background_filter_is_gone_from_the_menu_and_actions(self):
         a = AppTests.make(self)
         labels = list(self.labels(a.build_menu(True)))
-        self.assertIn('Desktop audio', labels)
         self.assertNotIn('Background filter', labels)
         self.assertIsNone(a.lookup_action('music-filter'))
 
     def test_the_menu_has_labelled_sections_and_opens_the_transcript(self):
         a = AppTests.make(self)
         labels = list(self.labels(a.build_menu(True)))
-        for label in ('Listen to', 'Appearance', 'Transcript', 'Open transcript', 'Keep 7 days of history',
-                      'Clear this session', 'Reset position and size', 'Move to next screen', 'Quit'):
+        for label in ('Appearance', 'Transcript', 'Open transcript', 'Keep 7 days of history',
+                      'Clear this session', 'Reset position and size', 'Move to next screen', 'More options…', 'Quit'):
             self.assertIn(label, labels)
         self.assertNotIn('Copy transcript', labels)
+        # appearance, the box's place, the transcript, then More options for the rest
+        order = [labels.index(label)
+                 for label in ('Appearance', 'Reset position and size', 'Transcript', 'More options…')]
+        self.assertEqual(order, sorted(order))
+        # what to listen to moved to More options
+        self.assertNotIn('Listen to', labels)
+        self.assertNotIn('Desktop audio', labels)
+        self.assertIsNotNone(a.lookup_action('source'))
         self.assertNotIn('Move to next screen', list(self.labels(a.build_menu(False))))
+
+    def test_how_new_words_arrive_is_kept_and_shown_on_the_captions(self):
+        a = AppTests.make(self)
+        for key, default in (('word_effect', 'fade'), ('word_speed', 'normal')):  # other tests share the file
+            self.addCleanup(a.settings.set, key, default)
+        self.assertEqual(a.lookup_action('word-effect').get_state().get_string(), 'fade')
+        self.assertEqual(a.lookup_action('word-speed').get_state().get_string(), 'normal')
+        a.lookup_action('word-effect').activate(nc.GLib.Variant('s', 'assemble'))
+        a.lookup_action('word-speed').activate(nc.GLib.Variant('s', 'slow'))
+        a.lookup_action('word-effect').activate(nc.GLib.Variant('s', 'sparkles'))  # not an effect
+        self.assertEqual((a.settings.get('word_effect'), a.settings.get('word_speed')), ('assemble', 'slow'))
+        self.assertEqual(a.window.caption.effects[-1], ('assemble', 1.75))
 
     def customs(self, model):
         for i in range(model.get_n_items()):
@@ -229,7 +250,10 @@ class SettingsTests(unittest.TestCase):
         kf.set_integer('main', 'width', 5)
         kf.set_string('main', 'source', 'speakers')
         kf.set_string('main', 'colour', 'purple')
+        kf.set_string('main', 'word_effect', 'sparkles')
+        kf.set_string('main', 'word_speed', 'warp')
         self.assertEqual(self.settings.get('colour'), 'white')
+        self.assertEqual((self.settings.get('word_effect'), self.settings.get('word_speed')), ('fade', 'normal'))
         self.assertEqual(self.settings.get('size'), nc.SIZES[0])
         self.assertEqual(self.settings.get('opacity'), 1.0)
         self.assertEqual(self.settings.get('rows'), 1)

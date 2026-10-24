@@ -14,6 +14,7 @@ import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 import cairo  # noqa: E402
+import numpy as np  # noqa: E402
 gi.require_version('Pango', '1.0')
 gi.require_version('Gsk', '4.0')
 gi.require_version('Graphene', '1.0')
@@ -60,6 +61,18 @@ COLOURS = {'white': ('White', '#ffffff'), 'yellow': ('Yellow', '#ffff00'),
 FADE_IN_MS, FADE_OUT_MS = 200, 150
 GLIDE_MS, WORD_MS, STATUS_MS, CHANGE_MS, BREATH_MS = 200, 120, 150, 150, 2000
 UNDOCK_MS, DOCK_MS = 220, 260  # docked captions slide into their edge, and out of the new one
+# How new words arrive, chosen under More options. The pixel effects cut the word into small
+# pieces cut from the text itself, so the pieces put together are exactly the word.
+WORD_EFFECTS = {'none': ('None', 'Each word appears at once'),
+                'fade': ('Fade', 'Each word fades in'),
+                'assemble': ('Pixel assemble', 'Left to right, the pixels fade in as they fly into place'),
+                'dissolve': ('Pixel dissolve', 'The pixels switch on in random order'),
+                'mosaic': ('Mosaic sharpen', 'The word starts as big blocks and sharpens'),
+                'rain': ('Pixel rain', 'The pixels drop into place from above, left to right')}
+WORD_SPEEDS = {'fast': ('Fast', 0.6), 'normal': ('Normal', 1.0), 'slow': ('Slow', 1.75)}
+PIXEL_MS = 200  # a pixel effect at normal speed (the fade takes WORD_MS)
+PIXEL_WORDS = 8  # more words than this arriving at once (a whole passage) fade in instead
+MOSAIC = (0.07, 0.11, 0.16, 0.24, 0.36, 0.55, 1.0)  # the mosaic's steps, as a share of full detail
 BREATH_STEP_MS = 40  # breathing is slow and may last long: 25 steps a second, not every frame
 # Where the captions go: floating where they are dragged, or docked along an edge of the screen.
 # Docked, they reserve that strip of the screen (the layer-shell exclusive zone), so maximised and
@@ -71,9 +84,11 @@ ALONG = {'top': ('left', 'right'), 'bottom': ('left', 'right'), 'left': ('top', 
          'right': ('top', 'bottom')}  # the edges a docked strip also reaches
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
             'width': -1, 'rows': ROWS, 'colour': 'white', 'history': True,
-            'position': 'floating', 'dock_rows': ROWS, 'dock_width': -1}
+            'position': 'floating', 'dock_rows': ROWS, 'dock_width': -1,
+            'word_effect': 'fade', 'word_speed': 'normal'}
 LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'dock_rows': (1, 100)}
-CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS), 'position': tuple(POSITIONS)}
+CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS), 'position': tuple(POSITIONS),
+           'word_effect': tuple(WORD_EFFECTS), 'word_speed': tuple(WORD_SPEEDS)}
 
 
 # On KDE Plasma, docked captions float over a fullscreen app on their screen (which hides the
@@ -287,6 +302,123 @@ def ease_out(p):
     return 1 - (1 - p) ** 3
 
 
+class Pieces:
+    """A new word cut into small square pieces, for the pixel effects. The word is drawn once,
+    as the label draws it, and each piece keeps the text's own smooth edges, so once every
+    piece has landed they show exactly the word. Pieces with no ink are left out. Each frame
+    puts all the pieces into one image, with numpy, rather than drawing them one by one."""
+
+    def __init__(self, layout, colour, box, scale, row_height):
+        """layout: the label's layout without the fading; box: the word's (x, y, width, height)
+        in it, px; scale: the screen's pixels per px."""
+        x, y, w, h = box
+        self.left, self.top = math.floor(x) - 1, math.floor(y)  # whole px, so landed pieces sit on pixels
+        self.width, self.height = math.ceil(x + w) + 1 - self.left, math.ceil(y + h) - self.top
+        snap = Gtk.Snapshot()
+        snap.scale(scale, scale)
+        snap.translate(Graphene.Point().init(-self.left, -self.top))
+        snap.push_clip(Graphene.Rect().init(self.left, self.top, self.width, self.height))
+        snap.append_layout(layout, colour)
+        snap.pop()
+        width, height = max(1, math.ceil(self.width * scale)), max(1, math.ceil(self.height * scale))
+        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        node = snap.to_node()
+        if node:
+            node.draw(cairo.Context(self.surface))
+        self.surface.flush()
+        self.surface.set_device_scale(scale, scale)
+        # pieces about 1/17 of a row across: the same look, and about as many, at any text size
+        self.scale, self.cell = scale, max(1, round(max(2, round(row_height / 17)) * scale))  # screen pixels
+        cell, self.size = self.cell, self.cell / scale
+        rows, cols = -(-height // cell), -(-width // cell)
+        word = np.zeros((rows * cell, cols * cell, 4), np.uint8)
+        pixels = np.frombuffer(self.surface.get_data(), np.uint8).reshape(height, -1)[:, :width * 4]
+        word[:height, :width] = pixels.reshape(height, width, 4)
+        cells = word.reshape(rows, cell, cols, cell, 4).transpose(0, 2, 1, 3, 4)
+        r, c = np.nonzero(cells[..., 3].max(axis=(2, 3)))
+        self.cells, n = cells[r, c], len(r)  # each piece's pixels, as cairo keeps them
+        self.x, self.y = c * self.size, r * self.size  # each piece's place in the word, px
+        self.across = self.x / self.width  # 0 at the word's left edge, nearly 1 at its right
+        rng = np.random.default_rng()
+        angle, reach = rng.uniform(0, 2 * math.pi, n), rng.uniform(0.4, 1.5, n) * row_height
+        self.dx, self.dy = np.cos(angle) * reach, np.sin(angle) * reach * 0.7  # where assemble starts
+        self.delay = rng.uniform(0, 0.06, n)  # so assemble's left-to-right front is not a hard edge
+        self.order = rng.random(n)  # when dissolve switches each piece on
+        self.drop = rng.uniform(0.5, 1.4, n) * row_height  # how far rain drops from
+        self.margin = round((1.5 * row_height + self.size) * scale)  # screen pixels around the word
+        self.mosaics, self.key = {}, None
+
+    SHARP = 0.55  # the mosaic has its full detail by here, then blends into the label
+
+    @classmethod
+    def blend(cls, p):
+        """How far the mosaic has blended into the label, p of the way through."""
+        return max(0.0, (p - cls.SHARP) / (1 - cls.SHARP))
+
+    def bounds(self, x, y):
+        """Where the pieces can be while the word lands at (x, y), as x, y, width, height."""
+        m = self.margin / self.scale
+        return x + self.left - m, y + self.top - m, self.width + 2 * m, self.height + 2 * m
+
+    def state(self, effect, p):
+        """Each piece p of the way (0 to 1) through a pixel effect: whether it shows, how far
+        it is from its place (px), and its opacity. The pieces rush in and then settle, so most
+        of the word can be read before half the time is up; all have landed by 0.75."""
+        zero = np.zeros(len(self.x))
+        if effect == 'assemble':
+            t = p - (self.across * 0.25 + self.delay)
+            q = 1 - (1 - np.clip(t / 0.4, 0, 1)) ** 5
+            return t > 0, self.dx * (1 - q), self.dy * (1 - q), np.clip(t / 0.1, 0, 1)
+        if effect == 'rain':
+            t = (p - self.across * 0.25) / 0.45
+            q = 1 - (1 - np.clip(t, 0, 1)) ** 5
+            return t > 0, zero, -self.drop * (1 - q), q
+        return p >= self.order * 0.5, zero, zero, zero + 1  # dissolve
+
+    def draw(self, cr, effect, p, x, y):
+        """Draw the word p of the way (0 to 1) through its effect, landing at (x, y)."""
+        x, y = x + self.left, y + self.top
+        if effect == 'mosaic':
+            step = MOSAIC[min(len(MOSAIC) - 1, int(p / self.SHARP * len(MOSAIC)))]
+            small = self.mosaics.get(step)
+            if small is None:
+                w = max(1, round(self.surface.get_width() * step))
+                h = max(1, round(self.surface.get_height() * step))
+                small = self.mosaics[step] = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
+                c = cairo.Context(small)
+                c.scale(w / self.width, h / self.height)
+                c.set_source_surface(self.surface, 0, 0)
+                c.paint()
+            cr.save()
+            cr.translate(x, y)
+            cr.scale(self.width / small.get_width(), self.height / small.get_height())
+            cr.set_source_surface(small, 0, 0)
+            cr.get_source().set_filter(cairo.FILTER_NEAREST)
+            cr.paint_with_alpha(min(1.0, p * 6) * (1 - self.blend(p)))
+            cr.restore()
+            return
+        shown, ox, oy, alpha = self.state(effect, p)
+        # Put every piece in one image, on whole screen pixels (landed, exactly where the word's are)
+        m, cell = self.margin, self.cell
+        width, height = self.surface.get_width() + 2 * m, self.surface.get_height() + 2 * m
+        px = m + np.rint((self.x + ox) * self.scale).astype(np.intp)
+        py = m + np.rint((self.y + oy) * self.scale).astype(np.intp)
+        k = np.nonzero(shown & (px >= 0) & (py >= 0) & (px + cell <= width) & (py + cell <= height))[0]
+        if not len(k):
+            return
+        pixels = self.cells[k]
+        if (alpha[k] < 1).any():
+            pixels = (pixels * alpha[k, None, None, None]).astype(np.uint8)  # premultiplied: all four
+        span = np.arange(cell)
+        frame = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        image = np.ndarray((height, frame.get_stride() // 4, 4), np.uint8, frame.get_data())
+        image[py[k, None, None] + span[None, :, None], px[k, None, None] + span[None, None, :]] = pixels
+        frame.mark_dirty()
+        frame.set_device_scale(self.scale, self.scale)
+        cr.set_source_surface(frame, x - m / self.scale, y - m / self.scale)
+        cr.paint()
+
+
 class StyledLabel(Gtk.Label):
     """A Gtk.Label that calls styled() once GTK has applied new CSS to it. GTK applies a new
     font size only when it next lays the window out, after restyle() has measured the font."""
@@ -386,9 +518,10 @@ class Drawer(Gtk.Widget):
 class CaptionText(Gtk.Widget):
     """The caption rows: a Gtk.Label, which screen readers read, clipped to exactly the rows.
     When the passage moves up, the rows glide up instead of jumping (the label then shows the
-    rows on their way out too, moved up by self.offset). New words fade in. A status message
-    shown in place of captions fades in, and breathes while it waits for speech. Without
-    animations, the label shows just the last rows."""
+    rows on their way out too, moved up by self.offset). New words arrive with the chosen effect:
+    they fade in, or the label hides them while their Pieces are drawn over it, until every
+    piece has landed. A status message shown in place of captions fades in, and breathes while
+    it waits for speech. Without animations, the label shows just the last rows."""
 
     def __init__(self, label, **kwargs):
         super().__init__(overflow=Gtk.Overflow.HIDDEN, **kwargs)
@@ -398,7 +531,9 @@ class CaptionText(Gtk.Widget):
         self.flexible = False  # docked at a side, the compositor's height decides the rows
         self.text, self.lines, self.words, self.status = '', [], [], False
         self.glide, self.glide_start = 0.0, 0  # rows to glide up, counted from glide_start (µs)
-        self.appeared = {}  # passage word index: when it appeared (µs), while it fades in
+        self.appeared = {}  # passage word index: when it appeared (µs), while it arrives
+        self.effect, self.speed = 'fade', 1.0  # how new words arrive, and the speed's factor
+        self.pieces, self.drawing = {}, []  # passage word index: its Pieces; what to draw, with progress
         self.shown_at = self.breath_start = None  # status message: when it appeared, began breathing
         self.offset, self.tick, self.breath_timer, self.attributed = 0.0, 0, 0, False
 
@@ -432,8 +567,18 @@ class CaptionText(Gtk.Widget):
         """A new width, font or number of rows: the rows are shown at rest, wrapped afresh."""
         self.layout, self.rows, self.row_height, self.flexible = layout, rows, row_height, flexible
         self.wrapper = Rows(layout, row_height)
-        self.glide, self.appeared = 0.0, {}
+        self.glide, self.appeared, self.pieces = 0.0, {}, {}
         self.queue_resize()
+
+    def set_effect(self, effect, speed):
+        """How new words arrive (a WORD_EFFECTS name), and the factor of its WORD_SPEEDS speed."""
+        self.effect, self.speed, self.pieces = effect, speed, {}
+
+    def word_us(self):
+        """How long a new word takes to arrive, in µs."""
+        if self.effect == 'none':
+            return 0
+        return (WORD_MS if self.effect == 'fade' else PIXEL_MS) * self.speed * 1000
 
     def show(self, text, status=False, waiting=False):
         """Show the passage, or with status, a status message (waiting: one that waits for
@@ -447,7 +592,8 @@ class CaptionText(Gtk.Widget):
                 self.glide = 0.0
             elif moved:
                 self.glide, self.glide_start = self.gliding(now) + moved, now
-            self.appeared = {} if status else self.carry(words, now, fresh=self.status or not self.words)
+            fresh = self.status or not self.words
+            self.appeared = {} if status or self.effect == 'none' else self.carry(words, now, fresh)
             if not (status and text):
                 self.shown_at = None
             elif not self.status or text != self.text:
@@ -500,7 +646,7 @@ class CaptionText(Gtk.Widget):
         return self.glide * (1 - ease_out(max(0.0, p)))
 
     def update(self, now):
-        """Show the rows, the words fading in and the status message as of now (µs). True
+        """Show the rows, the words arriving and the status message as of now (µs). True
         while the rows, words or a status message's fade still move (breathing is timed by
         breathe instead)."""
         glide = self.gliding(now)
@@ -513,10 +659,14 @@ class CaptionText(Gtk.Widget):
         if offset != self.offset:
             self.offset = offset
             self.queue_allocate()
-        self.appeared = {i: t for i, t in self.appeared.items() if now - t < WORD_MS * 1000}
+        self.appeared = {i: t for i, t in self.appeared.items() if now - t < self.word_us()}
+        attrs, drawing = self.arrivals(text, now) if self.appeared else (None, [])
         if self.appeared or self.attributed:
-            self.label.set_attributes(self.fading(text, now) if self.appeared else None)
+            self.label.set_attributes(attrs)
             self.attributed = bool(self.appeared)
+        if drawing or self.drawing:
+            self.queue_draw()
+        self.drawing = drawing
         opacity = 1.0
         if self.shown_at is not None:
             p = (now - self.shown_at) / (STATUS_MS * 1000)
@@ -529,19 +679,66 @@ class CaptionText(Gtk.Widget):
         self.label.set_opacity(opacity)
         return bool(self.glide or self.appeared or self.shown_at is not None)
 
-    def fading(self, text, now):
-        """Pango attributes that fade in the words that just appeared, in the shown text."""
+    def arrivals(self, text, now):
+        """Pango attributes for the words arriving in the shown text: faded in, or hidden while
+        their pieces are drawn over the label; and those pieces, as (Pieces, progress 0 to 1)."""
         spans = [m.span() for m in re.finditer(r'\S+', text)]
         first = len(self.words) - len(spans)  # the passage index of the first word shown
-        attrs = Pango.AttrList()
+        burst = {}  # words that appeared together, such as a whole passage after a status message
+        for t in self.appeared.values():
+            burst[t] = burst.get(t, 0) + 1
+        attrs, drawing, pieces, layout = Pango.AttrList(), [], {}, None
         for i, t in self.appeared.items():
-            if 0 <= i - first < len(spans):
-                start, end = spans[i - first]
-                p = min(1.0, max(0.0, (now - t) / (WORD_MS * 1000)))
-                alpha = Pango.attr_foreground_alpha_new(max(1, int(65535 * p)))  # 0 means opaque
-                alpha.start_index, alpha.end_index = len(text[:start].encode()), len(text[:end].encode())
-                attrs.insert(alpha)
-        return attrs
+            if not 0 <= i - first < len(spans):
+                continue
+            a, b = spans[i - first]
+            start, end = len(text[:a].encode()), len(text[:b].encode())
+            p = alpha = min(1.0, max(0.0, (now - t) / self.word_us()))
+            if self.effect != 'fade' and burst[t] <= PIXEL_WORDS:
+                if layout is None:
+                    layout = self.label.get_layout().copy()
+                    layout.set_attributes(None)
+                word = self.word_pieces(i, layout, text[a:b], start, end)
+                if word:
+                    pieces[i] = word
+                    drawing.append((word, p))
+                    alpha = Pieces.blend(p) if self.effect == 'mosaic' else 0.0
+            attr = Pango.attr_foreground_alpha_new(max(1, int(65535 * alpha)))  # 0 means opaque
+            attr.start_index, attr.end_index = start, end
+            attrs.insert(attr)
+        self.pieces = pieces
+        return attrs, drawing
+
+    def word_pieces(self, i, layout, word, start, end):
+        """The Pieces of passage word i, shown as word between byte offsets start and end of
+        the layout; made again if it moved or the colour changed."""
+        first, last = layout.index_to_pos(start), layout.index_to_pos(end)
+        box = (first.x / Pango.SCALE, first.y / Pango.SCALE, (last.x - first.x) / Pango.SCALE,
+               first.height / Pango.SCALE)
+        native = self.get_native()
+        surface = native.get_surface() if native else None
+        scale = surface.get_scale() if surface else self.get_scale_factor()
+        colour = self.label.get_color()
+        key = (word, tuple(round(v * 8) for v in box), colour.to_string(), scale)
+        pieces = self.pieces.get(i)
+        if pieces is None or pieces.key != key:
+            try:
+                pieces = Pieces(layout, colour, box, scale, self.row_height)
+            except (cairo.Error, GLib.Error, ValueError) as e:
+                LOG.debug('Could not cut %r into pieces, fading it in: %s', word, e)
+                return None
+            pieces.key = key
+        return pieces
+
+    def do_snapshot(self, snapshot):
+        Gtk.Widget.do_snapshot(self, snapshot)  # the label
+        width, height = self.get_width(), self.get_height()
+        for pieces, p in self.drawing:  # over the label, moved up with it while the rows glide
+            x, y, w, h = pieces.bounds(0, -self.offset)
+            x0, y0, x1, y1 = max(0, x), max(0, y), min(width, x + w), min(height, y + h)
+            if x1 > x0 and y1 > y0:
+                cr = snapshot.append_cairo(Graphene.Rect().init(x0, y0, x1 - x0, y1 - y0))
+                pieces.draw(cr, self.effect, p, 0, -self.offset)
 
     def start(self, now=None):
         """Show the current state, and keep updating it while anything moves."""
@@ -612,6 +809,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.label.add_css_class('caption-text')
         self.caption = CaptionText(self.label, margin_start=PAD_X, margin_end=PAD_X,
                                    margin_top=PAD_Y, margin_bottom=PAD_Y)
+        self.caption.set_effect(*app.word_effect())
         self.rows_area = Gtk.Overlay(child=self.caption)  # docked, status messages show over it
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.box.add_css_class('caption-box')
@@ -1048,6 +1246,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
                                              transition: background-color {CHANGE_MS}ms ease-out; }}
             window.nowcaption .caption-text {{ color: {colour}; font-size: {px}px; font-weight: 500;
                                               transition: color {CHANGE_MS}ms ease-out; }}
+            .caption-preview {{ background: rgba(0, 0, 0, {alpha}); border-radius: 14px; }}
+            .caption-preview .caption-text {{ color: {colour}; font-size: {min(px, Preview.MAX_SIZE)}px;
+                                             font-weight: 500; transition: color {CHANGE_MS}ms ease-out; }}
             window.nowcaption .caption-status {{ color: #cccccc; font-size: {max(14, round(px * 0.55))}px;
                                                 padding: 0 {PAD_X}px {PAD_Y}px; }}
             window.nowcaption.docked .caption-box {{ border-radius: 0; }}
@@ -1665,6 +1866,148 @@ class TranscriptWindow(Adw.Window):
         dialog.present(self)
 
 
+class Preview(Gtk.Box):
+    """A sample caption under More options, in the captions' colour and background, that keeps
+    adding words like speech, so each way for new words to arrive can be seen before choosing it."""
+
+    WIDTH, ROWS, MAX_SIZE, EVERY_MS = 420, 2, 26, 380  # text width (px), rows, largest text (px), a word every
+    SAMPLE = ('So we took the long road back past the old sawmill, and it was getting dark. The radio '
+              'kept cutting out, then we saw headlights behind us, way too close.').split()
+
+    def __init__(self, app):
+        super().__init__(css_classes=['caption-preview'], halign=Gtk.Align.CENTER,
+                         accessible_role=Gtk.AccessibleRole.PRESENTATION)
+        self.update_state([Gtk.AccessibleState.HIDDEN], [True])  # sample text, not captions
+        self.label = StyledLabel(self.fit, xalign=0, yalign=0, wrap=False, single_line_mode=False)
+        self.label.add_css_class('caption-text')
+        self.caption = CaptionText(self.label, margin_start=PAD_X, margin_end=PAD_X,
+                                   margin_top=PAD_Y, margin_bottom=PAD_Y)
+        self.caption.set_size_request(self.WIDTH, -1)
+        self.caption.set_effect(*app.word_effect())
+        self.append(self.caption)
+        self.shown, self.row_height, self.timer = 0, None, 0
+        self.connect('map', lambda *a: self.play(True))
+        self.connect('unmap', lambda *a: self.play(False))
+        self.fit()
+
+    def fit(self):
+        """Wrap the sample to the preview, in the font GTK has applied to it."""
+        height = self.label.create_pango_layout('Ag').get_pixel_size()[1]
+        if height != self.row_height:
+            self.row_height = height
+            layout = self.label.create_pango_layout('')
+            layout.set_width(self.WIDTH * Pango.SCALE)
+            layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+            self.caption.configure(layout, self.ROWS, height)
+            self.caption.show(' '.join(self.SAMPLE[:self.shown]))
+
+    def play(self, on):
+        if self.timer:
+            GLib.source_remove(self.timer)
+            self.timer = 0
+        if on:
+            self.timer = GLib.timeout_add(self.EVERY_MS, self.next_word)
+
+    def next_word(self):
+        if self.shown == len(self.SAMPLE):  # start again, every word new
+            self.shown = 0
+            self.caption.show('')
+        self.shown += 1
+        self.caption.show(' '.join(self.SAMPLE[:self.shown]))
+        return GLib.SOURCE_CONTINUE
+
+
+class OptionsWindow(Adw.Window):
+    """More options, for what the caption box's menu has no room for: what to listen to, and
+    how new words arrive (with a sample caption showing it) and how fast. Choices show in the
+    sample first and reach the captions only with Apply; closing without it drops them."""
+
+    SETTINGS = {'source': 'source', 'word-effect': 'word_effect', 'word-speed': 'word_speed'}  # action: key
+
+    def __init__(self, app):
+        super().__init__(application=app, title='More options', default_width=560, default_height=760)
+        self.app = app
+        self.chosen = Gio.SimpleActionGroup()  # the choices made here, until Apply
+        for name, key in self.SETTINGS.items():
+            action = Gio.SimpleAction.new_stateful(name, GLib.VariantType.new('s'),
+                                                   GLib.Variant('s', app.settings.get(key)))
+            action.connect('activate', self.on_choice)
+            self.chosen.add_action(action)
+        self.insert_action_group('options', self.chosen)
+        page = Adw.PreferencesPage()
+        listen = Adw.PreferencesGroup(title='Listen to')
+        self.choices(listen, 'options.source', (('desktop', 'Desktop audio', 'Everything your computer plays'),
+                                                ('mic', 'Microphone', 'Your microphone, for the people around you')))
+        page.add(listen)
+        self.preview = Preview(app)
+        sample = Adw.PreferencesGroup(title='New words', description='How each new word appears in the captions')
+        sample.add(self.preview)
+        page.add(sample)
+        words = Adw.PreferencesGroup()
+        self.choices(words, 'options.word-effect', ((name, title, subtitle)
+                                                   for name, (title, subtitle) in WORD_EFFECTS.items()))
+        speeds = Gtk.Box(css_classes=['linked'], valign=Gtk.Align.CENTER)
+        for name, (label, _) in WORD_SPEEDS.items():
+            speeds.append(Gtk.ToggleButton(label=label, action_name='options.word-speed',
+                                           action_target=GLib.Variant('s', name)))
+        self.speed = Adw.ActionRow(title='Speed')
+        self.speed.add_suffix(speeds)
+        words.add(self.speed)
+        page.add(words)
+        motion = Adw.PreferencesGroup(description='With animations turned off for your desktop, new words '
+                                                  'appear at once, whichever way is chosen.')
+        page.add(motion)
+        self.apply_button = Gtk.Button(label='Apply', css_classes=['suggested-action'],
+                                       tooltip_text='Use these choices for the captions')
+        self.apply_button.connect('clicked', lambda *a: self.apply())
+        header = Adw.HeaderBar()
+        header.pack_end(self.apply_button)
+        view = Adw.ToolbarView(content=page)
+        view.add_top_bar(header)
+        self.set_content(view)
+        close = Gtk.ShortcutController()
+        close.add_shortcut(Gtk.Shortcut.new(Gtk.ShortcutTrigger.parse_string('Escape'),
+                                            Gtk.NamedAction.new('window.close')))
+        self.add_controller(close)
+        self.show_choices()
+
+    def choice(self, name):
+        return self.chosen.lookup_action(name).get_state().get_string()
+
+    def changed(self):
+        """The choices that differ from what the captions use."""
+        return [name for name, key in self.SETTINGS.items() if self.choice(name) != self.app.settings.get(key)]
+
+    def on_choice(self, action, value):
+        action.set_state(value)
+        self.show_choices()
+
+    def show_choices(self):
+        effect = self.choice('word-effect')
+        self.preview.caption.set_effect(effect, WORD_SPEEDS[self.choice('word-speed')][1])
+        self.speed.set_sensitive(effect != 'none')  # no speed for words that appear at once
+        self.apply_button.set_sensitive(bool(self.changed()))
+
+    def apply(self):
+        for name in self.changed():  # only those, so the same source does not restart capture
+            self.app.lookup_action(name).activate(GLib.Variant('s', self.choice(name)))
+        self.show_choices()
+
+    @staticmethod
+    def choices(group, action, options):
+        """A row for each (value, title, subtitle), chosen with a radio button bound to action."""
+        first = None
+        for value, title, subtitle in options:
+            check = Gtk.CheckButton(action_name=action, action_target=GLib.Variant('s', value),
+                                    valign=Gtk.Align.CENTER)
+            if first:
+                check.set_group(first)
+            first = first or check
+            row = Adw.ActionRow(title=title, subtitle=subtitle, activatable_widget=check)
+            row.add_prefix(check)
+            group.add(row)
+
+
 class NowCaption(Adw.Application):
     """Owns the window, the capture and the recognition worker. All methods run on the GTK
     thread; worker and capture callbacks are passed here with GLib.idle_add."""
@@ -1683,6 +2026,7 @@ class NowCaption(Adw.Application):
         self.started = time.time()
         self.history_path = engine.history_file(self.started)  # created once something is said
         self.transcript = None  # the transcript window, while it is open
+        self.options = None  # the More options window, while it is open
         self.save_queues = {}  # destination URI -> accepted writes, in snapshot order
         self.quit_requested = False
         self.fading_out = False
@@ -1696,9 +2040,9 @@ class NowCaption(Adw.Application):
         self.add_actions()
 
     def build_menu(self, several_screens=False, layer=False):
-        """The caption box's menu, in labelled sections: what to listen to, how captions look,
-        the transcript, the box's place, and the app. CaptionWindow.update_menu fills the
-        'custom' items with rows of buttons that keep the menu open."""
+        """The caption box's menu, in sections: how captions look, the box's place, the
+        transcript, then More options (a window for the rest) and the app. CaptionWindow.update_menu
+        fills the 'custom' items with rows of buttons that keep the menu open."""
         def section(label, *items):
             m = Gio.Menu()
             for item in items:
@@ -1712,19 +2056,18 @@ class NowCaption(Adw.Application):
 
         item = Gio.MenuItem.new
         menu = Gio.Menu()
-        menu.append_item(section('Listen to', item('Desktop audio', 'app.source::desktop'),
-                                 item('Microphone', 'app.source::mic')))
         menu.append_item(section('Appearance', *(custom(name) for name in (*STEPPERS, 'text-colour'))))
-        menu.append_item(section('Transcript', item('Open transcript', 'app.transcript'),
-                                 item(f'Keep {engine.HISTORY_DAYS} days of history', 'app.history'),
-                                 item('Clear this session', 'app.clear')))
         place = [item('Reset position and size', 'app.reset')]
         if layer:  # elsewhere the window manager places the window
             place.insert(0, custom('position'))
         if several_screens:
             place.append(item('Move to next screen', 'app.next-screen'))
         menu.append_item(section(None, *place))
-        menu.append_item(section(None, item('About NowCaption', 'app.about'), item('Quit', 'app.quit')))
+        menu.append_item(section('Transcript', item('Open transcript', 'app.transcript'),
+                                 item(f'Keep {engine.HISTORY_DAYS} days of history', 'app.history'),
+                                 item('Clear this session', 'app.clear')))
+        menu.append_item(section(None, item('More options…', 'app.options'), item('About NowCaption', 'app.about'),
+                                 item('Quit', 'app.quit')))
         return menu
 
     def add_actions(self):
@@ -1751,10 +2094,17 @@ class NowCaption(Adw.Application):
                                                  GLib.Variant('s', self.settings.get('position')))
         position.connect('activate', self.on_position)
         self.add_action(position)
+        for name, key, handler in (('word-effect', 'word_effect', self.on_word_effect),
+                                   ('word-speed', 'word_speed', self.on_word_speed)):
+            action = Gio.SimpleAction.new_stateful(name, GLib.VariantType.new('s'),
+                                                   GLib.Variant('s', self.settings.get(key)))
+            action.connect('activate', handler)
+            self.add_action(action)
         history = Gio.SimpleAction.new_stateful('history', None, GLib.Variant('b', self.settings.get('history')))
         history.connect('activate', self.on_history)
         self.add_action(history)
         act('transcript', self.open_transcript, ['<Control>t'])
+        act('options', self.open_options, ['<Control>comma'])
         act('reset', lambda: (self.window.reset_position(), self.window.reset_size()))
         act('reset-position', lambda: self.window.reset_position())
         act('reset-size', lambda: self.window.reset_size())
@@ -1785,6 +2135,36 @@ class NowCaption(Adw.Application):
         self.settings.set('position', value.get_string())
         if self.window:
             self.window.reposition()
+
+    def on_word_effect(self, action, value):
+        if value.get_string() in WORD_EFFECTS:
+            action.set_state(value)
+            self.settings.set('word_effect', value.get_string())
+            self.show_word_effect()
+
+    def on_word_speed(self, action, value):
+        if value.get_string() in WORD_SPEEDS:
+            action.set_state(value)
+            self.settings.set('word_speed', value.get_string())
+            self.show_word_effect()
+
+    def word_effect(self):
+        """How new words arrive, and the factor of its speed, as CaptionText.set_effect takes them."""
+        return self.settings.get('word_effect'), WORD_SPEEDS[self.settings.get('word_speed')][1]
+
+    def show_word_effect(self):
+        if self.window:
+            self.window.caption.set_effect(*self.word_effect())
+
+    def open_options(self):
+        if self.options is None:
+            self.options = OptionsWindow(self)
+            self.options.connect('close-request', self.on_options_closed)
+        self.options.present()
+
+    def on_options_closed(self, window):
+        self.options = None
+        return False
 
     def on_history(self, action, value):
         keep = not action.get_state().get_boolean()
