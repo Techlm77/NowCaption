@@ -10,11 +10,11 @@
  "timed_words": 678,
  "missed_timed_words": 9,
  "timed_word_coverage": 0.9869,
- "lag_s_p50": 0.259,
- "lag_s_p90": 0.4,
- "lag_s_p99": 0.528,
- "cpu_cores_playback": 0.191,
- "cpu_cores_settling_gaps": 0.1056,
- "cpu_cores_silence": 0.0043,
- "peak_rss_mb": 321
+ "lag_s_p50": 0.201,
+ "lag_s_p90": 0.364,
+ "lag_s_p99": 0.534,
+ "cpu_cores_playback": 0.195,
+ "cpu_cores_settling_gaps": 0.1101,
+ "cpu_cores_silence": 0.0077,
+ "peak_rss_mb": 353
 }

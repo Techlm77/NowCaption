@@ -22,10 +22,10 @@ fetch() {  # url sha256 folder
     rm -rf "$tmp"
 }
 # Use a locally built archive (tools/export-model.py) if there is one, else the GitHub release.
-asr=nowcaption-fastconformer-en-80ms-cc-by-v2
+asr=nowcaption-fastconformer-en-80ms-cc-by-v3
 if [ -f "dist/$asr.tar.bz2" ]; then cp "dist/$asr.tar.bz2" .cache/; fi
-fetch "https://github.com/Techlm77/NowCaption/releases/download/models-v2/$asr.tar.bz2" \
-      4ecb5591981f4e6bd3456d5bd1a523ae170e22465717ae59cc30c70ddf470fb8 "$asr"
+fetch "https://github.com/Techlm77/NowCaption/releases/download/models-v3/$asr.tar.bz2" \
+      b11bca74087b934c4bd3cd8b70212450f43ab7119606eab5a05a31a008ee913e "$asr"
 fetch https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-online-punct-en-2024-08-06.tar.bz2 \
       9f5e5a72c7d2829635bd074fce92b6bbd5b78da8a52e7ad8ed1be933f366b99d sherpa-onnx-online-punct-en-2024-08-06
 echo "Models are in ./models"

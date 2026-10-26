@@ -1,0 +1,20 @@
+{
+ "score_version": 3,
+ "metric_scope": "capture_to_worker_event",
+ "caption_trace": "complete_session_raw_text",
+ "clock_origin": "paplay_process_launch",
+ "data": "test-clean",
+ "clips": 40,
+ "reference_words": 694,
+ "timed_reference_words": 687,
+ "timed_words": 681,
+ "missed_timed_words": 6,
+ "timed_word_coverage": 0.9913,
+ "lag_s_p50": 0.254,
+ "lag_s_p90": 0.391,
+ "lag_s_p99": 0.525,
+ "cpu_cores_playback": 0.192,
+ "cpu_cores_settling_gaps": 0.1083,
+ "cpu_cores_silence": 0.0052,
+ "peak_rss_mb": 321
+}

@@ -73,12 +73,12 @@ modules:
   - name: models
     buildsystem: simple
     build-commands:
-      - install -Dm644 -t /app/share/nowcaption/models/nowcaption-fastconformer-en-80ms-cc-by-v2 asr/tokens.txt asr/encoder.int8.onnx asr/decoder.int8.onnx asr/joiner.int8.onnx asr/README.md
+      - install -Dm644 -t /app/share/nowcaption/models/nowcaption-fastconformer-en-80ms-cc-by-v3 asr/tokens.txt asr/encoder.int8.onnx asr/decoder.int8.onnx asr/joiner.int8.onnx asr/README.md
       - install -Dm644 -t /app/share/nowcaption/models/sherpa-onnx-online-punct-en-2024-08-06 punct/model.int8.onnx punct/bpe.vocab punct/README.md
     sources:
       - type: archive
-        url: https://github.com/Techlm77/NowCaption/releases/download/models-v2/nowcaption-fastconformer-en-80ms-cc-by-v2.tar.bz2
-        sha256: 4ecb5591981f4e6bd3456d5bd1a523ae170e22465717ae59cc30c70ddf470fb8
+        url: https://github.com/Techlm77/NowCaption/releases/download/models-v3/nowcaption-fastconformer-en-80ms-cc-by-v3.tar.bz2
+        sha256: b11bca74087b934c4bd3cd8b70212450f43ab7119606eab5a05a31a008ee913e
         dest: asr
       - type: archive
         url: https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-online-punct-en-2024-08-06.tar.bz2

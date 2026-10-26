@@ -57,6 +57,24 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.2.0" date="2026-10-26">
+      <description>
+        <p>
+          A new speech model, NowCaption's own v3: fewer mistakes in everyday speech, words that
+          show a little sooner, and captions that keep up after pauses.
+        </p>
+        <ul>
+          <li>About a fifth fewer wrong words when captioning continuously, as the app does: 17.3% to
+            13.3% across meetings, calls, podcasts, accents and noisy recordings</li>
+          <li>The first words after a pause are wrong far less often (28% to 17%)</li>
+          <li>Fewer mistakes for every accent group tested, including British, Irish, Scottish, Welsh,
+            American, Canadian, Indian and African English, and none worse</li>
+          <li>Words show a little sooner on average, with the same CPU use; the model is 127 MB and
+            needs about 30 MB more memory</li>
+          <li>Known limit: a short sentence straight after a pause can show slightly later than before</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.16" date="2026-10-24">
       <description>
         <p>

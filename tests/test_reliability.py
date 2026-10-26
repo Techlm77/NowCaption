@@ -498,7 +498,7 @@ class ScriptTests(unittest.TestCase):
         self.assertIn('FETCHED', r.stdout)
         self.assertNotEqual(r.returncode, 0)
         # models present now, but a previous pip install failed: no marker, so it must install again
-        for f in ('nowcaption-fastconformer-en-80ms-cc-by-v2/' + n for n in engine.ASR_FILES):
+        for f in (engine.ASR_DIR + '/' + n for n in engine.ASR_FILES):
             (self.dir / 'models' / f).parent.mkdir(parents=True, exist_ok=True)
             (self.dir / 'models' / f).write_text('x')
         for n in engine.PUNCT_FILES:

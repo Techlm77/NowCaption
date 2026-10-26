@@ -6,23 +6,14 @@
   2.1
  ],
  "words": 2369,
- "errors": 163,
- "wer": 0.0688,
- "lag_s_mean": 0.209,
- "lag_s_p50": 0.228,
- "lag_s_p90": 0.391,
- "timed_words": 2218,
+ "errors": 139,
+ "wer": 0.0587,
+ "lag_s_mean": 0.186,
+ "lag_s_p50": 0.21,
+ "lag_s_p90": 0.377,
+ "timed_words": 2234,
  "audio_s": 1129.5,
- "cpu_rtf": 0.174,
- "stage_ms_per_audio_s": {
-  "speech model (decode_stream: encoder and greedy search)": 159.18,
-  "punctuation and casing": 11.27,
-  "reading the recognised text (get_result)": 1.82,
-  "audio features (accept_waveform)": 1.19,
-  "is_ready": 0.06,
-  "new stream": 0.0,
-  "everything else (Python)": 0.5
- },
+ "cpu_rtf": 0.1719,
  "items": [
   {
    "audio": "367-293981-0001.wav",
@@ -46,17 +37,17 @@
   },
   {
    "audio": "533-131564-0014.wav",
-   "hyp": "what did you make of me and the children to be sure that were re hurt to death between them",
+   "hyp": "what did you make of me and the children to be sure that were hurt death between them",
    "errors": 4
   },
   {
    "audio": "533-131564-0011.wav",
-   "hyp": "now don't pour into a tempest at",
-   "errors": 2
+   "hyp": "now don't pour into a tempest at that",
+   "errors": 1
   },
   {
    "audio": "533-131562-0014.wav",
-   "hyp": "here benson entered the candles and there followed the brief interval of silence i sitting still in my chair and he standing with his back to the fire silently triumphing in my despair",
+   "hyp": "here benson entered the candles and there followed a brief interval of silence i sitting still in my chair and he is standing with his back to the fire silently triumphing in my despair",
    "errors": 2
   },
   {
@@ -76,8 +67,8 @@
   },
   {
    "audio": "1688-142285-0091.wav",
-   "hyp": "my dear said mister howel alarmed pray don't go off on that idea",
-   "errors": 1
+   "hyp": "my dear said mister hale alarmed pray don't go off on that idea",
+   "errors": 0
   },
   {
    "audio": "1688-142285-0035.wav",
@@ -101,13 +92,13 @@
   },
   {
    "audio": "1998-15444-0013.wav",
-   "hyp": "anecdotes are usually given hypodermically or if their mouth in the form of tablets",
-   "errors": 2
+   "hyp": "antidotes are usually given hypodermically or if their mouth in the form of tablets",
+   "errors": 1
   },
   {
    "audio": "2033-164915-0001.wav",
-   "hyp": "then she threw herself upon him and he gathered her to his bosom and the twain fell down in a fainting fit",
-   "errors": 0
+   "hyp": "then she threw herself upon him and he gathered her to his bosom and twain fell down in a fainting fit",
+   "errors": 1
   },
   {
    "audio": "2033-164914-0011.wav",
@@ -116,18 +107,18 @@
   },
   {
    "audio": "2033-164915-0007.wav",
-   "hyp": "she said it hath reached me o auspicious king that when the stalker girdth his ass for flight and bespake himself saying o would i knew what is become of him",
+   "hyp": "she said it hath reached me o auspicious king that when the stalker girded his ass for flight and bespake himself saying o would i knew what is become of him",
    "errors": 3
   },
   {
    "audio": "2033-164914-0007.wav",
-   "hyp": "and he also improvised the two following this stitch",
+   "hyp": "and he also improvised the two following this ditch",
    "errors": 2
   },
   {
    "audio": "2414-128291-0013.wav",
-   "hyp": "the kingdom of heaven however is with the kine and wise it not with the rich",
-   "errors": 2
+   "hyp": "the kingdom of heaven however is with the kind and why is it not with the rich",
+   "errors": 1
   },
   {
    "audio": "2414-128292-0032.wav",
@@ -136,32 +127,32 @@
   },
   {
    "audio": "2414-159411-0018.wav",
-   "hyp": "after this they saw an allocator and the brahman related the matter to him hoping for a more favourable verdict",
+   "hyp": "after this they saw an alligator and the brahmer related the matter to him hoping for a more favourable verdict",
    "errors": 2
   },
   {
    "audio": "2414-159411-0032.wav",
-   "hyp": "when the brahman had turned this the jackal said oh you wicked and agrateful tiger",
+   "hyp": "when the brahman had turned this the jackal said oh you wicked and ungrateful tyr",
    "errors": 2
   },
   {
    "audio": "2609-156975-0014.wav",
-   "hyp": "the making of the loyal patriot",
-   "errors": 1
+   "hyp": "the making of a loyal patriot",
+   "errors": 0
   },
   {
    "audio": "2609-157645-0013.wav",
-   "hyp": "go into church at hayes in thursday's days mess have been acquaint in the assigning experience",
-   "errors": 8
+   "hyp": "go into church at hage and thou's days must have been acquainted and the assigning experience",
+   "errors": 9
   },
   {
    "audio": "2609-169640-0008.wav",
-   "hyp": "although if they went three feet to or two this gave us the moment of breathing time",
+   "hyp": "although if they went three feet to our two this gave up some moment of breathing time",
    "errors": 3
   },
   {
    "audio": "2609-157645-0007.wav",
-   "hyp": "one sunday says mister ditchfield he handed that for pipe and joshua the clerk told him that the people were getting them patin",
+   "hyp": "one sunday says mister ditchfield he handed that for pipe and joshua the clerk told him that the people were getting them patient",
    "errors": 5
   },
   {
@@ -181,8 +172,8 @@
   },
   {
    "audio": "3005-163399-0004.wav",
-   "hyp": "when we got there she set me down in a split bottom chair and set herself down on a little low stool in front of me holding both of my hands and says",
-   "errors": 1
+   "hyp": "when we got there she set me down in a split bottomed chair and set herself down on a little low stool in front of me holding both of my hands and says",
+   "errors": 0
   },
   {
    "audio": "3080-5040-0016.wav",
@@ -206,8 +197,8 @@
   },
   {
    "audio": "3331-159605-0000.wav",
-   "hyp": "she pulled her head down turned her skirt back put her feet on the fender and took part on to her lap all of which arrangements signified that something very important had got to be thought over and settled",
-   "errors": 4
+   "hyp": "she pulled her hair down turned her skirt back put her feet on the fender and took part on to her lap all of which arrangements signified that something very important had got to be thought over and settled",
+   "errors": 3
   },
   {
    "audio": "3331-159605-0006.wav",
@@ -216,8 +207,8 @@
   },
   {
    "audio": "3331-159609-0012.wav",
-   "hyp": "once or twice what sort of chokingly and i thought it was only some little flirtation",
-   "errors": 2
+   "hyp": "once or twice but sort of chokingly and i thought it was only some little flirtation",
+   "errors": 1
   },
   {
    "audio": "3331-159609-0023.wav",
@@ -251,8 +242,8 @@
   },
   {
    "audio": "3538-163622-0005.wav",
-   "hyp": "the king promised him the same punishment and the same reward that he had promised his brother",
-   "errors": 1
+   "hyp": "then the king promised him the same punishment and the same reward that he had promised his brother",
+   "errors": 0
   },
   {
    "audio": "3538-163619-0007.wav",
@@ -261,13 +252,13 @@
   },
   {
    "audio": "3538-163622-0004.wav",
-   "hyp": "he had gone at once to seek a place he said but never would he do such a thing again",
-   "errors": 1
+   "hyp": "he had gone out once to seek a place he said but never would he do such a thing again",
+   "errors": 0
   },
   {
    "audio": "3764-168671-0052.wav",
-   "hyp": "a fauchevon whatever his anguish offered a drink but he did not explain himself on one point who was to pay",
-   "errors": 2
+   "hyp": "a fauchelevent whatever his anguish offered a drink but he did not explain himself on one point who was to pay",
+   "errors": 1
   },
   {
    "audio": "3764-168670-0011.wav",
@@ -276,13 +267,13 @@
   },
   {
    "audio": "3764-168670-0029.wav",
-   "hyp": "the church in the street that the church which any one can enter",
-   "errors": 1
+   "hyp": "the church in the street the church which any one can enter",
+   "errors": 0
   },
   {
    "audio": "3764-168671-0029.wav",
-   "hyp": "he persisted feebly father miss tiien is the grave digger",
-   "errors": 3
+   "hyp": "but he persisted feebly father miss tienne is the grave digger",
+   "errors": 2
   },
   {
    "audio": "3997-180297-0005.wav",
@@ -296,8 +287,8 @@
   },
   {
    "audio": "3997-180294-0027.wav",
-   "hyp": "did she love me enough to believe that the more beautiful she looked the happier i should be",
-   "errors": 0
+   "hyp": "does she love me enough to believe that the more beautiful she looked the happier i should be",
+   "errors": 1
   },
   {
    "audio": "3997-182399-0012.wav",
@@ -306,8 +297,8 @@
   },
   {
    "audio": "4198-12259-0018.wav",
-   "hyp": "tang quams",
-   "errors": 4
+   "hyp": "and i tangwam sponsors",
+   "errors": 2
   },
   {
    "audio": "4198-12259-0015.wav",
@@ -316,7 +307,7 @@
   },
   {
    "audio": "4198-12281-0012.wav",
-   "hyp": "oh the holy lady knights it said one the good sanctus oh our lady of succours said another help help help",
+   "hyp": "oh the holy lady knights it said one the good sanctus oh our lady of succuas said another help help",
    "errors": 6
   },
   {
@@ -346,8 +337,8 @@
   },
   {
    "audio": "4350-10919-0020.wav",
-   "hyp": "the celebrated doctor announced to the princess a feeling of what was due from him dictated his doing so that he ought to see the patient once more",
-   "errors": 0
+   "hyp": "the celebrated doctor announced that the princess a feeling of what was due from him dictated his doing so that he ought to see the patient once more",
+   "errors": 1
   },
   {
    "audio": "4350-9170-0051.wav",
@@ -366,8 +357,8 @@
   },
   {
    "audio": "4852-28312-0008.wav",
-   "hyp": "chris swallowed and his voice came back to him",
-   "errors": 0
+   "hyp": "chris swallowed his voice came back to him",
+   "errors": 1
   },
   {
    "audio": "4852-28330-0011.wav",
@@ -376,13 +367,13 @@
   },
   {
    "audio": "4852-28330-0002.wav",
-   "hyp": "next ned s silly was relieved of the helm by albert jones who took over ned went on down",
-   "errors": 4
+   "hyp": "next ned silly was relieved of the helm by albert jones who took over ned went on down",
+   "errors": 3
   },
   {
    "audio": "4852-28330-0009.wav",
-   "hyp": "his face rose with nervousness that this might do not do as an answer and he stood stiff and still before captain lizzard",
-   "errors": 3
+   "hyp": "his face rose with nervousness that this might do not do as an answer and he stood stiff and still before captain blizzard",
+   "errors": 2
   },
   {
    "audio": "5442-41168-0010.wav",
@@ -401,13 +392,13 @@
   },
   {
    "audio": "5442-41169-0007.wav",
-   "hyp": "still just the same always at a loss the landowner answered with a resigned smile but with an expression of serenity and conviction that so it must be",
-   "errors": 1
+   "hyp": "oh still just the same always at a loss the landowner answered with a resigned smile but with an expression of serenity and conviction that so it must be",
+   "errors": 0
   },
   {
    "audio": "5484-24318-0028.wav",
-   "hyp": "he himself on the way to exposed himself to the malice and mockery of the whole city",
-   "errors": 1
+   "hyp": "he himself on the way to expose himself to the malice and mockery of the whole city",
+   "errors": 0
   },
   {
    "audio": "5484-24317-0029.wav",
@@ -416,8 +407,8 @@
   },
   {
    "audio": "5484-24317-0023.wav",
-   "hyp": "that is going too far replied hermon",
-   "errors": 0
+   "hyp": "that is going too far replied herman",
+   "errors": 1
   },
   {
    "audio": "5484-24318-0009.wav",
@@ -441,12 +432,12 @@
   },
   {
    "audio": "5764-299665-0029.wav",
-   "hyp": "a child shunned by the beauty of the flame grasped it with his dimpled hand",
+   "hyp": "a child shone by the beauty of the flame grasped it with his dimpled hand",
    "errors": 3
   },
   {
    "audio": "6070-63485-0016.wav",
-   "hyp": "between saint wain and the road of la revolt at the end of the road agreed",
+   "hyp": "between saint waint and the road of la revolt at the end of the road agreed",
    "errors": 2
   },
   {
@@ -461,23 +452,23 @@
   },
   {
    "audio": "6070-86745-0019.wav",
-   "hyp": "with the o talents you would make your fortune in three or four years",
+   "hyp": "with the old talents you would make your fortune in three or four years",
    "errors": 2
   },
   {
    "audio": "6128-63240-0022.wav",
-   "hyp": "that was one comfort with olive she never went through any forms",
-   "errors": 0
-  },
-  {
-   "audio": "6128-63241-0012.wav",
-   "hyp": "he was too simple too mississippi for that she was almost disappointed",
+   "hyp": "that was one comfort with olive she never won through any forms",
    "errors": 1
   },
   {
-   "audio": "6128-63240-0007.wav",
-   "hyp": "these things the eyes especially with their smouldering fire might have indicated that he was to be a great american statesman or on the other hand they might simply have proved that he came from carolina or alabama",
+   "audio": "6128-63241-0012.wav",
+   "hyp": "he was too simple too mississippian for that she was almost disappointed",
    "errors": 0
+  },
+  {
+   "audio": "6128-63240-0007.wav",
+   "hyp": "these things the eyes especially with their smouldering fire might have indicated that he was to be great american statesman or on the other hand they might simply have proved that he came from carolina or alabama",
+   "errors": 1
   },
   {
    "audio": "6128-63240-0009.wav",
@@ -486,8 +477,8 @@
   },
   {
    "audio": "6432-63722-0023.wav",
-   "hyp": "labour's often heard him scrap in a lot and this afternoon they went at it again in hot and heavy",
-   "errors": 5
+   "hyp": "labors often heard him scraping a lot and this afternoon they went at it again in hot and heavy",
+   "errors": 4
   },
   {
    "audio": "6432-63722-0026.wav",
@@ -506,8 +497,8 @@
   },
   {
    "audio": "6938-70848-0024.wav",
-   "hyp": "he he knew that an agreement with the polsheviki was being discussed but he did not know that it had been concluded",
-   "errors": 2
+   "hyp": "he knew that an agreement with the bolsheviki was being discussed but he did not know that it had been concluded",
+   "errors": 0
   },
   {
    "audio": "6938-70848-0030.wav",
@@ -521,8 +512,8 @@
   },
   {
    "audio": "6938-70848-0022.wav",
-   "hyp": "the first stage was the crushing of autocracy and the crushing of the power of the industrial capitalist and the landowners whose interest are closely related",
-   "errors": 4
+   "hyp": "the first stage was the crushing of autocracy and the crushing of the power of the industrial capitalist and the landowners whose interests are closely related",
+   "errors": 3
   },
   {
    "audio": "7018-75789-0015.wav",
@@ -531,8 +522,8 @@
   },
   {
    "audio": "7018-75789-0024.wav",
-   "hyp": "she said it hath reached me o auspicious king that when sinbad the seaman had related the history of what befell him in his sixth voyage and all the company had dispersed sinbad the landsman went home and slept as of wont",
-   "errors": 3
+   "hyp": "she said it hath reached me o auspicious king that when sindbad the seamen had related the history of what befell him in his sixth voyage and all the company had dispersed sindbad the landsman went home and slept as of wont",
+   "errors": 2
   },
   {
    "audio": "7018-75789-0003.wav",
@@ -566,8 +557,8 @@
   },
   {
    "audio": "7902-96594-0023.wav",
-   "hyp": "beg pardon didn't mean now sir said the sailor touching his forelock",
-   "errors": 1
+   "hyp": "began didn't mean nought sir said the sailor touching his forelock",
+   "errors": 3
   },
   {
    "audio": "7902-96595-0019.wav",
@@ -576,8 +567,8 @@
   },
   {
    "audio": "7902-96595-0017.wav",
-   "hyp": "i don't know muttered dick and men can't be sure",
-   "errors": 4
+   "hyp": "i dunno muttered dick and men can't be sure",
+   "errors": 2
   },
   {
    "audio": "7902-96592-0042.wav",
@@ -586,8 +577,8 @@
   },
   {
    "audio": "7975-280057-0012.wav",
-   "hyp": "now old lady call on your protectors why don't you call on co younger now",
-   "errors": 1
+   "hyp": "now lady call on your protectors why don't you call on co younger now",
+   "errors": 2
   },
   {
    "audio": "7975-280076-0014.wav",
@@ -641,13 +632,13 @@
   },
   {
    "audio": "8188-269288-0049.wav",
-   "hyp": "you manage with a candle just for once",
-   "errors": 1
+   "hyp": "had you managed with a candle just for once",
+   "errors": 2
   },
   {
    "audio": "8280-266249-0007.wav",
-   "hyp": "and when it dears little fellow he is just about the age of our herald i should judge",
-   "errors": 4
+   "hyp": "and when a dear little fellow he is just about the age of our herald i should judge",
+   "errors": 2
   },
   {
    "audio": "8280-266249-0055.wav",
@@ -661,8 +652,8 @@
   },
   {
    "audio": "8280-266249-0027.wav",
-   "hyp": "em must require a good deal of resolution for one who has become fond of the indulgence to give it up remarked mister daly",
-   "errors": 1
+   "hyp": "it must require a good deal of resolution for one who has become fond of the indulgence to give it up remarked mister daly",
+   "errors": 0
   },
   {
    "audio": "8461-278226-0007.wav",
@@ -671,8 +662,8 @@
   },
   {
    "audio": "8461-281231-0014.wav",
-   "hyp": "tell me thy name a work thy pleasure on may",
-   "errors": 2
+   "hyp": "tell me thy name or work thy pleasure on me",
+   "errors": 0
   },
   {
    "audio": "8461-281231-0028.wav",
@@ -681,8 +672,8 @@
   },
   {
    "audio": "8461-258277-0007.wav",
-   "hyp": "then he sat out rejoicing to return to the barracco de forty",
-   "errors": 4
+   "hyp": "then he set out rejoicing to return to the barrack of the forty",
+   "errors": 0
   }
  ]
 }

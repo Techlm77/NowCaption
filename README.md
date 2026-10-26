@@ -8,8 +8,8 @@ your desktop. It is made for people who are deaf or hard of hearing.
 
 - **Private.** Everything runs on your computer, offline. No account, and audio never leaves it.
 - **Accurate.** Punctuation and capital letters included. NowCaption's own speech model
-  makes 2.5% word errors on clear speech, a third of upstream Live Captions' 8.1%, and
-  fewer than the NVIDIA model it was trained from on meetings, calls and noisy speech
+  makes 2.7% word errors on clear speech, a third of upstream Live Captions' 8.1%, and in
+  1.2.0 about a fifth fewer than before on meetings, calls, accents and noisy speech
   ([benchmark](benchmark/)).
 - **Light.** Runs on the CPU as speech arrives. No GPU needed.
 
@@ -104,7 +104,8 @@ switching to headphones, or after a problem, open **More options…** and press
 
 **First word missing?** When speech is hard to make out, such as strong accents or
 unclear recordings, the first word after a pause is the one most often missed or misheard,
-because the speech model has nothing yet to go on. Clear speech is not affected.
+because the speech model has nothing yet to go on. 1.2.0's speech model misses far fewer of
+them than before, but it still happens most there. Clear speech is rarely affected.
 
 ## Run from source
 

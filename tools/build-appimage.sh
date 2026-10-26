@@ -89,13 +89,13 @@ find "$APPDIR" -name __pycache__ -prune -exec rm -rf {} +
 python3 -m compileall -q "$APPDIR/usr/lib/python3.12" "$DIST" >/dev/null || true
 
 echo "== Models"
-if [ ! -s models/nowcaption-fastconformer-en-80ms-cc-by-v2/encoder.int8.onnx ] ||
+if [ ! -s models/nowcaption-fastconformer-en-80ms-cc-by-v3/encoder.int8.onnx ] ||
    [ ! -s models/sherpa-onnx-online-punct-en-2024-08-06/model.int8.onnx ]; then
     tools/fetch-models.sh
 fi
 M=$APPDIR/usr/share/nowcaption/models
 for f in tokens.txt encoder.int8.onnx decoder.int8.onnx joiner.int8.onnx README.md; do
-    install -Dm644 "models/nowcaption-fastconformer-en-80ms-cc-by-v2/$f" -t "$M/nowcaption-fastconformer-en-80ms-cc-by-v2"
+    install -Dm644 "models/nowcaption-fastconformer-en-80ms-cc-by-v3/$f" -t "$M/nowcaption-fastconformer-en-80ms-cc-by-v3"
 done
 for f in model.int8.onnx bpe.vocab README.md; do
     install -Dm644 "models/sherpa-onnx-online-punct-en-2024-08-06/$f" -t "$M/sherpa-onnx-online-punct-en-2024-08-06"

@@ -12,7 +12,8 @@ m = Path(a.model)
 r = so.OfflineRecognizer.from_transducer(encoder=str(m/'encoder.int8.onnx'), decoder=str(m/'decoder.int8.onnx'),
     joiner=str(m/'joiner.int8.onnx'), tokens=str(m/'tokens.txt'), model_type='nemo_transducer', num_threads=8)
 out = {}; kept = total = errs = 0
-for row in json.load(open(D / 'refs.json')):
+rows = json.load(open(D / 'refs.json')) if (D / 'refs.json').exists() else [json.loads(l) for l in open(D / 'refs.jsonl')]  # get-data.py / get-esb.py
+for row in rows:
     x, _ = sf.read(D / row['audio'], dtype='float32'); s = r.create_stream(); s.accept_waveform(16000, x); r.decode_stream(s)
     res = s.result; toks, ts = res.tokens, res.timestamps
     durs = list(getattr(res, 'durations', []) or [])

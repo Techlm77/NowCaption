@@ -7,13 +7,14 @@ contain the models and libraries below, each under its own license.
 
 | Model | By | License |
 |---|---|---|
-| Speech recognition: [`nowcaption-fastconformer-en-80ms-cc-by-v2`](https://github.com/Techlm77/NowCaption/releases/tag/models-v2) | NowCaption, fine-tuned from NVIDIA's [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi) (NeMo team) | CC-BY-4.0 |
+| Speech recognition: [`nowcaption-fastconformer-en-80ms-cc-by-v3`](https://github.com/Techlm77/NowCaption/releases/tag/models-v3) | NowCaption, fine-tuned from NVIDIA's [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi) (NeMo team) | CC-BY-4.0 |
 | Punctuation and capital letters: `sherpa-onnx-online-punct-en-2024-08-06` | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) by frankyoujian, packaged by k2-fsa | Apache-2.0 |
 
-The speech model was trained with the text NVIDIA's Parakeet TDT 0.6B v2 (CC-BY-4.0) heard in
-each recording, then exported to ONNX with an 80 ms lookahead and quantized to int8, with an
-export script adapted from k2-fsa's sherpa-onnx. Its README.md, in the model archive, has the
-details.
+The speech model is NowCaption's third fine-tune. Version 2 was trained with the text NVIDIA's
+Parakeet TDT 0.6B v2 (CC-BY-4.0) heard in each recording; version 3 continued from it on the
+recordings below with their own transcripts, or NVIDIA's Granary labels (CC-BY-4.0) for the
+YODAS videos. It is exported to ONNX with an 80 ms lookahead and quantized to int8, with an export
+script adapted from k2-fsa's sherpa-onnx. Its README.md, in the model archive, has the details.
 
 ## Libraries
 
@@ -46,6 +47,8 @@ None of these recordings are bundled.
 | [YODAS2](https://huggingface.co/datasets/espnet/yodas2), English videos with human subtitles | ESPnet / WAVLab | CC-BY-3.0 |
 | [AMI Meeting Corpus](https://huggingface.co/datasets/edinburghcstr/ami) | University of Edinburgh | CC-BY-4.0 |
 | [VoxPopuli](https://huggingface.co/datasets/facebook/voxpopuli), English | Meta AI | CC0-1.0 |
-| [LibriSpeech](https://www.openslr.org/12) train-clean-360 and train-other-500 | Vassil Panayotov et al. | CC-BY-4.0 |
+| [LibriSpeech](https://www.openslr.org/12) train-clean-100, train-clean-360 and train-other-500 | Vassil Panayotov et al. | CC-BY-4.0 |
+| [Common Voice](https://commonvoice.mozilla.org) 22, English | Mozilla | CC0-1.0 |
+| [Granary](https://huggingface.co/datasets/nvidia/Granary), English YODAS part (NVIDIA's labels for YODAS2 videos, as packaged in [espnet/yodas-granary](https://huggingface.co/datasets/espnet/yodas-granary)) | NVIDIA; audio ESPnet / WAVLab | CC-BY-4.0 (labels), CC-BY-3.0 (audio) |
 | [MUSAN](https://www.openslr.org/17): music, noise and babble mixed into the audio | David Snyder et al. | Creative Commons or public domain, per file |
 | [RIRS_NOISES](https://www.openslr.org/28): room echo | Tom Ko et al. | Apache-2.0 |
