@@ -91,7 +91,8 @@ and 6, while a fullscreen game or video is open on their screen, docked captions
 above it and dock again when it closes; elsewhere, choose **Floating** for fullscreen apps.
 On KDE Plasma 6, a floating panel on the captions' edge stops floating while they're docked
 against it, as it does when a window touches it, and floats again when they move away or
-NowCaption quits.
+NowCaption quits. Plasma 5.27 has no way for apps to do that: there, turn off **Floating**
+for that panel in Edit Mode, or dock the captions on another edge.
 Floating captions keep their bottom edge in place when you change the text size.
 
 **KWin permission.** On KDE Plasma, the Flatpak may talk to KWin, so docked captions can
