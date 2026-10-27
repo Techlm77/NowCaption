@@ -77,7 +77,7 @@ before any training, for the default model:
 | Median / 90% time until a word shows, continuous use: at most 0.20 / 0.35 s | 0.210 / 0.406 s on the eight sets; 0.162 / 0.315 s on LibriSpeech clean ([`pipeline.py`](#continuous-use-caption-pipeline)) | **No** on the everyday sets |
 | CPU: at most 15% of one 7800X3D core | 17.7% in sustained real-time use (v2: 17.2%) | **No** |
 | CPU on an older 4-core PC (about 2017): real-time factor at most 0.3 | Not measured: no such PC was available | Unknown |
-| Memory of the whole app: at most 450 MB | WHOLE_APP_RSS | WHOLE_APP_MET |
+| Memory of the whole app: at most 450 MB | 436 MB at its peak while starting, about 385 MB after four minutes of listening (the installed Flatpak, resident memory including GTK and shared libraries) | **Yes** |
 | Download: at most 150 MB | 127 MB | **Yes** |
 
 A second, larger model ("Large", opt-in) was planned with targets of its own. It was not made for
