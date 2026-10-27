@@ -40,7 +40,7 @@ the app's own caption pipeline:
 | First two words after a pause, continuous use | 28.4% wrong | **17.4%** wrong | |
 | Time until a word shows, continuous use: median / 90% / 99% | 0.219 / 0.399 / 0.591 s | 0.210 / 0.406 / 0.619 s | median −13 ms (−15 to −10), 90% −6 ms (−9 to −2) on the words both got right |
 | Time until a word shows, fresh stream: median / 90% / 99% | 0.317 / 0.528 / 0.736 s | **0.235 / 0.448 / 0.658 s** | median −82 ms (−84 to −80) |
-| Accent test set (2,992 clips, 20 regions), continuous use | 17.24% | **13.78%** | −3.46 (−3.86 to −3.04); no region worse |
+| Accent test set (2,992 clips, 20 regions), continuous use | 17.24% | **13.78%** | −3.46 (−3.86 to −3.04); 16 of 20 regions better beyond chance, none worse beyond chance |
 | Clips that repeat one word 4+ times ("the the the the") | 6 | **0** | |
 | CPU, real-time continuous speech (share of one core) | 17.2% | 17.7% | |
 | Peak memory of the caption process | 321 MB | 353 MB | |
@@ -65,6 +65,23 @@ the middle 95% of the changes.
   accent gains come in continuous use, which is how the app runs.
 - It uses about 30 MB more memory, from int8 weights with one scale per channel instead of per
   tensor (more accurate, slightly bigger).
+
+**The targets set before training, and how v3 did.** They were written down on 24 October 2026,
+before any training, for the default model:
+
+| Target | v3 | Met? |
+|---|---|---|
+| Better than v2 on average and on accents, and no set worse beyond chance by more than 0.5 points | 8 sets −4.01 / −0.34 points (continuous / fresh), accents −3.46, no set worse beyond chance by more than 0.5 | **Yes** |
+| Better than v2 in every accent region | 16 of 20 better beyond chance (continuous use); the four smallest regions (5–15 clips) within chance, and one of them, US Hispanic (5 clips), 5.0 points worse | **No** (not shown for the four smallest regions) |
+| At most 12.5% words wrong on the eight sets | 13.31% continuous, 13.18% fresh; 12.43% and 12.19% on the 400 other clips per set | **No** (only on the other clips) |
+| Median / 90% time until a word shows, continuous use: at most 0.20 / 0.35 s | 0.210 / 0.406 s on the eight sets; 0.162 / 0.315 s on LibriSpeech clean ([`pipeline.py`](#continuous-use-caption-pipeline)) | **No** on the everyday sets |
+| CPU: at most 15% of one 7800X3D core | 17.7% in sustained real-time use (v2: 17.2%) | **No** |
+| CPU on an older 4-core PC (about 2017): real-time factor at most 0.3 | Not measured: no such PC was available | Unknown |
+| Memory of the whole app: at most 450 MB | WHOLE_APP_RSS | WHOLE_APP_MET |
+| Download: at most 150 MB | 127 MB | **Yes** |
+
+A second, larger model ("Large", opt-in) was planned with targets of its own. It was not made for
+1.2.0.
 
 ## Against Live Captions (engine-only)
 
@@ -132,8 +149,9 @@ Words wrong in continuous use, v2 → v3:
 | India and South Asia | 24.4% | 17.7% | Ireland and Northern Ireland | 22.6% | 19.8% |
 | Other second-language English | 20.5% | 17.7% | **All 2,992 clips** | **17.24%** | **13.78%** |
 
-16 of the 20 regions are better beyond chance and none is worse; the other four (Northern
-Ireland, US Hispanic, US Northeast and US South) have 5–15 clips each. With a fresh stream per clip every region is within chance of v2 (all clips: 14.18% →
+16 of the 20 regions are better beyond chance and none is worse beyond chance. The other four
+(Northern Ireland, US Hispanic, US Northeast and US South) have only 5–15 clips each, too few to
+tell: three of them are better and US Hispanic is 5.0 points worse (0.0 to +9.3). With a fresh stream per clip every region is within chance of v2 (all clips: 14.18% →
 14.10%).
 
 ## Continuous use (caption pipeline)
@@ -276,6 +294,21 @@ beyond chance (−0.34 points continuous, −0.19 fresh) for 5–8 ms of delay. 
 confirmed on the accent set and on 400 other clips per set that played no part in the choice.
 The model card in the release archive lists the training data, the two saves and the export.
 
+**Why only int8.** The same blended weights were also exported in three other number formats and
+measured on the same eight sets (continuous use, against the shipped int8):
+
+| Format | Download | Words wrong | Time until a word shows, median | CPU | Peak memory |
+|---|---|---|---|---|---|
+| **int8, per channel (shipped)** | 127 MB | 13.31% | 0.210 s | 0.191 | 348 MB |
+| int4 matrices, int8 convolutions | 88 MB | 13.90% (+0.60, worse beyond chance) | 0.221 s | 0.220 | 274 MB |
+| float16 | 229 MB | 13.27% (within chance) | 0.230 s | 0.350 | 853 MB |
+| float32 | 456 MB | 13.32% (within chance) | 0.230 s | 0.344 | 928 MB |
+
+Full precision made no measurable difference to accuracy but showed words 20 ms later, with about
+80% more CPU and 2.5 times the memory; int4 saved 74 MB of memory but made more mistakes, beyond
+chance on Common Voice, AMI and Earnings-22. So 1.2.0 ships int8 only, and the app has no
+setting to change it.
+
 ## How things are measured
 
 - **WER** in `bench.py`, `pipeline.py` and `e2e.py` is word error rate after lower-casing and
@@ -333,8 +366,10 @@ python compare.py --models v2 v3 --base v2
 Results are written to `results/`: `pipeline-<data>-s<seed>.json` from `pipeline.py`,
 `e2e-v3-*.json` from `e2e.py` (scorer version 3), `stream/` from `stream.py`, and the rest from
 `bench.py` (`*-dummy-*` from the one-speaker screen). `results/1.2.0/` has `compare.py`'s
-tables for the 1.2.0 release; the per-clip results behind them (every hypothesis and word
-time; reference transcripts left out, as some test sets' licences don't allow passing them on) are
-attached to the GitHub release as `nowcaption-1.2.0-benchmark-results.tar.xz`. Older
+tables for the 1.2.0 release; the per-clip results behind them are attached to the GitHub release
+as `nowcaption-1.2.0-benchmark-results.tar.xz`: every clip's word errors and word times, and what
+NowCaption recognised for the sets whose licence allows passing on text from them (LibriSpeech, AMI,
+Common Voice and VoxPopuli). Reference transcripts are left out, as some test sets' licences don't
+allow passing them on. Older
 runs, such as `e2e-test-*.json` from a first scorer that could credit a word to the wrong clip,
 are kept for reference; earlier versions' results are in the git history.

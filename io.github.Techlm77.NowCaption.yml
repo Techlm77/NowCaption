@@ -78,7 +78,7 @@ modules:
     sources:
       - type: archive
         url: https://github.com/Techlm77/NowCaption/releases/download/models-v3/nowcaption-fastconformer-en-80ms-cc-by-v3.tar.bz2
-        sha256: b11bca74087b934c4bd3cd8b70212450f43ab7119606eab5a05a31a008ee913e
+        sha256: 5e7e38c57a217e197516325621694bb6380ab2a68e423d5558f2f32330044ddd
         dest: asr
       - type: archive
         url: https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-online-punct-en-2024-08-06.tar.bz2

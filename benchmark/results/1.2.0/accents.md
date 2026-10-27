@@ -1,7 +1,7 @@
 
 ## Continuous use (2 models complete)
 
-| Model | 8-set avg WER | vs base (95% range) | Common Voice | Settled p50 / p90 / p99 (s) | vs base median (ms) | First p50 / p90 | Loops | CPU | Peak MB |
+| Model | 20-set avg WER | vs base (95% range) | Common Voice | Settled p50 / p90 / p99 (s) | vs base median (ms) | First p50 / p90 | Loops | CPU | Peak MB |
 |---|---|---|---|---|---|---|---|---|---|
 | v3 ★ | 12.04% | -3.16 (-3.84 to -2.57) | — | 0.248 / 0.470 / 0.724 | +26 (+22 to +29) | 0.248 / 0.470 | 1 | 0.186 | 337 |
 | v2 ★ | 15.19% | — | — | 0.217 / 0.426 / 0.692 | — | 0.217 / 0.426 | 4 | 0.184 | 309 |
@@ -23,7 +23,7 @@ Speech after a pause (each clip follows 2 s of silence): the first 2 words of ev
 
 ## Fresh stream per clip (2 models complete)
 
-| Model | 8-set avg WER | vs base (95% range) | Common Voice | Settled p50 / p90 / p99 (s) | vs base median (ms) | First p50 / p90 | Loops | CPU | Peak MB |
+| Model | 20-set avg WER | vs base (95% range) | Common Voice | Settled p50 / p90 / p99 (s) | vs base median (ms) | First p50 / p90 | Loops | CPU | Peak MB |
 |---|---|---|---|---|---|---|---|---|---|
 | v3 ★ | 12.07% | -0.16 (-0.61 to +0.27) | — | 0.289 / 0.516 / 0.754 | -79 (-81 to -76) | 0.289 / 0.516 | 0 | 0.206 | 341 |
 | v2 | 12.23% | — | — | 0.367 / 0.586 / 0.846 | — | 0.367 / 0.586 | 3 | 0.204 | 309 |

@@ -214,7 +214,7 @@ def main():
                 r['vs_base'] = paired(r['model'], a.base, mode)
         report['modes'][mode] = {'rows': rows, 'pareto': pareto(rows)}
         print(f'\n## {"Continuous use" if mode == "cont" else "Fresh stream per clip"} ({len(rows)} models complete)\n')
-        print('| Model | 8-set avg WER | vs base (95% range) | Common Voice | Settled p50 / p90 / p99 (s) | vs base median (ms) | First p50 / p90 | Loops | CPU | Peak MB |')
+        print(f'| Model | {len(SETS)}-set avg WER | vs base (95% range) | Common Voice | Settled p50 / p90 / p99 (s) | vs base median (ms) | First p50 / p90 | Loops | CPU | Peak MB |')
         print('|---|---|---|---|---|---|---|---|---|---|')
         for r in sorted(rows, key=lambda r: r['avg_wer']):
             v = r.get('vs_base')
