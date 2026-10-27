@@ -1,0 +1,265 @@
+{
+ "note": "Continuous use, same clips, seed 0, 2.0-2.1 s gaps, 40 ms blocks, Ryzen 7 7800X3D. WER: Whisper English normaliser, plain mean of the 8 sets. Delays: on-screen (\"shown\"), per-set median / p90 averaged over the sets. CPU: process CPU seconds per second of audio, weighted by audio. RAM: peak resident memory of the test process. Engines dated 2026-10-25 ran side by side; 2026-10-26 runs ran alone.",
+ "engines": [
+  {
+   "key": "v3b-a3-i25-cont",
+   "name": "NowCaption 1.2.0 (v3)",
+   "date": "2026-10-26",
+   "clips_per_set": 400,
+   "wer_8set": 0.1331,
+   "per_set_wer": {
+    "ami": 0.1641,
+    "common_voice": 0.1749,
+    "earnings22": 0.1677,
+    "gigaspeech": 0.1396,
+    "librispeech-clean": 0.034,
+    "librispeech-other": 0.0732,
+    "urgent2024": 0.2215,
+    "voxpopuli": 0.0896
+   },
+   "shown_p50_s": 0.221,
+   "shown_p90_s": 0.415,
+   "cpu_cores": 0.191,
+   "peak_rss_mb": 348,
+   "first100": {
+    "wer_8set": 0.1343,
+    "shown_p50_s": 0.208,
+    "shown_p90_s": 0.402
+   }
+  },
+  {
+   "key": "v3b-today-cont",
+   "name": "NowCaption 1.1.x (v2)",
+   "date": "2026-10-26",
+   "clips_per_set": 400,
+   "wer_8set": 0.1731,
+   "per_set_wer": {
+    "ami": 0.2576,
+    "common_voice": 0.2751,
+    "earnings22": 0.1976,
+    "gigaspeech": 0.1641,
+    "librispeech-clean": 0.0334,
+    "librispeech-other": 0.0805,
+    "urgent2024": 0.282,
+    "voxpopuli": 0.0948
+   },
+   "shown_p50_s": 0.218,
+   "shown_p90_s": 0.407,
+   "cpu_cores": 0.187,
+   "peak_rss_mb": 319,
+   "first100": {
+    "wer_8set": 0.1714,
+    "shown_p50_s": 0.201,
+    "shown_p90_s": 0.384
+   }
+  },
+  {
+   "key": "nowcaption-v2",
+   "name": "NowCaption 1.1.x (v2)",
+   "date": "2026-10-25",
+   "clips_per_set": 400,
+   "wer_8set": 0.1731,
+   "per_set_wer": {
+    "ami": 0.2576,
+    "common_voice": 0.2751,
+    "earnings22": 0.1976,
+    "gigaspeech": 0.1641,
+    "librispeech-clean": 0.0334,
+    "librispeech-other": 0.0805,
+    "urgent2024": 0.282,
+    "voxpopuli": 0.0948
+   },
+   "shown_p50_s": 0.229,
+   "shown_p90_s": 0.416,
+   "cpu_cores": 0.24,
+   "peak_rss_mb": 314,
+   "first100": {
+    "wer_8set": 0.1714,
+    "shown_p50_s": 0.215,
+    "shown_p90_s": 0.398
+   }
+  },
+  {
+   "key": "moonshine-medium",
+   "name": "Moonshine Streaming Medium",
+   "date": "2026-10-25",
+   "clips_per_set": 400,
+   "wer_8set": 0.1364,
+   "per_set_wer": {
+    "ami": 0.1644,
+    "common_voice": 0.2303,
+    "earnings22": 0.1567,
+    "gigaspeech": 0.1055,
+    "librispeech-clean": 0.0283,
+    "librispeech-other": 0.067,
+    "urgent2024": 0.2385,
+    "voxpopuli": 0.1003
+   },
+   "shown_p50_s": 0.905,
+   "shown_p90_s": 1.469,
+   "cpu_cores": 0.515,
+   "peak_rss_mb": 926,
+   "first100": {
+    "wer_8set": 0.1468,
+    "shown_p50_s": 0.897,
+    "shown_p90_s": 1.487
+   }
+  },
+  {
+   "key": "moonshine-small",
+   "name": "Moonshine Streaming Small",
+   "date": "2026-10-25",
+   "clips_per_set": 400,
+   "wer_8set": 0.1523,
+   "per_set_wer": {
+    "ami": 0.1903,
+    "common_voice": 0.2421,
+    "earnings22": 0.1688,
+    "gigaspeech": 0.1147,
+    "librispeech-clean": 0.0331,
+    "librispeech-other": 0.0916,
+    "urgent2024": 0.267,
+    "voxpopuli": 0.111
+   },
+   "shown_p50_s": 0.798,
+   "shown_p90_s": 1.224,
+   "cpu_cores": 0.378,
+   "peak_rss_mb": 577,
+   "first100": {
+    "wer_8set": 0.1615,
+    "shown_p50_s": 0.778,
+    "shown_p90_s": 1.226
+   }
+  },
+  {
+   "key": "parakeet-eou",
+   "name": "Parakeet Realtime EOU 120M",
+   "date": "2026-10-25",
+   "clips_per_set": 400,
+   "wer_8set": 0.1646,
+   "per_set_wer": {
+    "ami": 0.2336,
+    "common_voice": 0.2658,
+    "earnings22": 0.1733,
+    "gigaspeech": 0.1436,
+    "librispeech-clean": 0.0389,
+    "librispeech-other": 0.0914,
+    "urgent2024": 0.2692,
+    "voxpopuli": 0.1006
+   },
+   "shown_p50_s": 0.152,
+   "shown_p90_s": 0.386,
+   "cpu_cores": 0.228,
+   "peak_rss_mb": 309,
+   "first100": {
+    "wer_8set": 0.1628,
+    "shown_p50_s": 0.139,
+    "shown_p90_s": 0.37
+   }
+  },
+  {
+   "key": "vosk-large",
+   "name": "Vosk en-us 0.22 (large)",
+   "date": "2026-10-25",
+   "clips_per_set": 400,
+   "wer_8set": 0.2846,
+   "per_set_wer": {
+    "ami": 0.3484,
+    "common_voice": 0.3843,
+    "earnings22": 0.3799,
+    "gigaspeech": 0.2011,
+    "librispeech-clean": 0.0811,
+    "librispeech-other": 0.2112,
+    "urgent2024": 0.4953,
+    "voxpopuli": 0.1754
+   },
+   "shown_p50_s": 0.557,
+   "shown_p90_s": 1.13,
+   "cpu_cores": 0.349,
+   "peak_rss_mb": 7296,
+   "first100": {
+    "wer_8set": 0.2867,
+    "shown_p50_s": 0.558,
+    "shown_p90_s": 1.324
+   }
+  },
+  {
+   "key": "vosk-small",
+   "name": "Vosk small-en-us 0.15",
+   "date": "2026-10-25",
+   "clips_per_set": 400,
+   "wer_8set": 0.3153,
+   "per_set_wer": {
+    "ami": 0.3933,
+    "common_voice": 0.4508,
+    "earnings22": 0.4234,
+    "gigaspeech": 0.2278,
+    "librispeech-clean": 0.1026,
+    "librispeech-other": 0.2424,
+    "urgent2024": 0.4625,
+    "voxpopuli": 0.2198
+   },
+   "shown_p50_s": 0.244,
+   "shown_p90_s": 0.482,
+   "cpu_cores": 0.063,
+   "peak_rss_mb": 523,
+   "first100": {
+    "wer_8set": 0.3252,
+    "shown_p50_s": 0.239,
+    "shown_p90_s": 0.481
+   }
+  },
+  {
+   "key": "livecaptions-april",
+   "name": "April english-dev-01110 (LiveCaptions)",
+   "date": "2026-10-25",
+   "clips_per_set": 400,
+   "wer_8set": 0.3237,
+   "per_set_wer": {
+    "ami": 0.3341,
+    "common_voice": 0.5744,
+    "earnings22": 0.3792,
+    "gigaspeech": 0.2009,
+    "librispeech-clean": 0.1082,
+    "librispeech-other": 0.2311,
+    "urgent2024": 0.4529,
+    "voxpopuli": 0.3091
+   },
+   "shown_p50_s": 0.293,
+   "shown_p90_s": 0.434,
+   "cpu_cores": 0.382,
+   "peak_rss_mb": 733,
+   "first100": {
+    "wer_8set": 0.3113,
+    "shown_p50_s": 0.294,
+    "shown_p90_s": 0.434
+   }
+  },
+  {
+   "key": "whisper-small.en",
+   "name": "Whisper small.en, live (LocalAgreement-2)",
+   "date": "2026-10-25",
+   "clips_per_set": 100,
+   "wer_8set": 0.2059,
+   "per_set_wer": {
+    "ami": 0.2027,
+    "common_voice": 0.3543,
+    "earnings22": 0.2165,
+    "gigaspeech": 0.2378,
+    "librispeech-clean": 0.0536,
+    "librispeech-other": 0.1151,
+    "urgent2024": 0.3423,
+    "voxpopuli": 0.1248
+   },
+   "shown_p50_s": 3.063,
+   "shown_p90_s": 9.953,
+   "cpu_cores": 3.242,
+   "peak_rss_mb": 1190,
+   "first100": {
+    "wer_8set": 0.2059,
+    "shown_p50_s": 3.063,
+    "shown_p90_s": 9.953
+   }
+  }
+ ]
+}

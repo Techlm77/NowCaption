@@ -135,4 +135,5 @@ the other files in [`tests/`](tests/) say what they cover.
 | Punctuation and capital letters | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) by frankyoujian | Apache-2.0 |
 
 NowCaption's own code is MIT licensed. Everything else it ships with, and the speech its model
-was trained on, is listed in [MODEL-LICENSES.md](MODEL-LICENSES.md).
+was trained on, is listed in [MODEL-LICENSES.md](MODEL-LICENSES.md). How speech model v3 was trained,
+chosen and exported is in its [model card](MODEL-CARD-v3.md).

@@ -154,6 +154,44 @@ Words wrong in continuous use, v2 → v3:
 tell: three of them are better and US Hispanic is 5.0 points worse (0.0 to +9.3). With a fresh stream per clip every region is within chance of v2 (all clips: 14.18% →
 14.10%).
 
+## Against other offline engines (streaming)
+
+The same 3,200 clips as [everyday speech](#everyday-speech-streaming), captioned in continuous use by
+each engine through `stream.py`, which also runs the engines other Linux caption apps use (its
+docstring shows how each is run). Words wrong don't depend on the machine's load: NowCaption 1.1.x
+made 17.31% on both 25 and 26 October. Delay and CPU do: on 25 October the engines ran side by side,
+and 1.1.x measured 0.23 s and 0.240 cores; alone on the 26th, 0.22 s and 0.187 cores. So compare
+1.2.0's delay and CPU with 1.1.x's from the 26th. Delays here are "shown" (on screen and lined up
+with the final text), each set's median and 90% averaged over the sets; CPU is the whole process's.
+
+| Engine | What it is | Words wrong | Shown: median / 90% | CPU (cores) | Peak memory |
+|---|---|---|---|---|---|
+| **NowCaption 1.2.0** (26 Oct) | This app; speech model v3, CC-BY-4.0 | **13.31%** | 0.22 / 0.41 s | 0.191 | 348 MB |
+| NowCaption 1.1.x (26 Oct) | Speech model v2 | 17.31% | 0.22 / 0.41 s | 0.187 | 319 MB |
+| Moonshine Streaming Medium | Engine (MIT) | 13.64% | 0.91 / 1.47 s | 0.515 | 926 MB |
+| Moonshine Streaming Small | Engine (MIT) | 15.23% | 0.80 / 1.22 s | 0.378 | 577 MB |
+| Parakeet Realtime EOU 120M | Engine (NVIDIA Open Model License); no punctuation or capitals | 16.46% | 0.15 / 0.39 s | 0.228 | 309 MB |
+| NowCaption 1.1.x (25 Oct) | Speech model v2 | 17.31% | 0.23 / 0.42 s | 0.240 | 314 MB |
+| Vosk en-us 0.22 (large) | Engine (Apache 2.0) | 28.46% | 0.56 / 1.13 s | 0.349 | 7,296 MB |
+| Vosk small-en-us 0.15 | Engine (Apache 2.0) | 31.53% | 0.24 / 0.48 s | 0.063 | 523 MB |
+| April english-dev-01110 | LiveCaptions' engine and model | 32.37% | 0.29 / 0.43 s | 0.382 | 733 MB |
+
+With 3,200 clips, differences under about 0.7 points can be luck, so 1.2.0 and Moonshine Medium are
+about as accurate, and Moonshine shows words about four times later. Vosk publishes 9.85% (small) and
+5.69% (large) on LibriSpeech test-clean; here they make 10.3% and 8.1% on LibriSpeech clean, and far
+more on everyday speech.
+
+Whisper (faster-whisper small.en, INT8, 4 threads, LocalAgreement-2 with 1 s minimum chunks) ran
+only the first 100 clips of each set: 20.59% words wrong, words shown 3.06 s after they end at the
+median (90% within 9.95 s), 3.24 CPU cores and 1,190 MB. NowCaption 1.2.0 makes 13.43% on the same
+clips (1.1.x: 17.14%).
+
+On a set of hard cases (names, numbers, gaming and streaming talk, with references from two NVIDIA
+models agreeing), measured with 1.1.x only, Moonshine (6.6–7.1%) and Parakeet (8.6%) made fewer
+mistakes than NowCaption (12.6%). 1.2.0 hasn't been measured on it, and the set isn't published.
+Every engine's per-set results: [`results/1.2.0/engines.md`](results/1.2.0/engines.md) and
+`engines.json`.
+
 ## Continuous use (caption pipeline)
 
 `pipeline.py`: the LibriSpeech clips joined by 2.0–2.1 s of digital silence, three random gap
@@ -292,7 +330,8 @@ The released v3 blends two of run 3's saves in weight space: three quarters of t
 of the 8-hour save's accuracy, and on the eight test sets it is better than the 4-hour save
 beyond chance (−0.34 points continuous, −0.19 fresh) for 5–8 ms of delay. It was then
 confirmed on the accent set and on 400 other clips per set that played no part in the choice.
-The model card in the release archive lists the training data, the two saves and the export.
+The [model card](../MODEL-CARD-v3.md) (the same text as `README.md` in the release archive) lists the
+training data, how the model was trained and chosen, the two saves and the export, with checksums.
 
 **Why only int8.** The same blended weights were also exported in three other number formats and
 measured on the same eight sets (continuous use, against the shipped int8):
@@ -361,6 +400,7 @@ for s in data/esb/*/; do
   python stream.py appreset:../models/nowcaption-fastconformer-en-80ms-cc-by-v3 --data $s --name v3-fresh
 done                                       # the same with the v2 folder and --name v2-cont / v2-fresh
 python compare.py --models v2 v3 --base v2
+# other engines: stream.py moonshine:, april:, vosk: and whisper: (see stream.py's docstring)
 ```
 
 Results are written to `results/`: `pipeline-<data>-s<seed>.json` from `pipeline.py`,

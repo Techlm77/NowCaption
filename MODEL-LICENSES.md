@@ -7,7 +7,7 @@ contain the models and libraries below, each under its own license.
 
 | Model | By | License |
 |---|---|---|
-| Speech recognition: [`nowcaption-fastconformer-en-80ms-cc-by-v3`](https://github.com/Techlm77/NowCaption/releases/tag/models-v3) | NowCaption, fine-tuned from NVIDIA's [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi) (NeMo team) | CC-BY-4.0 |
+| Speech recognition: [`nowcaption-fastconformer-en-80ms-cc-by-v3`](https://github.com/Techlm77/NowCaption/releases/tag/models-v3) ([model card](MODEL-CARD-v3.md)) | NowCaption, fine-tuned from NVIDIA's [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi) (NeMo team) | CC-BY-4.0 |
 | Punctuation and capital letters: `sherpa-onnx-online-punct-en-2024-08-06` | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) by frankyoujian, packaged by k2-fsa | Apache-2.0 |
 
 The speech model is NowCaption's third fine-tune. Version 2 was trained with the text NVIDIA's
