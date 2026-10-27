@@ -57,6 +57,14 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.2.1" date="2026-10-27">
+      <description>
+        <p>
+          On KDE Plasma 6, a floating panel now stops floating while docked captions touch it, as it
+          does when a window touches it, and floats again when they move away or NowCaption quits.
+        </p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-10-27">
       <description>
         <p>

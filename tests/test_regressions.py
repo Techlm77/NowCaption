@@ -77,6 +77,7 @@ def app_with_fakes():
     a.history_path = engine.history_file(a.started)
     a.capture = NS(starts=[], start=lambda device, gen: a.capture.starts.append((device, gen)), stop=lambda: None)
     a.fullscreen_watch = NS(stop=lambda sync=False: None)  # the KWin script is not these tests' business
+    a.panel_float = NS(stop=lambda: None, dock=lambda edge, output='': None)  # nor are Plasma's panels
     return a
 
 

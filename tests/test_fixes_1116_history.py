@@ -177,6 +177,7 @@ class AppTests(unittest.TestCase):
         self.addCleanup(patcher.stop)
         self.app = nc.NowCaption()
         self.app.fullscreen_watch.bus = None  # never load a KWin script into the desktop running the tests
+        self.app.panel_float.bus = None  # nor change the panels of the desktop running the tests
         self.folder = engine.history_dir()
         self.folder.mkdir(parents=True)
 

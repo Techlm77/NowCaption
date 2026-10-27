@@ -41,6 +41,7 @@ def shared_app():
         app.set_flags(app.get_flags() | nc.Gio.ApplicationFlags.NON_UNIQUE)
         app.register(None)
         app.fullscreen_watch.bus = None  # never load a KWin script into the desktop running the tests
+        app.panel_float.bus = None  # nor change the panels of the desktop running the tests
         APP.append(app)
     return APP[0]
 

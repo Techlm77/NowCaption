@@ -89,6 +89,9 @@ windows to resize both together. Choosing another position slides the captions i
 edge and out of the new one, and your windows move along with them. On KDE Plasma 5.27
 and 6, while a fullscreen game or video is open on their screen, docked captions float
 above it and dock again when it closes; elsewhere, choose **Floating** for fullscreen apps.
+On KDE Plasma 6, a floating panel on the captions' edge stops floating while they're docked
+against it, as it does when a window touches it, and floats again when they move away or
+NowCaption quits.
 Floating captions keep their bottom edge in place when you change the text size.
 
 **KWin permission.** On KDE Plasma, the Flatpak may talk to KWin, so docked captions can
@@ -97,6 +100,11 @@ while the captions are docked, to learn when a fullscreen app opens on their scr
 you'd rather not allow it, run
 `flatpak override --user --no-talk-name=org.kde.KWin io.github.Techlm77.NowCaption`;
 docked captions then stay docked under fullscreen apps.
+
+**Plasma permission.** The Flatpak may also talk to Plasma, to turn a floating panel's
+floating off while docked captions touch it (and back on after). If you'd rather not allow
+it, run `flatpak override --user --no-talk-name=org.kde.plasmashell io.github.Techlm77.NowCaption`;
+the panel then keeps floating next to docked captions.
 
 **No captions?** Make sure sound plays through your default output device. After
 switching to headphones, or after a problem, open **More options…** and press

@@ -45,6 +45,7 @@ jobs:
             gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 \
             python3-yaml dbus xvfb xauth
       - run: NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_app.py
+      - run: PYTHONPATH=src /usr/bin/python3 tests/test_fixes_121.py
       - run: xvfb-run -a env NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_window.py
       - run: |
           for t in history options effects window transcript access packaging; do

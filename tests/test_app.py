@@ -58,6 +58,7 @@ class AppTests(unittest.TestCase):
     def make(self):
         a = nc.NowCaption()
         a.fullscreen_watch.bus = None  # never load a KWin script into the desktop running the tests
+        a.panel_float.bus = None  # nor change the panels of the desktop running the tests
         a.window = FakeWindow()
         a.capture = NS(starts=[], start=lambda device, gen: a.capture.starts.append(gen), stop=lambda: None)
         a.worker = NS(set_source=lambda gen: None, clear=lambda gen: None, restart=lambda: None)

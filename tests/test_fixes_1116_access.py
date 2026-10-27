@@ -281,6 +281,7 @@ nc.NowCaption.open_options = lambda self: print('options', flush=True)
 nc.NowCaption.request_quit = quit
 app = nc.NowCaption()
 app.fullscreen_watch.bus = None
+app.panel_float.bus = None  # nor change the panels of the desktop running the tests
 status = app.run(['nowcaption'])
 for thread in threading.enumerate():
     if thread is not threading.current_thread():

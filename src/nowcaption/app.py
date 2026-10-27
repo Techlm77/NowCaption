@@ -87,7 +87,7 @@ ALONG = {'top': ('left', 'right'), 'bottom': ('left', 'right'), 'left': ('top', 
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
             'width': -1, 'rows': ROWS, 'colour': 'white', 'history': True,
             'position': 'floating', 'dock_rows': ROWS, 'dock_width': -1,
-            'word_effect': 'fade', 'word_speed': 'normal'}
+            'word_effect': 'fade', 'word_speed': 'normal', 'unfloated': ''}
 LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'dock_rows': (1, 100)}
 CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS), 'position': tuple(POSITIONS),
            'word_effect': tuple(WORD_EFFECTS), 'word_speed': tuple(WORD_SPEEDS)}
@@ -189,6 +189,80 @@ class FullscreenWatch:
         if self.output is not None:
             self.output = None
             self.call('unloadScript', ('(s)', (self.NAME,)), sync=sync)
+
+
+# On KDE Plasma a floating panel stops floating while a window touches it, but Plasma only counts
+# app windows. Docked on the panel's edge, the captions touch it and maximised windows end at the
+# captions instead, so the panel would float on as if nothing touched it. While the captions are
+# docked on the edge and screen of a floating panel, NowCaption turns that panel's floating off
+# through Plasma's desktop scripting, and on again when they leave that edge or the app quits. The
+# panels it changed are kept in the settings ('unfloated'), so after a crash the next start puts
+# them back. Plasma 5's scripting has no floating to change: there nothing happens.
+PANELS_SCRIPT = """// NowCaption: the panels the docked captions touch do not float.
+var OURS = %s;  // the panels NowCaption turned floating off for before
+var EDGE = %s;  // the edge the captions are docked on, "" when they are not
+var OUTPUT = %s;  // their screen's connector name, "" for any screen
+var screen = OUTPUT !== "" && typeof screenForConnector === "function" ? screenForConnector(OUTPUT) : -1;
+var now = [];
+panels().forEach(function (p) {
+    if (typeof p.floating !== "boolean") return;
+    var touched = EDGE !== "" && p.location === EDGE && (OUTPUT === "" || p.screen === screen);
+    var ours = OURS.indexOf(p.id) >= 0;
+    if (touched && (p.floating || ours)) {
+        p.floating = false;
+        now.push(p.id);
+    } else if (ours) {
+        p.floating = true;
+    }
+});
+print(JSON.stringify(now));
+"""
+
+
+class PanelFloat:
+    """Runs PANELS_SCRIPT in Plasma when the docked edge changes. The calls are synchronous but
+    short (a hung Plasma costs at most TIMEOUT_MS once); where Plasma is not running they fail at
+    once and nothing changes."""
+    TIMEOUT_MS = 500
+
+    def __init__(self, settings):
+        self.settings, self.want, self.bus = settings, False, None  # False: not told yet
+        try:
+            self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        except GLib.Error:
+            pass
+
+    def ours(self):
+        return [int(i) for i in self.settings.get('unfloated').split(',') if i.strip().isdigit()]
+
+    def dock(self, edge, output=''):
+        """The captions are docked on edge ('top', 'bottom', 'left' or 'right') of the screen with
+        this connector name ('' for any), or not docked (None)."""
+        want = (edge, output or '') if edge else None
+        if want == self.want:
+            return
+        self.want = want
+        if want or self.ours():
+            self.run(*(want or ('', '')))
+
+    def stop(self):
+        """The app quits: the panels float again."""
+        self.dock(None)
+
+    def run(self, edge, output):
+        if not self.bus:
+            return
+        script = PANELS_SCRIPT % tuple(map(json.dumps, (self.ours(), edge, output)))
+        try:
+            reply = self.bus.call_sync('org.kde.plasmashell', '/PlasmaShell', 'org.kde.PlasmaShell',
+                                       'evaluateScript', GLib.Variant('(s)', (script,)), GLib.VariantType('(s)'),
+                                       Gio.DBusCallFlags.NO_AUTO_START, self.TIMEOUT_MS, None)
+            now = json.loads(reply.unpack()[0].strip().splitlines()[-1])
+        except (GLib.Error, ValueError, IndexError) as e:
+            LOG.debug('Plasma panels left as they are: %s', e)
+            return
+        if isinstance(now, list):
+            self.settings.set('unfloated', ','.join(str(i) for i in now if isinstance(i, int)))
 
 
 class Settings:
@@ -987,6 +1061,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         # fullscreen apps included
         LayerShell.set_layer(self, LayerShell.Layer.TOP if self.edge else LayerShell.Layer.OVERLAY)
         self.watch_fullscreen()
+        self.touch_panels()
         for name in ('top', 'bottom', 'left', 'right'):
             LayerShell.set_anchor(self, getattr(LayerShell.Edge, name.upper()),
                                   self.edge is None or name == self.edge or name in ALONG[self.edge])
@@ -1016,6 +1091,14 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.app.fullscreen_watch.start(self.monitor.get_connector() or '', (g.x, g.y, g.width, g.height))
         else:
             self.app.fullscreen_watch.start('')
+
+    def touch_panels(self):
+        """Docked, the captions touch the panels on their edge: on Plasma those stop floating, as
+        they do for a window that touches them (see PANELS_SCRIPT). Floating over a fullscreen
+        app changes nothing: the panels are hidden then, and the captions dock again after."""
+        chosen = self.settings.get('position')
+        output = (self.monitor.get_connector() or '') if self.monitor else ''
+        self.app.panel_float.dock(None if chosen == 'floating' else chosen, output)
 
     def set_covered(self, covered):
         """A fullscreen app on this screen opened or closed: float over it, or dock again."""
@@ -1139,6 +1222,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.box_width = self.width_for(monitor)
         if self.layer and monitor:
             self.watch_fullscreen()
+            self.touch_panels()
         self.watch_monitor()
         if self.layer and monitor:
             LayerShell.set_monitor(self, monitor)
@@ -2226,6 +2310,7 @@ class NowCaption(Adw.Application):
         self.quit_requested = False
         self.fading_out = False
         self.fullscreen_watch = FullscreenWatch(APP_ID)
+        self.panel_float = PanelFloat(self.settings)
         self.capture = audio.Capture(
             on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
             on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
@@ -2513,6 +2598,7 @@ class NowCaption(Adw.Application):
     def on_shutdown(self, app):
         self.closing = True
         self.fullscreen_watch.stop(sync=True)
+        self.panel_float.stop()
         self.cancel_recognition_retry()
         if self.retry_id:
             GLib.source_remove(self.retry_id)

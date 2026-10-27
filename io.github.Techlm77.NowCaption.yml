@@ -13,6 +13,9 @@ finish-args:
   # On KDE Plasma, docked captions float over a fullscreen app on their screen: a small KWin
   # script, loaded only while they are docked, tells NowCaption when one is open.
   - --talk-name=org.kde.KWin
+  # Docked against a floating Plasma panel, the captions turn its floating off (Plasma only counts
+  # windows as touching it) and back on after, through Plasma's desktop scripting.
+  - --talk-name=org.kde.plasmashell
 cleanup:
   - /include
   - /lib/pkgconfig
