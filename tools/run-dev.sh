@@ -7,10 +7,10 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-need="models/nowcaption-fastconformer-en-80ms-cc-by-v3/tokens.txt
-models/nowcaption-fastconformer-en-80ms-cc-by-v3/encoder.int8.onnx
-models/nowcaption-fastconformer-en-80ms-cc-by-v3/decoder.int8.onnx
-models/nowcaption-fastconformer-en-80ms-cc-by-v3/joiner.int8.onnx
+need="models/nowcaption-fastconformer-en-80ms-cc-by-v4/tokens.txt
+models/nowcaption-fastconformer-en-80ms-cc-by-v4/encoder.int8.onnx
+models/nowcaption-fastconformer-en-80ms-cc-by-v4/decoder.int8.onnx
+models/nowcaption-fastconformer-en-80ms-cc-by-v4/joiner.int8.onnx
 models/sherpa-onnx-online-punct-en-2024-08-06/model.int8.onnx
 models/sherpa-onnx-online-punct-en-2024-08-06/bpe.vocab"
 for f in $need; do

@@ -1,10 +1,10 @@
 """Streaming benchmark: one engine captions a whole test set as one live stream, as an app would.
 
-Used for NowCaption 1.2.0's model choice (v3 against v2, on the ESB sets from get-esb.py) and for the
-comparison with the caption engines other Linux apps use:
+Used for NowCaption's model choices (v3 against v2 for 1.2.0, v4 against v3 for 1.2.2, on the ESB sets from
+get-esb.py) and for the comparison with the caption engines other Linux apps use:
 
-    python stream.py app:../models/nowcaption-fastconformer-en-80ms-cc-by-v3 --data data/esb/ami --name v3-cont
-    python stream.py appreset:../models/nowcaption-fastconformer-en-80ms-cc-by-v3 --data data/esb/ami --name v3-fresh
+    python stream.py app:../models/nowcaption-fastconformer-en-80ms-cc-by-v4 --data data/esb/ami --name v4-cont
+    python stream.py appreset:../models/nowcaption-fastconformer-en-80ms-cc-by-v4 --data data/esb/ami --name v4-fresh
     python stream.py moonshine:medium --data data/esb/ami [--interval 0.5]       (needs moonshine-voice)
     python stream.py april:april/april-english-dev-01110_en.april --data data/esb/ami    (build-april.sh)
     python stream.py vosk:vosk-model-small-en-us-0.15 --data data/esb/ami         (needs vosk)

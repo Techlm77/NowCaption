@@ -27,7 +27,7 @@ WARMUP_S = 0.96         # silence before a new stream's first audio (12 encoder 
                         # LibriSpeech test-other in 5 of 6 continuous runs, so 0.96 s stays
 PAUSE_S = 0.8           # no new words for this long starts a new caption line
 MAX_LINE = 160          # characters before a running line is split anyway
-ASR_DIR = 'nowcaption-fastconformer-en-80ms-cc-by-v3'
+ASR_DIR = 'nowcaption-fastconformer-en-80ms-cc-by-v4'
 ASR_FILES = ('tokens.txt', 'encoder.int8.onnx', 'decoder.int8.onnx', 'joiner.int8.onnx')
 PUNCT_DIR = 'sherpa-onnx-online-punct-en-2024-08-06'
 PUNCT_FILES = ('model.int8.onnx', 'bpe.vocab')

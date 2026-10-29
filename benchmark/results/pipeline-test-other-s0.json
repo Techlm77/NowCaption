@@ -6,28 +6,28 @@
   2.1
  ],
  "words": 2369,
- "errors": 149,
- "wer": 0.0629,
- "lag_s_mean": 0.187,
- "lag_s_p50": 0.214,
- "lag_s_p90": 0.38,
+ "errors": 153,
+ "wer": 0.0646,
+ "lag_s_mean": 0.17,
+ "lag_s_p50": 0.197,
+ "lag_s_p90": 0.364,
  "timed_words": 2223,
  "audio_s": 1130.5,
- "cpu_rtf": 0.1691,
+ "cpu_rtf": 0.0714,
  "stage_ms_per_audio_s": {
-  "speech model (decode_stream: encoder and greedy search)": 154.82,
-  "punctuation and casing": 10.99,
-  "reading the recognised text (get_result)": 1.7,
-  "audio features (accept_waveform)": 1.07,
+  "speech model (decode_stream: encoder and greedy search)": 57.49,
+  "punctuation and casing": 10.89,
+  "reading the recognised text (get_result)": 1.57,
+  "audio features (accept_waveform)": 1.05,
   "is_ready": 0.05,
   "new stream": 0.0,
-  "everything else (Python)": 0.44
+  "everything else (Python)": 0.4
  },
  "items": [
   {
    "audio": "367-293981-0001.wav",
-   "hyp": "i say so continued don quixote because i hate taking away anyone's good name",
-   "errors": 0
+   "hyp": "i say so continued don quixote because i hate taking away any one's good name",
+   "errors": 2
   },
   {
    "audio": "367-293981-0003.wav",
@@ -86,8 +86,8 @@
   },
   {
    "audio": "1998-29455-0013.wav",
-   "hyp": "that's all right said mister beale awkwardly",
-   "errors": 0
+   "hyp": "that's all right said mister bee awkwardly",
+   "errors": 1
   },
   {
    "audio": "1998-15444-0018.wav",
@@ -136,8 +136,8 @@
   },
   {
    "audio": "2414-159411-0018.wav",
-   "hyp": "after this they saw an allocator and the brahman related the matter to him hoping for a more favourable verdict",
-   "errors": 2
+   "hyp": "after this they saw an alligator and the brahman related the matter to him hoping for a more favourable verdict",
+   "errors": 1
   },
   {
    "audio": "2414-159411-0032.wav",
@@ -151,8 +151,8 @@
   },
   {
    "audio": "2609-157645-0013.wav",
-   "hyp": "going to church at hayden thursday's days must have been acquainted and he signing experience",
-   "errors": 7
+   "hyp": "go into church saint hayden thursday's days must have been acquainted the assigning experience",
+   "errors": 9
   },
   {
    "audio": "2609-169640-0008.wav",
@@ -161,8 +161,8 @@
   },
   {
    "audio": "2609-157645-0007.wav",
-   "hyp": "one sunday says mister ditchfield he handed that pipe and joshua the clerk told him that the people were getting them pacin",
-   "errors": 5
+   "hyp": "one sunday says mister ditchfield he handed that pipe and jonso the clerk told him that the people were getting impatient",
+   "errors": 4
   },
   {
    "audio": "3005-163390-0019.wav",
@@ -181,8 +181,8 @@
   },
   {
    "audio": "3005-163399-0004.wav",
-   "hyp": "when we got there she set me down in a split bottomed chair and set herself down on a little low stool in front of me holding both of my hands and says",
-   "errors": 0
+   "hyp": "when we got there she set me down in a split bottom chair and set herself down on a little low stool in front of me holding both of my hands and says",
+   "errors": 1
   },
   {
    "audio": "3080-5040-0016.wav",
@@ -206,8 +206,8 @@
   },
   {
    "audio": "3331-159605-0000.wav",
-   "hyp": "she pulled her head down turned her skirt back put her feet on the fender and took part on to her lap all of which arrangements signified that something very important had got to be thought over and settled",
-   "errors": 4
+   "hyp": "she pulled her hair down turned as good back put her feet on the fender and took part on to her lap all of which arrangements signified that something very important had got to be thought over and settled",
+   "errors": 5
   },
   {
    "audio": "3331-159605-0006.wav",
@@ -216,8 +216,8 @@
   },
   {
    "audio": "3331-159609-0012.wav",
-   "hyp": "once or twice but sort of chokingly and i thought it was only some little flirtation",
-   "errors": 1
+   "hyp": "once or twice what sort of chokingly and i thought it was only some little flirtation",
+   "errors": 2
   },
   {
    "audio": "3331-159609-0023.wav",
@@ -271,8 +271,8 @@
   },
   {
    "audio": "3764-168670-0011.wav",
-   "hyp": "jean valjean stared him straight in the eye and thought that he was raven",
-   "errors": 1
+   "hyp": "jean valjean stared him straight in the eye and thought that he was raving",
+   "errors": 0
   },
   {
    "audio": "3764-168670-0029.wav",
@@ -281,8 +281,8 @@
   },
   {
    "audio": "3764-168671-0029.wav",
-   "hyp": "feebly father miss tiel is the grave digger",
-   "errors": 5
+   "hyp": "but he persisted feebly father miss tiel is the grave digger",
+   "errors": 2
   },
   {
    "audio": "3997-180297-0005.wav",
@@ -306,7 +306,7 @@
   },
   {
    "audio": "4198-12259-0018.wav",
-   "hyp": "and i tank quam sponsors",
+   "hyp": "and i tang quam sponsors",
    "errors": 3
   },
   {
@@ -316,8 +316,8 @@
   },
   {
    "audio": "4198-12281-0012.wav",
-   "hyp": "oh the holy lady knights it said one the good sanctus oh our lady of succuas said another help help",
-   "errors": 6
+   "hyp": "oh the holy lady knights it said one the good sanctus oh our lady of succuas said another help help help",
+   "errors": 7
   },
   {
    "audio": "4198-61336-0022.wav",
@@ -346,8 +346,8 @@
   },
   {
    "audio": "4350-10919-0020.wav",
-   "hyp": "the celebrated doctor announced to the princess a feeling of what was due from him that kated his doing so that he ought to see the patient once more",
-   "errors": 2
+   "hyp": "the celebrated doctor announced that the princess a feeling of what was due from him dictated his doing so that he ought to see the patient once more",
+   "errors": 1
   },
   {
    "audio": "4350-9170-0051.wav",
@@ -366,8 +366,8 @@
   },
   {
    "audio": "4852-28312-0008.wav",
-   "hyp": "chris swallowed his voice came back to him",
-   "errors": 1
+   "hyp": "chris swallowed and his voice came back to him",
+   "errors": 0
   },
   {
    "audio": "4852-28330-0011.wav",
@@ -376,8 +376,8 @@
   },
   {
    "audio": "4852-28330-0002.wav",
-   "hyp": "next ned silly was relieved at the helm by albert jones who took over ned went on down",
-   "errors": 2
+   "hyp": "next ned's silly whistlie to the helm by elbert jones who took over ned went on down",
+   "errors": 5
   },
   {
    "audio": "4852-28330-0009.wav",
@@ -391,8 +391,8 @@
   },
   {
    "audio": "5442-41168-0023.wav",
-   "hyp": "if the men younger and more deserving than i let them serve",
-   "errors": 2
+   "hyp": "if the are men younger and more deserving than i let them serve",
+   "errors": 1
   },
   {
    "audio": "5442-32873-0008.wav",
@@ -416,8 +416,8 @@
   },
   {
    "audio": "5484-24317-0023.wav",
-   "hyp": "that is going to far replied herman",
-   "errors": 2
+   "hyp": "that is going to fall herman",
+   "errors": 4
   },
   {
    "audio": "5484-24318-0009.wav",
@@ -446,12 +446,12 @@
   },
   {
    "audio": "6070-63485-0016.wav",
-   "hyp": "between saint waint and the road of la revolt at the end of the road agreed",
+   "hyp": "between saint wain and the road of la revolt at the end of the road agreed",
    "errors": 2
   },
   {
    "audio": "6070-63485-0002.wav",
-   "hyp": "by means of this strategem they followed so closely that although within a few steps of seren tom they did not hear them",
+   "hyp": "by means of this strategy they followed so closely that although within a few steps of seren tom they did not hear them",
    "errors": 3
   },
   {
@@ -461,8 +461,8 @@
   },
   {
    "audio": "6070-86745-0019.wav",
-   "hyp": "with the autalents you would make your fortune in three or four years",
-   "errors": 2
+   "hyp": "with your talents you would make your fortune in three or four years",
+   "errors": 0
   },
   {
    "audio": "6128-63240-0022.wav",
@@ -476,7 +476,7 @@
   },
   {
    "audio": "6128-63240-0007.wav",
-   "hyp": "these things the eyes especially with their smouldering fire might have indicated that he was to be great american statesman or on the other hand there might simply have proved that he came from carolina or alabama",
+   "hyp": "these things the eyes especially with their smoldering fire might have indicated that he was to be a great american statesman or on the other hand there might simply have proved that he came from carolina or alabama",
    "errors": 2
   },
   {
@@ -486,8 +486,8 @@
   },
   {
    "audio": "6432-63722-0023.wav",
-   "hyp": "labors often heard him scraping a lot and this afternoon they went at it again in hot and heavy",
-   "errors": 4
+   "hyp": "neighbors often heard him scraping a lot and this afternoon they went at it again in hot and heavy",
+   "errors": 3
   },
   {
    "audio": "6432-63722-0026.wav",
@@ -516,7 +516,7 @@
   },
   {
    "audio": "6938-70848-0018.wav",
-   "hyp": "but this work both ways the lap socially revolutionist decided that if the congress had no power over the executive committee then the executive committee had no power over the congress",
+   "hyp": "but this work both ways the lap social revolutionist decided that if the congress had no power over the executive committee then the executive committee had no power over the congress",
    "errors": 4
   },
   {
@@ -556,8 +556,8 @@
   },
   {
    "audio": "7105-2340-0003.wav",
-   "hyp": "when a man is absolutely wealthy not merely well to do all suspicion of sordid motive natural disappears the thing becomes merely a tiresome malady",
-   "errors": 1
+   "hyp": "when a man is absolutely wealthy not merely well to do all suspicion of started motive natural disappears the thing becomes merely a tiresome malady",
+   "errors": 2
   },
   {
    "audio": "7105-2340-0029.wav",
@@ -566,8 +566,8 @@
   },
   {
    "audio": "7902-96594-0023.wav",
-   "hyp": "they pardoned didn't mean nought sir said the sailor touching his forelock",
-   "errors": 3
+   "hyp": "they pardon didn't mean nought sir said the sailor touching his forelock",
+   "errors": 2
   },
   {
    "audio": "7902-96595-0019.wav",
@@ -576,8 +576,8 @@
   },
   {
    "audio": "7902-96595-0017.wav",
-   "hyp": "i dunno muttered dick and a men can't be sure",
-   "errors": 1
+   "hyp": "i dunno muttered dick and men can't be sure",
+   "errors": 2
   },
   {
    "audio": "7902-96592-0042.wav",
@@ -621,12 +621,12 @@
   },
   {
    "audio": "8131-117016-0053.wav",
-   "hyp": "yet fitted with a dire predictions of security and with the spying gordon was going to do according to them",
-   "errors": 2
+   "hyp": "yet fitted with a dire predictions of security and with a spying gordon was going to do according to them",
+   "errors": 3
   },
   {
    "audio": "8188-269288-0034.wav",
-   "hyp": "hennie's eyes were very bright her cheeks were no longer pale and there was a brilliant color in them",
+   "hyp": "annie's eyes were very bright her cheeks were no longer pale and there was a brilliant colour in them",
    "errors": 1
   },
   {

@@ -57,6 +57,23 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.2.2" date="2026-10-29">
+      <description>
+        <p>
+          A new speech model, NowCaption's own v4: slightly fewer mistakes, with less than half the
+          CPU time.
+        </p>
+        <ul>
+          <li>Fewer wrong words when captioning continuously: 13.3% to 13.0% across meetings, calls,
+            podcasts, speeches and noisy recordings, and 13.8% to 13.5% across 20 accent groups</li>
+          <li>The speech model now needs about 7% of one CPU core for non-stop speech, down from
+            about 18%</li>
+          <li>Words show as soon as before; the download is smaller (111 MB, was 127 MB) and it needs
+            a little less memory</li>
+          <li>Known limit: very occasionally a word is repeated several times in a row</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2.1" date="2026-10-27">
       <description>
         <p>

@@ -1,0 +1,1164 @@
+{
+ "base": "v3",
+ "modes": {
+  "cont": {
+   "rows": [
+    {
+     "model": "v4",
+     "mode": "cont",
+     "sets": {
+      "africa": {
+       "wer": 0.2277,
+       "settled_p50": 0.275,
+       "loops": 1,
+       "cpu_rtf": 0.141,
+       "peak_rss_mb": 323,
+       "resets": null,
+       "clips": 159
+      },
+      "australia-nz": {
+       "wer": 0.0893,
+       "settled_p50": 0.263,
+       "loops": 0,
+       "cpu_rtf": 0.1415,
+       "peak_rss_mb": 324,
+       "resets": null,
+       "clips": 122
+      },
+      "canada": {
+       "wer": 0.0728,
+       "settled_p50": 0.223,
+       "loops": 0,
+       "cpu_rtf": 0.1365,
+       "peak_rss_mb": 322,
+       "resets": null,
+       "clips": 102
+      },
+      "england-midlands": {
+       "wer": 0.0624,
+       "settled_p50": 0.226,
+       "loops": 0,
+       "cpu_rtf": 0.1467,
+       "peak_rss_mb": 320,
+       "resets": null,
+       "clips": 44
+      },
+      "england-north": {
+       "wer": 0.0645,
+       "settled_p50": 0.199,
+       "loops": 0,
+       "cpu_rtf": 0.1456,
+       "peak_rss_mb": 323,
+       "resets": null,
+       "clips": 171
+      },
+      "england-south": {
+       "wer": 0.0984,
+       "settled_p50": 0.212,
+       "loops": 0,
+       "cpu_rtf": 0.1494,
+       "peak_rss_mb": 324,
+       "resets": null,
+       "clips": 300
+      },
+      "india-south-asia": {
+       "wer": 0.1685,
+       "settled_p50": 0.305,
+       "loops": 0,
+       "cpu_rtf": 0.1461,
+       "peak_rss_mb": 316,
+       "resets": null,
+       "clips": 300
+      },
+      "ireland": {
+       "wer": 0.2019,
+       "settled_p50": 0.244,
+       "loops": 0,
+       "cpu_rtf": 0.1445,
+       "peak_rss_mb": 325,
+       "resets": null,
+       "clips": 106
+      },
+      "northern-ireland": {
+       "wer": 0.0385,
+       "settled_p50": 0.2025,
+       "loops": 0,
+       "cpu_rtf": 0.1382,
+       "peak_rss_mb": 317,
+       "resets": null,
+       "clips": 5
+      },
+      "other-l2": {
+       "wer": 0.17,
+       "settled_p50": 0.275,
+       "loops": 0,
+       "cpu_rtf": 0.1461,
+       "peak_rss_mb": 320,
+       "resets": null,
+       "clips": 300
+      },
+      "scotland": {
+       "wer": 0.1074,
+       "settled_p50": 0.214,
+       "loops": 1,
+       "cpu_rtf": 0.1539,
+       "peak_rss_mb": 318,
+       "resets": null,
+       "clips": 213
+      },
+      "uk-general": {
+       "wer": 0.1301,
+       "settled_p50": 0.29,
+       "loops": 0,
+       "cpu_rtf": 0.1477,
+       "peak_rss_mb": 317,
+       "resets": null,
+       "clips": 300
+      },
+      "us-aae": {
+       "wer": 0.1941,
+       "settled_p50": 0.253,
+       "loops": 0,
+       "cpu_rtf": 0.1467,
+       "peak_rss_mb": 318,
+       "resets": null,
+       "clips": 300
+      },
+      "us-general": {
+       "wer": 0.1189,
+       "settled_p50": 0.256,
+       "loops": 0,
+       "cpu_rtf": 0.1486,
+       "peak_rss_mb": 319,
+       "resets": null,
+       "clips": 300
+      },
+      "us-hispanic": {
+       "wer": 0.1,
+       "settled_p50": 0.27049999999999996,
+       "loops": 0,
+       "cpu_rtf": 0.1383,
+       "peak_rss_mb": 319,
+       "resets": null,
+       "clips": 5
+      },
+      "us-midwest": {
+       "wer": 0.1423,
+       "settled_p50": 0.2025,
+       "loops": 0,
+       "cpu_rtf": 0.1449,
+       "peak_rss_mb": 325,
+       "resets": null,
+       "clips": 35
+      },
+      "us-northeast": {
+       "wer": 0.092,
+       "settled_p50": 0.217,
+       "loops": 0,
+       "cpu_rtf": 0.1196,
+       "peak_rss_mb": 322,
+       "resets": null,
+       "clips": 15
+      },
+      "us-south": {
+       "wer": 0.1092,
+       "settled_p50": 0.2155,
+       "loops": 0,
+       "cpu_rtf": 0.1298,
+       "peak_rss_mb": 318,
+       "resets": null,
+       "clips": 12
+      },
+      "us-west": {
+       "wer": 0.0485,
+       "settled_p50": 0.189,
+       "loops": 0,
+       "cpu_rtf": 0.1475,
+       "peak_rss_mb": 315,
+       "resets": null,
+       "clips": 29
+      },
+      "wales": {
+       "wer": 0.0693,
+       "settled_p50": 0.204,
+       "loops": 0,
+       "cpu_rtf": 0.1525,
+       "peak_rss_mb": 317,
+       "resets": null,
+       "clips": 174
+      }
+     },
+     "avg_wer": 0.11529000000000003,
+     "cv_wer": null,
+     "settled": [
+      0.242,
+      0.466,
+      0.732
+     ],
+     "first": [
+      0.242,
+      0.466,
+      0.732
+     ],
+     "timed": 31418,
+     "loops": 2,
+     "cpu_rtf": 0.14325499999999997,
+     "peak_rss_mb": 325,
+     "vs_base": {
+      "sets": {
+       "africa": [
+        -0.0024183796856106408,
+        -0.011985033689909188,
+        0.007471891126533767
+       ],
+       "australia-nz": [
+        -0.005533596837944664,
+        -0.017652932151008185,
+        0.006226288910505834
+       ],
+       "canada": [
+        -0.002952755905511811,
+        -0.01049804923906202,
+        0.003182796277676357
+       ],
+       "england-midlands": [
+        0.0,
+        -0.009868827495014306,
+        0.010720578306904439
+       ],
+       "england-north": [
+        0.0043308791684712,
+        -0.0017133204232466438,
+        0.010476485443588169
+       ],
+       "england-south": [
+        -0.0054139408978118655,
+        -0.014184824014346181,
+        0.0019985700169042656
+       ],
+       "india-south-asia": [
+        -0.008291873963515755,
+        -0.01732102200239455,
+        0.00033190339095370776
+       ],
+       "ireland": [
+        -0.0005341880341880342,
+        -0.010484358674363913,
+        0.009253824031503138
+       ],
+       "northern-ireland": [
+        0.019230769230769232,
+        0.0,
+        0.05660377358490566
+       ],
+       "other-l2": [
+        -0.007082538817760828,
+        -0.01663860245658502,
+        0.001834004221244333
+       ],
+       "scotland": [
+        0.0013097576948264572,
+        -0.006208494390727998,
+        0.00895899816531612
+       ],
+       "uk-general": [
+        -0.00033523298692591353,
+        -0.008827110205928943,
+        0.007934806535814954
+       ],
+       "us-aae": [
+        -0.00501002004008016,
+        -0.013527725027793565,
+        0.0036061850936357793
+       ],
+       "us-general": [
+        -0.00256986829424992,
+        -0.009660304393911955,
+        0.004524960048702534
+       ],
+       "us-hispanic": [
+        -0.05,
+        -0.09302325581395349,
+        0.0
+       ],
+       "us-midwest": [
+        0.0,
+        -0.008065332375604022,
+        0.008266184573002745
+       ],
+       "us-northeast": [
+        -0.018404907975460124,
+        -0.04571521942110177,
+        0.0
+       ],
+       "us-south": [
+        -0.01680672268907563,
+        -0.04504504504504504,
+        0.0
+       ],
+       "us-west": [
+        0.0,
+        -0.0078125,
+        0.008380475095065955
+       ],
+       "wales": [
+        -0.0013233348037053375,
+        -0.007359855085865889,
+        0.00437469291568716
+       ]
+      },
+      "avg_wer": [
+       -0.005090297741888689,
+       -0.008546173542356707,
+       -0.0010624002364171413
+      ],
+      "settled_p50": [
+       -0.007000000000000006,
+       -0.007000000000000006,
+       -0.0050000000000000044
+      ],
+      "settled_p90": [
+       -0.0040000000000000036,
+       -0.006000000000000005,
+       -0.0020000000000000018
+      ],
+      "paired_words": 30932
+     },
+     "after_pause": {
+      "first": [
+       923,
+       5981,
+       0.345
+      ],
+      "rest": [
+       3689,
+       31329,
+       0.225
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       923,
+       5981,
+       0.345
+      ],
+      "rest": [
+       3689,
+       31329,
+       0.225
+      ]
+     }
+    },
+    {
+     "model": "v3",
+     "mode": "cont",
+     "sets": {
+      "africa": {
+       "wer": 0.2301,
+       "settled_p50": 0.2785,
+       "loops": 0,
+       "cpu_rtf": 0.1893,
+       "peak_rss_mb": 328,
+       "resets": null,
+       "clips": 159
+      },
+      "australia-nz": {
+       "wer": 0.0949,
+       "settled_p50": 0.264,
+       "loops": 0,
+       "cpu_rtf": 0.1836,
+       "peak_rss_mb": 329,
+       "resets": null,
+       "clips": 122
+      },
+      "canada": {
+       "wer": 0.0758,
+       "settled_p50": 0.227,
+       "loops": 0,
+       "cpu_rtf": 0.1853,
+       "peak_rss_mb": 332,
+       "resets": null,
+       "clips": 102
+      },
+      "england-midlands": {
+       "wer": 0.0624,
+       "settled_p50": 0.233,
+       "loops": 0,
+       "cpu_rtf": 0.1867,
+       "peak_rss_mb": 335,
+       "resets": null,
+       "clips": 44
+      },
+      "england-north": {
+       "wer": 0.0602,
+       "settled_p50": 0.208,
+       "loops": 0,
+       "cpu_rtf": 0.1907,
+       "peak_rss_mb": 324,
+       "resets": null,
+       "clips": 171
+      },
+      "england-south": {
+       "wer": 0.1038,
+       "settled_p50": 0.219,
+       "loops": 1,
+       "cpu_rtf": 0.1894,
+       "peak_rss_mb": 334,
+       "resets": null,
+       "clips": 300
+      },
+      "india-south-asia": {
+       "wer": 0.1768,
+       "settled_p50": 0.302,
+       "loops": 0,
+       "cpu_rtf": 0.1836,
+       "peak_rss_mb": 329,
+       "resets": null,
+       "clips": 300
+      },
+      "ireland": {
+       "wer": 0.2025,
+       "settled_p50": 0.258,
+       "loops": 0,
+       "cpu_rtf": 0.1865,
+       "peak_rss_mb": 331,
+       "resets": null,
+       "clips": 106
+      },
+      "northern-ireland": {
+       "wer": 0.0192,
+       "settled_p50": 0.208,
+       "loops": 0,
+       "cpu_rtf": 0.1796,
+       "peak_rss_mb": 329,
+       "resets": null,
+       "clips": 5
+      },
+      "other-l2": {
+       "wer": 0.1771,
+       "settled_p50": 0.274,
+       "loops": 0,
+       "cpu_rtf": 0.181,
+       "peak_rss_mb": 336,
+       "resets": null,
+       "clips": 300
+      },
+      "scotland": {
+       "wer": 0.1061,
+       "settled_p50": 0.222,
+       "loops": 0,
+       "cpu_rtf": 0.1919,
+       "peak_rss_mb": 333,
+       "resets": null,
+       "clips": 213
+      },
+      "uk-general": {
+       "wer": 0.1304,
+       "settled_p50": 0.295,
+       "loops": 0,
+       "cpu_rtf": 0.1865,
+       "peak_rss_mb": 334,
+       "resets": null,
+       "clips": 300
+      },
+      "us-aae": {
+       "wer": 0.1991,
+       "settled_p50": 0.265,
+       "loops": 0,
+       "cpu_rtf": 0.1936,
+       "peak_rss_mb": 335,
+       "resets": null,
+       "clips": 300
+      },
+      "us-general": {
+       "wer": 0.1214,
+       "settled_p50": 0.256,
+       "loops": 0,
+       "cpu_rtf": 0.186,
+       "peak_rss_mb": 336,
+       "resets": null,
+       "clips": 300
+      },
+      "us-hispanic": {
+       "wer": 0.15,
+       "settled_p50": 0.2895,
+       "loops": 0,
+       "cpu_rtf": 0.1737,
+       "peak_rss_mb": 329,
+       "resets": null,
+       "clips": 5
+      },
+      "us-midwest": {
+       "wer": 0.1423,
+       "settled_p50": 0.212,
+       "loops": 0,
+       "cpu_rtf": 0.1873,
+       "peak_rss_mb": 327,
+       "resets": null,
+       "clips": 35
+      },
+      "us-northeast": {
+       "wer": 0.1104,
+       "settled_p50": 0.24,
+       "loops": 0,
+       "cpu_rtf": 0.1798,
+       "peak_rss_mb": 328,
+       "resets": null,
+       "clips": 15
+      },
+      "us-south": {
+       "wer": 0.1261,
+       "settled_p50": 0.216,
+       "loops": 0,
+       "cpu_rtf": 0.183,
+       "peak_rss_mb": 333,
+       "resets": null,
+       "clips": 12
+      },
+      "us-west": {
+       "wer": 0.0485,
+       "settled_p50": 0.199,
+       "loops": 0,
+       "cpu_rtf": 0.186,
+       "peak_rss_mb": 331,
+       "resets": null,
+       "clips": 29
+      },
+      "wales": {
+       "wer": 0.0706,
+       "settled_p50": 0.195,
+       "loops": 0,
+       "cpu_rtf": 0.1915,
+       "peak_rss_mb": 337,
+       "resets": null,
+       "clips": 174
+      }
+     },
+     "avg_wer": 0.120385,
+     "cv_wer": null,
+     "settled": [
+      0.248,
+      0.47,
+      0.724
+     ],
+     "first": [
+      0.248,
+      0.47,
+      0.724
+     ],
+     "timed": 31304,
+     "loops": 1,
+     "cpu_rtf": 0.18575000000000003,
+     "peak_rss_mb": 337,
+     "after_pause": {
+      "first": [
+       950,
+       5981,
+       0.34
+      ],
+      "rest": [
+       3769,
+       31329,
+       0.233
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       950,
+       5981,
+       0.34
+      ],
+      "rest": [
+       3769,
+       31329,
+       0.233
+      ]
+     }
+    }
+   ],
+   "pareto": [
+    "v4"
+   ]
+  },
+  "fresh": {
+   "rows": [
+    {
+     "model": "v4",
+     "mode": "fresh",
+     "sets": {
+      "africa": {
+       "wer": 0.2354,
+       "settled_p50": 0.303,
+       "loops": 0,
+       "cpu_rtf": 0.1514,
+       "peak_rss_mb": 320,
+       "resets": 160,
+       "clips": 159
+      },
+      "australia-nz": {
+       "wer": 0.0933,
+       "settled_p50": 0.265,
+       "loops": 0,
+       "cpu_rtf": 0.1597,
+       "peak_rss_mb": 321,
+       "resets": 122,
+       "clips": 122
+      },
+      "canada": {
+       "wer": 0.0758,
+       "settled_p50": 0.241,
+       "loops": 0,
+       "cpu_rtf": 0.1461,
+       "peak_rss_mb": 321,
+       "resets": 102,
+       "clips": 102
+      },
+      "england-midlands": {
+       "wer": 0.0624,
+       "settled_p50": 0.252,
+       "loops": 0,
+       "cpu_rtf": 0.1629,
+       "peak_rss_mb": 320,
+       "resets": 44,
+       "clips": 44
+      },
+      "england-north": {
+       "wer": 0.0585,
+       "settled_p50": 0.245,
+       "loops": 0,
+       "cpu_rtf": 0.1517,
+       "peak_rss_mb": 316,
+       "resets": 171,
+       "clips": 171
+      },
+      "england-south": {
+       "wer": 0.1067,
+       "settled_p50": 0.252,
+       "loops": 0,
+       "cpu_rtf": 0.1639,
+       "peak_rss_mb": 323,
+       "resets": 300,
+       "clips": 300
+      },
+      "india-south-asia": {
+       "wer": 0.1635,
+       "settled_p50": 0.311,
+       "loops": 0,
+       "cpu_rtf": 0.158,
+       "peak_rss_mb": 325,
+       "resets": 301,
+       "clips": 300
+      },
+      "ireland": {
+       "wer": 0.2212,
+       "settled_p50": 0.287,
+       "loops": 0,
+       "cpu_rtf": 0.1451,
+       "peak_rss_mb": 321,
+       "resets": 108,
+       "clips": 106
+      },
+      "northern-ireland": {
+       "wer": 0.0577,
+       "settled_p50": 0.202,
+       "loops": 0,
+       "cpu_rtf": 0.1463,
+       "peak_rss_mb": 319,
+       "resets": 5,
+       "clips": 5
+      },
+      "other-l2": {
+       "wer": 0.1719,
+       "settled_p50": 0.295,
+       "loops": 0,
+       "cpu_rtf": 0.1617,
+       "peak_rss_mb": 327,
+       "resets": 303,
+       "clips": 300
+      },
+      "scotland": {
+       "wer": 0.1156,
+       "settled_p50": 0.253,
+       "loops": 0,
+       "cpu_rtf": 0.1671,
+       "peak_rss_mb": 322,
+       "resets": 215,
+       "clips": 213
+      },
+      "uk-general": {
+       "wer": 0.1247,
+       "settled_p50": 0.302,
+       "loops": 0,
+       "cpu_rtf": 0.1626,
+       "peak_rss_mb": 313,
+       "resets": 301,
+       "clips": 300
+      },
+      "us-aae": {
+       "wer": 0.2174,
+       "settled_p50": 0.329,
+       "loops": 0,
+       "cpu_rtf": 0.1722,
+       "peak_rss_mb": 324,
+       "resets": 300,
+       "clips": 300
+      },
+      "us-general": {
+       "wer": 0.1214,
+       "settled_p50": 0.264,
+       "loops": 0,
+       "cpu_rtf": 0.1663,
+       "peak_rss_mb": 326,
+       "resets": 301,
+       "clips": 300
+      },
+      "us-hispanic": {
+       "wer": 0.125,
+       "settled_p50": 0.283,
+       "loops": 0,
+       "cpu_rtf": 0.1505,
+       "peak_rss_mb": 320,
+       "resets": 5,
+       "clips": 5
+      },
+      "us-midwest": {
+       "wer": 0.1608,
+       "settled_p50": 0.232,
+       "loops": 0,
+       "cpu_rtf": 0.1621,
+       "peak_rss_mb": 321,
+       "resets": 36,
+       "clips": 35
+      },
+      "us-northeast": {
+       "wer": 0.0982,
+       "settled_p50": 0.239,
+       "loops": 0,
+       "cpu_rtf": 0.1562,
+       "peak_rss_mb": 320,
+       "resets": 15,
+       "clips": 15
+      },
+      "us-south": {
+       "wer": 0.1513,
+       "settled_p50": 0.221,
+       "loops": 0,
+       "cpu_rtf": 0.1584,
+       "peak_rss_mb": 316,
+       "resets": 12,
+       "clips": 12
+      },
+      "us-west": {
+       "wer": 0.0539,
+       "settled_p50": 0.222,
+       "loops": 0,
+       "cpu_rtf": 0.16,
+       "peak_rss_mb": 322,
+       "resets": 29,
+       "clips": 29
+      },
+      "wales": {
+       "wer": 0.075,
+       "settled_p50": 0.228,
+       "loops": 0,
+       "cpu_rtf": 0.1644,
+       "peak_rss_mb": 317,
+       "resets": 174,
+       "clips": 174
+      }
+     },
+     "avg_wer": 0.124485,
+     "cv_wer": null,
+     "settled": [
+      0.273,
+      0.498,
+      0.743
+     ],
+     "first": [
+      0.273,
+      0.498,
+      0.743
+     ],
+     "timed": 31206,
+     "loops": 0,
+     "cpu_rtf": 0.15833000000000003,
+     "peak_rss_mb": 327,
+     "vs_base": {
+      "sets": {
+       "africa": [
+        0.0048367593712212815,
+        -0.0097511529569164,
+        0.01996030979515623
+       ],
+       "australia-nz": [
+        0.0,
+        -0.011383055366067575,
+        0.011173854748603348
+       ],
+       "canada": [
+        0.001968503937007874,
+        -0.008747853348775909,
+        0.014086645378342921
+       ],
+       "england-midlands": [
+        0.003284072249589491,
+        -0.0034543808379798122,
+        0.011571207324260235
+       ],
+       "england-north": [
+        0.00129926375054136,
+        -0.00529858723202862,
+        0.007672716068906472
+       ],
+       "england-south": [
+        0.0013534852244529664,
+        -0.004213788622722715,
+        0.007655292876556404
+       ],
+       "india-south-asia": [
+        -0.009618573797678276,
+        -0.0177798659227622,
+        -0.0017032486552043607
+       ],
+       "ireland": [
+        -0.002136752136752137,
+        -0.013678094711990217,
+        0.008782459552170262
+       ],
+       "northern-ireland": [
+        0.038461538461538464,
+        0.0,
+        0.07547169811320754
+       ],
+       "other-l2": [
+        0.002451648052301825,
+        -0.007962236078191689,
+        0.013604043617115655
+       ],
+       "scotland": [
+        -0.0016371971185330713,
+        -0.01152991539929289,
+        0.00798093182180954
+       ],
+       "uk-general": [
+        -0.004358028830036876,
+        -0.012024550941964222,
+        0.0030395907445883706
+       ],
+       "us-aae": [
+        -0.003256513026052104,
+        -0.011452545547937041,
+        0.004655917943056397
+       ],
+       "us-general": [
+        -0.00032123353678124,
+        -0.006943189135550134,
+        0.006355090949423245
+       ],
+       "us-hispanic": [
+        0.0,
+        -0.061224489795918366,
+        0.07894736842105263
+       ],
+       "us-midwest": [
+        0.020618556701030927,
+        0.006192493797545307,
+        0.03771039887438236
+       ],
+       "us-northeast": [
+        -0.012269938650306749,
+        -0.041666666666666664,
+        0.012658227848101266
+       ],
+       "us-south": [
+        0.03361344537815126,
+        0.0,
+        0.07843909217230195
+       ],
+       "us-west": [
+        0.0026954177897574125,
+        0.0,
+        0.009259975920192634
+       ],
+       "wales": [
+        -0.000882223202470225,
+        -0.0072900363665810266,
+        0.005111388882406474
+       ]
+      },
+      "avg_wer": [
+       0.00380511153084911,
+       -0.0008917891852411547,
+       0.00927878754169292
+      ],
+      "settled_p50": [
+       -0.01699999999999996,
+       -0.01899999999999996,
+       -0.014999999999999958
+      ],
+      "settled_p90": [
+       -0.017000000000000015,
+       -0.02100000000000002,
+       -0.016000000000000014
+      ],
+      "paired_words": 30715
+     },
+     "after_pause": {
+      "first": [
+       1017,
+       5981,
+       0.369
+      ],
+      "rest": [
+       3841,
+       31329,
+       0.257
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       1017,
+       5981,
+       0.369
+      ],
+      "rest": [
+       3841,
+       31329,
+       0.257
+      ]
+     }
+    },
+    {
+     "model": "v3",
+     "mode": "fresh",
+     "sets": {
+      "africa": {
+       "wer": 0.2306,
+       "settled_p50": 0.326,
+       "loops": 0,
+       "cpu_rtf": 0.2078,
+       "peak_rss_mb": 335,
+       "resets": 160,
+       "clips": 159
+      },
+      "australia-nz": {
+       "wer": 0.0933,
+       "settled_p50": 0.278,
+       "loops": 0,
+       "cpu_rtf": 0.205,
+       "peak_rss_mb": 330,
+       "resets": 122,
+       "clips": 122
+      },
+      "canada": {
+       "wer": 0.0738,
+       "settled_p50": 0.261,
+       "loops": 0,
+       "cpu_rtf": 0.2075,
+       "peak_rss_mb": 328,
+       "resets": 102,
+       "clips": 102
+      },
+      "england-midlands": {
+       "wer": 0.0591,
+       "settled_p50": 0.271,
+       "loops": 0,
+       "cpu_rtf": 0.2089,
+       "peak_rss_mb": 333,
+       "resets": 44,
+       "clips": 44
+      },
+      "england-north": {
+       "wer": 0.0572,
+       "settled_p50": 0.262,
+       "loops": 0,
+       "cpu_rtf": 0.2053,
+       "peak_rss_mb": 335,
+       "resets": 171,
+       "clips": 171
+      },
+      "england-south": {
+       "wer": 0.1053,
+       "settled_p50": 0.2665,
+       "loops": 0,
+       "cpu_rtf": 0.2108,
+       "peak_rss_mb": 341,
+       "resets": 300,
+       "clips": 300
+      },
+      "india-south-asia": {
+       "wer": 0.1731,
+       "settled_p50": 0.325,
+       "loops": 0,
+       "cpu_rtf": 0.2103,
+       "peak_rss_mb": 329,
+       "resets": 301,
+       "clips": 300
+      },
+      "ireland": {
+       "wer": 0.2233,
+       "settled_p50": 0.306,
+       "loops": 0,
+       "cpu_rtf": 0.2053,
+       "peak_rss_mb": 335,
+       "resets": 108,
+       "clips": 106
+      },
+      "northern-ireland": {
+       "wer": 0.0192,
+       "settled_p50": 0.209,
+       "loops": 0,
+       "cpu_rtf": 0.1943,
+       "peak_rss_mb": 331,
+       "resets": 5,
+       "clips": 5
+      },
+      "other-l2": {
+       "wer": 0.1694,
+       "settled_p50": 0.306,
+       "loops": 0,
+       "cpu_rtf": 0.1993,
+       "peak_rss_mb": 332,
+       "resets": 303,
+       "clips": 300
+      },
+      "scotland": {
+       "wer": 0.1172,
+       "settled_p50": 0.27,
+       "loops": 0,
+       "cpu_rtf": 0.2111,
+       "peak_rss_mb": 333,
+       "resets": 215,
+       "clips": 213
+      },
+      "uk-general": {
+       "wer": 0.1291,
+       "settled_p50": 0.318,
+       "loops": 0,
+       "cpu_rtf": 0.2087,
+       "peak_rss_mb": 337,
+       "resets": 301,
+       "clips": 300
+      },
+      "us-aae": {
+       "wer": 0.2207,
+       "settled_p50": 0.353,
+       "loops": 0,
+       "cpu_rtf": 0.2247,
+       "peak_rss_mb": 335,
+       "resets": 300,
+       "clips": 300
+      },
+      "us-general": {
+       "wer": 0.1217,
+       "settled_p50": 0.28,
+       "loops": 0,
+       "cpu_rtf": 0.2051,
+       "peak_rss_mb": 330,
+       "resets": 301,
+       "clips": 300
+      },
+      "us-hispanic": {
+       "wer": 0.125,
+       "settled_p50": 0.3405,
+       "loops": 0,
+       "cpu_rtf": 0.1794,
+       "peak_rss_mb": 328,
+       "resets": 5,
+       "clips": 5
+      },
+      "us-midwest": {
+       "wer": 0.1402,
+       "settled_p50": 0.257,
+       "loops": 0,
+       "cpu_rtf": 0.2085,
+       "peak_rss_mb": 327,
+       "resets": 36,
+       "clips": 35
+      },
+      "us-northeast": {
+       "wer": 0.1104,
+       "settled_p50": 0.244,
+       "loops": 0,
+       "cpu_rtf": 0.2054,
+       "peak_rss_mb": 331,
+       "resets": 15,
+       "clips": 15
+      },
+      "us-south": {
+       "wer": 0.1176,
+       "settled_p50": 0.235,
+       "loops": 0,
+       "cpu_rtf": 0.2035,
+       "peak_rss_mb": 333,
+       "resets": 12,
+       "clips": 12
+      },
+      "us-west": {
+       "wer": 0.0512,
+       "settled_p50": 0.2405,
+       "loops": 0,
+       "cpu_rtf": 0.206,
+       "peak_rss_mb": 331,
+       "resets": 29,
+       "clips": 29
+      },
+      "wales": {
+       "wer": 0.0759,
+       "settled_p50": 0.245,
+       "loops": 0,
+       "cpu_rtf": 0.2084,
+       "peak_rss_mb": 333,
+       "resets": 174,
+       "clips": 174
+      }
+     },
+     "avg_wer": 0.120665,
+     "cv_wer": null,
+     "settled": [
+      0.289,
+      0.516,
+      0.754
+     ],
+     "first": [
+      0.289,
+      0.516,
+      0.754
+     ],
+     "timed": 31172,
+     "loops": 0,
+     "cpu_rtf": 0.20576499999999998,
+     "peak_rss_mb": 341,
+     "after_pause": {
+      "first": [
+       1022,
+       5981,
+       0.383
+      ],
+      "rest": [
+       3870,
+       31329,
+       0.274
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       1022,
+       5981,
+       0.383
+      ],
+      "rest": [
+       3870,
+       31329,
+       0.274
+      ]
+     }
+    }
+   ],
+   "pareto": [
+    "v4",
+    "v3"
+   ]
+  }
+ }
+}

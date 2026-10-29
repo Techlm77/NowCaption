@@ -6,14 +6,14 @@
   2.1
  ],
  "words": 3151,
- "errors": 88,
- "wer": 0.0279,
- "lag_s_mean": 0.137,
- "lag_s_p50": 0.157,
- "lag_s_p90": 0.314,
- "timed_words": 3054,
+ "errors": 82,
+ "wer": 0.026,
+ "lag_s_mean": 0.122,
+ "lag_s_p50": 0.143,
+ "lag_s_p90": 0.298,
+ "timed_words": 3061,
  "audio_s": 1482.5,
- "cpu_rtf": 0.1751,
+ "cpu_rtf": 0.0724,
  "items": [
   {
    "audio": "61-70970-0000.wav",
@@ -22,8 +22,8 @@
   },
   {
    "audio": "61-70970-0004.wav",
-   "hyp": "but take it whilst i live and where montfichet's shield in the days when my eyes can be rejoiced by so brave a sight for you will never disgrace our study and i warrant me",
-   "errors": 4
+   "hyp": "but take it whilst i live and where montfichet's shield in the days when my eyes can be rejoiced by so brave a sight for you will never disgrace our studchean i warrant me",
+   "errors": 3
   },
   {
    "audio": "61-70968-0007.wav",
@@ -47,8 +47,8 @@
   },
   {
    "audio": "121-127105-0013.wav",
-   "hyp": "your easily judge why when you hear because the thing had been such a scare he continued to fix me",
-   "errors": 1
+   "hyp": "you'll easily judge why when you hear because the thing had been such a scare he continued to fix me",
+   "errors": 0
   },
   {
    "audio": "121-127105-0003.wav",
@@ -137,7 +137,7 @@
   },
   {
    "audio": "1089-134691-0020.wav",
-   "hyp": "hello stephanos here comes the daedalus",
+   "hyp": "hello stephanos here comes the dadalus",
    "errors": 1
   },
   {
@@ -152,8 +152,8 @@
   },
   {
    "audio": "1089-134686-0025.wav",
-   "hyp": "a gentle kick from the tall boy in the bench beside urged stephen to ask a difficult question",
-   "errors": 1
+   "hyp": "a gentle kick from the tall boy in the bench behind urged stephen to ask a difficult question",
+   "errors": 0
   },
   {
    "audio": "1188-133604-0022.wav",
@@ -187,8 +187,8 @@
   },
   {
    "audio": "1221-135767-0018.wav",
-   "hyp": "little pearl who was as greatly pleased with the gleaming armor as she had been with the glittering frontispiece of the house spent some time looking into the polished mirror of the breastplate",
-   "errors": 1
+   "hyp": "little pearl who was as greatly pleased with the gleaming armor as she had been with the glittering frontispiece of the house spent some time looking into the polished mirror of the breast plate",
+   "errors": 3
   },
   {
    "audio": "1221-135767-0019.wav",
@@ -222,8 +222,8 @@
   },
   {
    "audio": "1320-122612-0016.wav",
-   "hyp": "run back uncas and bring me the size of the singers foot",
-   "errors": 1
+   "hyp": "run back uncas and bring me the size of the singer's foot",
+   "errors": 0
   },
   {
    "audio": "1320-122612-0003.wav",
@@ -287,8 +287,8 @@
   },
   {
    "audio": "2094-142345-0039.wav",
-   "hyp": "i've strong assurance that no evil will happen to you and my uncle and the children for anything i've done",
-   "errors": 1
+   "hyp": "i've strong assurance that no evil will happen to you and my uncle and the children from anything i've done",
+   "errors": 0
   },
   {
    "audio": "2094-142345-0032.wav",
@@ -302,13 +302,13 @@
   },
   {
    "audio": "2300-131720-0013.wav",
-   "hyp": "unless he could secure an engine of smoother running and more exactly governant regulated than those available for his dynamo and lamp edison realized that he would find it almost impossible to give a steady light",
+   "hyp": "unless he could secure an engine of smoother running and more exactly governance regulated than those available for his dynamo and lamp edison realized that he would find it almost impossible to give a steady light",
    "errors": 2
   },
   {
    "audio": "2300-131720-0030.wav",
-   "hyp": "the principal employed in the edison electrolytic meter is that which exemplifies the power of electricity to decompose a chemical substance",
-   "errors": 1
+   "hyp": "the principle employed in the edison electrolytic meter is that which exemplifies the power of electricity to decompose a chemical substance",
+   "errors": 0
   },
   {
    "audio": "2300-131720-0038.wav",
@@ -362,8 +362,8 @@
   },
   {
    "audio": "3570-5694-0021.wav",
-   "hyp": "whenever as in these cases the menial service in question has to do directly with a primary leisure employments of fighting and hunting it easily acquires a reflected on a horrific character",
-   "errors": 4
+   "hyp": "whenever as in these cases the meanal service in question has to do directly with a primary leisure employments of fighting and hunting it easily acquires a reflected on a horrific character",
+   "errors": 5
   },
   {
    "audio": "3570-5695-0011.wav",
@@ -382,8 +382,8 @@
   },
   {
    "audio": "3575-170457-0023.wav",
-   "hyp": "i carefully avoid any appearance of preoccupation and eccentricity which might lead those i live amongst to suspect the nature of my pursuits",
-   "errors": 0
+   "hyp": "i carefully avoid any appearance of preoccupation and eccentricity which might lead those i live amongst a suspect the nature of my pursuits",
+   "errors": 1
   },
   {
    "audio": "3575-170457-0041.wav",
@@ -402,8 +402,8 @@
   },
   {
    "audio": "3729-6852-0007.wav",
-   "hyp": "two years before her death i saw her perform the character of marianne in the comedy of maravaux and in spite of her age and declining health the illusion was complete",
-   "errors": 1
+   "hyp": "two years before her death i saw her perform the character of marianne in the comedy of marivaux and in spite of her age and declining health the illusion was complete",
+   "errors": 0
   },
   {
    "audio": "3729-6852-0028.wav",
@@ -467,8 +467,8 @@
   },
   {
    "audio": "4507-16021-0031.wav",
-   "hyp": "and then we insist upon it the study of social deformities and infirmities and the task of pointing them out with the view to remedy is not a business in which choices permitted",
-   "errors": 3
+   "hyp": "and then we insist upon it the study of social deformities and infirmities and the task of pointing them out with a view to remedy is not a business in which choices permitted",
+   "errors": 2
   },
   {
    "audio": "4507-16021-0052.wav",
@@ -482,8 +482,8 @@
   },
   {
    "audio": "4970-29095-0001.wav",
-   "hyp": "she tried this morning an error or two upon the piano saying a simple song in a sweet but slightly metallic voice and then seating herself by the open window red philip's letter",
-   "errors": 3
+   "hyp": "she tried this morning an error or two upon the piano saying a simple song in a sweet but slightly metallic voice and then seating herself by the open window read philip's letter",
+   "errors": 2
   },
   {
    "audio": "4970-29093-0014.wav",
@@ -557,8 +557,8 @@
   },
   {
    "audio": "5639-40744-0039.wav",
-   "hyp": "when she came to her senses and blushing to find herself and rodolph's arms would have disengage herself no signora he said that must not be strive not to withdraw from the arms of him who holds you in his soul",
-   "errors": 4
+   "hyp": "when she came to her senses and blushing to find herself and rodolph's arms would have disengaged herself no signora he said that must not be strive not to withdraw from the arms of him who holds you in his soul",
+   "errors": 3
   },
   {
    "audio": "5639-40744-0029.wav",
@@ -612,8 +612,8 @@
   },
   {
    "audio": "6829-68769-0033.wav",
-   "hyp": "it was better for him to think the girl unfeiling than to know the truth",
-   "errors": 1
+   "hyp": "it was better for him to think the girl unfeeling than to know the truth",
+   "errors": 0
   },
   {
    "audio": "6930-81414-0015.wav",
@@ -667,8 +667,8 @@
   },
   {
    "audio": "7127-75947-0024.wav",
-   "hyp": "look yonder do you not see the moon slowly rising silvering the topmost branches of the chestnuts and the yokes",
-   "errors": 1
+   "hyp": "look yonder do you not see the moon slowly rising silvering the topmost branches of the chestnuts and the oaks",
+   "errors": 0
   },
   {
    "audio": "7127-75947-0027.wav",
@@ -692,8 +692,8 @@
   },
   {
    "audio": "7176-88083-0022.wav",
-   "hyp": "the hawk embittered by the loss of his first quarry had become as dogged and pursuit as a weasel not to be shaken off or evaded or deceived",
-   "errors": 1
+   "hyp": "the hawk embittered by the loss of his first quarry had become as dogged in pursuit as a weasel not to be shaken off or evaded or deceived",
+   "errors": 0
   },
   {
    "audio": "7729-102255-0014.wav",
@@ -702,8 +702,8 @@
   },
   {
    "audio": "7729-102255-0042.wav",
-   "hyp": "relocated footnote governor robinson being on his way east the steamboat on which he was traveling stopped at lexington missouri",
-   "errors": 0
+   "hyp": "relocated footnote governor robinson being on his way east the steam boat on which he was traveling stopped at lexington missouri",
+   "errors": 2
   },
   {
    "audio": "7729-102255-0030.wav",
@@ -747,7 +747,7 @@
   },
   {
    "audio": "8230-279154-0030.wav",
-   "hyp": "simmons two books mentioned in an earlier lecture do not touch knowledge memory at all closely",
+   "hyp": "symons two books mentioned in an earlier lecture do not touch knowledge memory at all closely",
    "errors": 1
   },
   {
@@ -782,8 +782,8 @@
   },
   {
    "audio": "8463-294828-0035.wav",
-   "hyp": "and so if i had been delayed by a quarter of an hour or even less the frigate would have gone without me and i would have missed out on this unearthly extraordinary and inconceivable expedition whose true story might well meet with some skepticism",
-   "errors": 2
+   "hyp": "and so if i had been delayed by a quarter of an hour or even less the frigate would have gone without me and i would have missed out on this unearthly extraordinary and inconceivable expedition whose true story might well meet with some scepticism",
+   "errors": 3
   },
   {
    "audio": "8463-287645-0011.wav",

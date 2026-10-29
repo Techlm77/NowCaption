@@ -8,10 +8,11 @@ your desktop. It is made for people who are deaf or hard of hearing.
 
 - **Private.** Everything runs on your computer, offline. No account, and audio never leaves it.
 - **Accurate.** Punctuation and capital letters included. NowCaption's own speech model
-  makes 2.7% word errors on clear speech, a third of upstream Live Captions' 8.1%, and in
-  1.2.0 about a fifth fewer than before on meetings, calls, accents and noisy speech
+  makes 2.7% word errors on clear speech, a third of upstream Live Captions' 8.1%, and
+  13.0% on everyday speech from meetings, calls, podcasts, accents and noisy recordings
   ([benchmark](benchmark/)).
-- **Light.** Runs on the CPU as speech arrives. No GPU needed.
+- **Light.** Runs on the CPU as speech arrives: since 1.2.2, about 7% of one CPU core for
+  non-stop speech. No GPU needed.
 
 ## Install
 
@@ -113,8 +114,8 @@ switching to headphones, or after a problem, open **More options…** and press
 
 **First word missing?** When speech is hard to make out, such as strong accents or
 unclear recordings, the first word after a pause is the one most often missed or misheard,
-because the speech model has nothing yet to go on. 1.2.0's speech model misses far fewer of
-them than before, but it still happens most there. Clear speech is rarely affected.
+because the speech model has nothing yet to go on. Since 1.2.0 the speech model misses far
+fewer of them than before, but it still happens most there. Clear speech is rarely affected.
 
 ## Run from source
 
@@ -144,5 +145,6 @@ the other files in [`tests/`](tests/) say what they cover.
 | Punctuation and capital letters | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) by frankyoujian | Apache-2.0 |
 
 NowCaption's own code is MIT licensed. Everything else it ships with, and the speech its model
-was trained on, is listed in [MODEL-LICENSES.md](MODEL-LICENSES.md). How speech model v3 was trained,
-chosen and exported is in its [model card](MODEL-CARD-v3.md).
+was trained on, is listed in [MODEL-LICENSES.md](MODEL-LICENSES.md). How speech model v4 was trained,
+chosen and exported is in its [model card](MODEL-CARD-v4.md) (v3's, used by 1.2.0 and 1.2.1:
+[MODEL-CARD-v3.md](MODEL-CARD-v3.md)).

@@ -7,14 +7,20 @@ contain the models and libraries below, each under its own license.
 
 | Model | By | License |
 |---|---|---|
-| Speech recognition: [`nowcaption-fastconformer-en-80ms-cc-by-v3`](https://github.com/Techlm77/NowCaption/releases/tag/models-v3) ([model card](MODEL-CARD-v3.md)) | NowCaption, fine-tuned from NVIDIA's [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi) (NeMo team) | CC-BY-4.0 |
+| Speech recognition: [`nowcaption-fastconformer-en-80ms-cc-by-v4`](https://github.com/Techlm77/NowCaption/releases/tag/models-v4) ([model card](MODEL-CARD-v4.md)) | NowCaption, fine-tuned from NVIDIA's [FastConformer streaming](https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi) (NeMo team) | CC-BY-4.0 |
 | Punctuation and capital letters: `sherpa-onnx-online-punct-en-2024-08-06` | [Edge-Punct-Casing](https://github.com/frankyoujian/Edge-Punct-Casing) by frankyoujian, packaged by k2-fsa | Apache-2.0 |
 
-The speech model is NowCaption's third fine-tune. Version 2 was trained with the text NVIDIA's
+The speech model is NowCaption's fourth fine-tune. Version 2 was trained with the text NVIDIA's
 Parakeet TDT 0.6B v2 (CC-BY-4.0) heard in each recording; version 3 continued from it on the
 recordings below with their own transcripts, or NVIDIA's Granary labels (CC-BY-4.0) for the
-YODAS videos. It is exported to ONNX with an 80 ms lookahead and quantized to int8, with an export
-script adapted from k2-fsa's sherpa-onnx. Its README.md, in the model archive, has the details.
+YODAS videos; version 4 continued from version 3 on the same recordings, with Parakeet TDT 0.6B
+v2's transcripts in place of Granary labels that leave out words at a clip's edges. It is exported
+to ONNX with an 80 ms lookahead and quantized to int8, with an export script adapted from k2-fsa's
+sherpa-onnx (for version 4, rewritten into an equivalent but faster form). Its README.md, in the
+model archive, has the details; it is the same text as [MODEL-CARD-v4.md](MODEL-CARD-v4.md).
+Version 3, used by NowCaption 1.2.0 and 1.2.1, stays available from the
+[models-v3](https://github.com/Techlm77/NowCaption/releases/tag/models-v3) release
+([model card](MODEL-CARD-v3.md)).
 
 ## Libraries
 
@@ -52,3 +58,4 @@ None of these recordings are bundled.
 | [Granary](https://huggingface.co/datasets/nvidia/Granary), English YODAS part (NVIDIA's labels for YODAS2 videos, as packaged in [espnet/yodas-granary](https://huggingface.co/datasets/espnet/yodas-granary)) | NVIDIA; audio ESPnet / WAVLab | CC-BY-4.0 (labels), CC-BY-3.0 (audio) |
 | [MUSAN](https://www.openslr.org/17): music, noise and babble mixed into the audio | David Snyder et al. | Creative Commons or public domain, per file |
 | [RIRS_NOISES](https://www.openslr.org/28): room echo | Tom Ko et al. | Apache-2.0 |
+| Transcripts of the recordings above by [Parakeet TDT 0.6B v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) (`nvidia/parakeet-tdt-0.6b-v2`), used to train version 4; none of its weights are in the speech model | NVIDIA NeMo team | CC-BY-4.0 |

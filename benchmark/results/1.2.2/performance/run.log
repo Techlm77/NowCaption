@@ -1,0 +1,46 @@
+2026-10-29 05:33:47 start; model <bench>/models/v3/kd2s43; Tctl 42.9
+2026-10-29 05:33:47 paced warm-up 60 s
+2026-10-29 05:34:48 paced 600 s
+2026-10-29 05:44:49 paced repeat 1, 120 s
+2026-10-29 05:46:49 paced repeat 2, 120 s
+2026-10-29 05:48:50 e2e warm-up (2 clips, discarded)
+2026-10-29 05:49:37 e2e test-clean
+2026-10-29 05:56:21 e2e test-clean exit 0
+2026-10-29 05:56:21 e2e test-other
+2026-10-29 06:01:58 e2e test-other exit 0
+2026-10-29 06:01:58 bench.py test-clean
+2026-10-29 06:01:58 bench.py test-other
+2026-10-29 06:01:59 pipeline test-clean seed 0
+2026-10-29 06:01:59 pipeline test-clean seed 1
+2026-10-29 06:01:59 pipeline test-clean seed 2
+2026-10-29 06:01:59 pipeline test-other seed 0
+2026-10-29 06:01:59 pipeline test-other seed 1
+2026-10-29 06:01:59 pipeline test-other seed 2
+2026-10-29 06:01:59 pipeline test-other seed 3
+2026-10-29 06:01:59 pipeline test-other seed 4
+2026-10-29 06:01:59 pipeline test-other seed 5
+2026-10-29 06:02:00 all done; Tctl 53.0
+2026-10-29 06:02:29 part 2 (venv-eval): bench.py and pipeline.py
+2026-10-29 06:02:29 bench.py test-clean
+2026-10-29 06:04:01 bench.py test-clean exit 0
+2026-10-29 06:04:01 bench.py test-other
+2026-10-29 06:05:12 bench.py test-other exit 0
+2026-10-29 06:05:12 pipeline test-clean seed 0
+2026-10-29 06:07:06 pipeline test-clean seed 0 exit 0
+2026-10-29 06:07:06 pipeline test-clean seed 1
+2026-10-29 06:08:58 pipeline test-clean seed 1 exit 0
+2026-10-29 06:08:58 pipeline test-clean seed 2
+2026-10-29 06:10:52 pipeline test-clean seed 2 exit 0
+2026-10-29 06:10:52 pipeline test-other seed 0
+2026-10-29 06:12:16 pipeline test-other seed 0 exit 0
+2026-10-29 06:12:16 pipeline test-other seed 1
+2026-10-29 06:13:41 pipeline test-other seed 1 exit 0
+2026-10-29 06:13:41 pipeline test-other seed 2
+2026-10-29 06:15:06 pipeline test-other seed 2 exit 0
+2026-10-29 06:15:06 pipeline test-other seed 3
+2026-10-29 06:16:34 pipeline test-other seed 3 exit 0
+2026-10-29 06:16:34 pipeline test-other seed 4
+2026-10-29 06:17:59 pipeline test-other seed 4 exit 0
+2026-10-29 06:17:59 pipeline test-other seed 5
+2026-10-29 06:19:23 pipeline test-other seed 5 exit 0
+2026-10-29 06:19:23 part 2 done; Tctl 68.9

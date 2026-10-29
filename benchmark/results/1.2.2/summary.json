@@ -1,0 +1,1874 @@
+{
+ "v3": {
+  "esb_cont": {
+   "wer": 12.45,
+   "sub": 3590,
+   "del": 2234,
+   "ins": 904,
+   "words": 54033,
+   "clips": 3175,
+   "sub_pct": 6.64,
+   "del_pct": 4.13,
+   "ins_pct": 1.67,
+   "mean_of_sets": 13.31
+  },
+  "esb_cont_sets": {
+   "librispeech-clean": {
+    "wer": 0.034,
+    "sub": 208,
+    "del": 25,
+    "ins": 38,
+    "words": 7964,
+    "clips": 400
+   },
+   "librispeech-other": {
+    "wer": 0.0732,
+    "sub": 413,
+    "del": 67,
+    "ins": 62,
+    "words": 7405,
+    "clips": 400
+   },
+   "common_voice": {
+    "wer": 0.1749,
+    "sub": 462,
+    "del": 113,
+    "ins": 104,
+    "words": 3882,
+    "clips": 400
+   },
+   "ami": {
+    "wer": 0.1641,
+    "sub": 214,
+    "del": 228,
+    "ins": 51,
+    "words": 3005,
+    "clips": 376
+   },
+   "voxpopuli": {
+    "wer": 0.0896,
+    "sub": 387,
+    "del": 309,
+    "ins": 166,
+    "words": 9623,
+    "clips": 400
+   },
+   "earnings22": {
+    "wer": 0.1677,
+    "sub": 513,
+    "del": 439,
+    "ins": 204,
+    "words": 6894,
+    "clips": 400
+   },
+   "gigaspeech": {
+    "wer": 0.1396,
+    "sub": 587,
+    "del": 375,
+    "ins": 155,
+    "words": 8002,
+    "clips": 399
+   },
+   "urgent2024": {
+    "wer": 0.2215,
+    "sub": 806,
+    "del": 678,
+    "ins": 124,
+    "words": 7258,
+    "clips": 400
+   }
+  },
+  "other_clips_cont": {
+   "wer": 11.61,
+   "sub": 3368,
+   "del": 2205,
+   "ins": 728,
+   "words": 54279,
+   "clips": 3168,
+   "sub_pct": 6.2,
+   "del_pct": 4.06,
+   "ins_pct": 1.34,
+   "mean_of_sets": 12.43
+  },
+  "other_clips_cont_sets": {
+   "librispeech-clean": {
+    "wer": 0.0309,
+    "sub": 198,
+    "del": 38,
+    "ins": 29,
+    "words": 8566,
+    "clips": 400
+   },
+   "librispeech-other": {
+    "wer": 0.071,
+    "sub": 365,
+    "del": 54,
+    "ins": 69,
+    "words": 6872,
+    "clips": 400
+   },
+   "common_voice": {
+    "wer": 0.1594,
+    "sub": 434,
+    "del": 131,
+    "ins": 56,
+    "words": 3896,
+    "clips": 400
+   },
+   "ami": {
+    "wer": 0.1592,
+    "sub": 168,
+    "del": 217,
+    "ins": 43,
+    "words": 2689,
+    "clips": 369
+   },
+   "voxpopuli": {
+    "wer": 0.0824,
+    "sub": 378,
+    "del": 267,
+    "ins": 139,
+    "words": 9519,
+    "clips": 400
+   },
+   "earnings22": {
+    "wer": 0.157,
+    "sub": 545,
+    "del": 466,
+    "ins": 157,
+    "words": 7441,
+    "clips": 400
+   },
+   "gigaspeech": {
+    "wer": 0.1313,
+    "sub": 517,
+    "del": 369,
+    "ins": 132,
+    "words": 7756,
+    "clips": 399
+   },
+   "urgent2024": {
+    "wer": 0.2028,
+    "sub": 763,
+    "del": 663,
+    "ins": 103,
+    "words": 7540,
+    "clips": 400
+   }
+  },
+  "accent_cont": {
+   "wer": 13.78,
+   "sub": 3101,
+   "del": 1618,
+   "ins": 421,
+   "words": 37310,
+   "clips": 2992,
+   "sub_pct": 8.31,
+   "del_pct": 4.34,
+   "ins_pct": 1.13,
+   "mean_of_sets": 12.04
+  },
+  "accent_cont_regions": {
+   "africa": {
+    "wer": 23.01,
+    "sub": 256,
+    "del": 286,
+    "ins": 29,
+    "words": 2481,
+    "clips": 159,
+    "sub_pct": 10.32,
+    "del_pct": 11.53,
+    "ins_pct": 1.17,
+    "mean_of_sets": 23.01
+   },
+   "australia-nz": {
+    "wer": 9.49,
+    "sub": 97,
+    "del": 16,
+    "ins": 7,
+    "words": 1265,
+    "clips": 122,
+    "sub_pct": 7.67,
+    "del_pct": 1.26,
+    "ins_pct": 0.55,
+    "mean_of_sets": 9.49
+   },
+   "canada": {
+    "wer": 7.58,
+    "sub": 55,
+    "del": 8,
+    "ins": 14,
+    "words": 1016,
+    "clips": 102,
+    "sub_pct": 5.41,
+    "del_pct": 0.79,
+    "ins_pct": 1.38,
+    "mean_of_sets": 7.58
+   },
+   "england-midlands": {
+    "wer": 6.24,
+    "sub": 27,
+    "del": 4,
+    "ins": 7,
+    "words": 609,
+    "clips": 44,
+    "sub_pct": 4.43,
+    "del_pct": 0.66,
+    "ins_pct": 1.15,
+    "mean_of_sets": 6.24
+   },
+   "england-north": {
+    "wer": 6.02,
+    "sub": 104,
+    "del": 18,
+    "ins": 17,
+    "words": 2309,
+    "clips": 171,
+    "sub_pct": 4.5,
+    "del_pct": 0.78,
+    "ins_pct": 0.74,
+    "mean_of_sets": 6.02
+   },
+   "england-south": {
+    "wer": 10.38,
+    "sub": 249,
+    "del": 165,
+    "ins": 46,
+    "words": 4433,
+    "clips": 300,
+    "sub_pct": 5.62,
+    "del_pct": 3.72,
+    "ins_pct": 1.04,
+    "mean_of_sets": 10.38
+   },
+   "india-south-asia": {
+    "wer": 17.68,
+    "sub": 383,
+    "del": 123,
+    "ins": 27,
+    "words": 3015,
+    "clips": 300,
+    "sub_pct": 12.7,
+    "del_pct": 4.08,
+    "ins_pct": 0.9,
+    "mean_of_sets": 17.68
+   },
+   "ireland": {
+    "wer": 20.25,
+    "sub": 196,
+    "del": 150,
+    "ins": 33,
+    "words": 1872,
+    "clips": 106,
+    "sub_pct": 10.47,
+    "del_pct": 8.01,
+    "ins_pct": 1.76,
+    "mean_of_sets": 20.25
+   },
+   "northern-ireland": {
+    "wer": 1.92,
+    "sub": 1,
+    "del": 0,
+    "ins": 0,
+    "words": 52,
+    "clips": 5,
+    "sub_pct": 1.92,
+    "del_pct": 0.0,
+    "ins_pct": 0.0,
+    "mean_of_sets": 1.92
+   },
+   "other-l2": {
+    "wer": 17.71,
+    "sub": 366,
+    "del": 235,
+    "ins": 49,
+    "words": 3671,
+    "clips": 300,
+    "sub_pct": 9.97,
+    "del_pct": 6.4,
+    "ins_pct": 1.33,
+    "mean_of_sets": 17.71
+   },
+   "scotland": {
+    "wer": 10.61,
+    "sub": 206,
+    "del": 85,
+    "ins": 33,
+    "words": 3054,
+    "clips": 213,
+    "sub_pct": 6.75,
+    "del_pct": 2.78,
+    "ins_pct": 1.08,
+    "mean_of_sets": 10.61
+   },
+   "uk-general": {
+    "wer": 13.04,
+    "sub": 285,
+    "del": 67,
+    "ins": 37,
+    "words": 2983,
+    "clips": 300,
+    "sub_pct": 9.55,
+    "del_pct": 2.25,
+    "ins_pct": 1.24,
+    "mean_of_sets": 13.04
+   },
+   "us-aae": {
+    "wer": 19.91,
+    "sub": 408,
+    "del": 334,
+    "ins": 53,
+    "words": 3992,
+    "clips": 300,
+    "sub_pct": 10.22,
+    "del_pct": 8.37,
+    "ins_pct": 1.33,
+    "mean_of_sets": 19.91
+   },
+   "us-general": {
+    "wer": 12.14,
+    "sub": 263,
+    "del": 72,
+    "ins": 43,
+    "words": 3113,
+    "clips": 300,
+    "sub_pct": 8.45,
+    "del_pct": 2.31,
+    "ins_pct": 1.38,
+    "mean_of_sets": 12.14
+   },
+   "us-hispanic": {
+    "wer": 15.0,
+    "sub": 4,
+    "del": 0,
+    "ins": 2,
+    "words": 40,
+    "clips": 5,
+    "sub_pct": 10.0,
+    "del_pct": 0.0,
+    "ins_pct": 5.0,
+    "mean_of_sets": 15.0
+   },
+   "us-midwest": {
+    "wer": 14.23,
+    "sub": 49,
+    "del": 18,
+    "ins": 2,
+    "words": 485,
+    "clips": 35,
+    "sub_pct": 10.1,
+    "del_pct": 3.71,
+    "ins_pct": 0.41,
+    "mean_of_sets": 14.23
+   },
+   "us-northeast": {
+    "wer": 11.04,
+    "sub": 14,
+    "del": 2,
+    "ins": 2,
+    "words": 163,
+    "clips": 15,
+    "sub_pct": 8.59,
+    "del_pct": 1.23,
+    "ins_pct": 1.23,
+    "mean_of_sets": 11.04
+   },
+   "us-south": {
+    "wer": 12.61,
+    "sub": 12,
+    "del": 2,
+    "ins": 1,
+    "words": 119,
+    "clips": 12,
+    "sub_pct": 10.08,
+    "del_pct": 1.68,
+    "ins_pct": 0.84,
+    "mean_of_sets": 12.61
+   },
+   "us-west": {
+    "wer": 4.85,
+    "sub": 11,
+    "del": 7,
+    "ins": 0,
+    "words": 371,
+    "clips": 29,
+    "sub_pct": 2.96,
+    "del_pct": 1.89,
+    "ins_pct": 0.0,
+    "mean_of_sets": 4.85
+   },
+   "wales": {
+    "wer": 7.06,
+    "sub": 115,
+    "del": 26,
+    "ins": 19,
+    "words": 2267,
+    "clips": 174,
+    "sub_pct": 5.07,
+    "del_pct": 1.15,
+    "ins_pct": 0.84,
+    "mean_of_sets": 7.06
+   }
+  },
+  "accent_cont_groups": {
+   "US regional (Midwest, West, Northeast, South, Hispanic)": {
+    "wer": 10.7,
+    "sub": 90,
+    "del": 29,
+    "ins": 7,
+    "words": 1178,
+    "clips": 96,
+    "sub_pct": 7.64,
+    "del_pct": 2.46,
+    "ins_pct": 0.59,
+    "mean_of_sets": 11.55
+   },
+   "Ireland and Northern Ireland": {
+    "wer": 19.75,
+    "sub": 197,
+    "del": 150,
+    "ins": 33,
+    "words": 1924,
+    "clips": 111,
+    "sub_pct": 10.24,
+    "del_pct": 7.8,
+    "ins_pct": 1.72,
+    "mean_of_sets": 11.09
+   }
+  },
+  "esb_fresh": {
+   "wer": 12.32,
+   "sub": 3537,
+   "del": 2263,
+   "ins": 858,
+   "words": 54033,
+   "clips": 3175,
+   "sub_pct": 6.55,
+   "del_pct": 4.19,
+   "ins_pct": 1.59,
+   "mean_of_sets": 13.18
+  },
+  "esb_fresh_sets": {
+   "librispeech-clean": {
+    "wer": 0.0333,
+    "sub": 202,
+    "del": 26,
+    "ins": 37,
+    "words": 7964,
+    "clips": 400
+   },
+   "librispeech-other": {
+    "wer": 0.0748,
+    "sub": 422,
+    "del": 71,
+    "ins": 61,
+    "words": 7405,
+    "clips": 400
+   },
+   "common_voice": {
+    "wer": 0.1718,
+    "sub": 465,
+    "del": 100,
+    "ins": 102,
+    "words": 3882,
+    "clips": 400
+   },
+   "ami": {
+    "wer": 0.1654,
+    "sub": 219,
+    "del": 226,
+    "ins": 52,
+    "words": 3005,
+    "clips": 376
+   },
+   "voxpopuli": {
+    "wer": 0.0917,
+    "sub": 391,
+    "del": 321,
+    "ins": 170,
+    "words": 9623,
+    "clips": 400
+   },
+   "earnings22": {
+    "wer": 0.1658,
+    "sub": 513,
+    "del": 449,
+    "ins": 181,
+    "words": 6894,
+    "clips": 400
+   },
+   "gigaspeech": {
+    "wer": 0.1355,
+    "sub": 578,
+    "del": 362,
+    "ins": 144,
+    "words": 8002,
+    "clips": 399
+   },
+   "urgent2024": {
+    "wer": 0.2158,
+    "sub": 747,
+    "del": 708,
+    "ins": 111,
+    "words": 7258,
+    "clips": 400
+   }
+  },
+  "other_clips_fresh": {
+   "wer": 11.48,
+   "sub": 3360,
+   "del": 2141,
+   "ins": 730,
+   "words": 54279,
+   "clips": 3168,
+   "sub_pct": 6.19,
+   "del_pct": 3.94,
+   "ins_pct": 1.34,
+   "mean_of_sets": 12.19
+  },
+  "other_clips_fresh_sets": {
+   "librispeech-clean": {
+    "wer": 0.0322,
+    "sub": 205,
+    "del": 37,
+    "ins": 34,
+    "words": 8566,
+    "clips": 400
+   },
+   "librispeech-other": {
+    "wer": 0.068,
+    "sub": 352,
+    "del": 54,
+    "ins": 61,
+    "words": 6872,
+    "clips": 400
+   },
+   "common_voice": {
+    "wer": 0.155,
+    "sub": 441,
+    "del": 106,
+    "ins": 57,
+    "words": 3896,
+    "clips": 400
+   },
+   "ami": {
+    "wer": 0.1484,
+    "sub": 180,
+    "del": 181,
+    "ins": 38,
+    "words": 2689,
+    "clips": 369
+   },
+   "voxpopuli": {
+    "wer": 0.0813,
+    "sub": 383,
+    "del": 246,
+    "ins": 145,
+    "words": 9519,
+    "clips": 400
+   },
+   "earnings22": {
+    "wer": 0.1619,
+    "sub": 565,
+    "del": 471,
+    "ins": 169,
+    "words": 7441,
+    "clips": 400
+   },
+   "gigaspeech": {
+    "wer": 0.1304,
+    "sub": 505,
+    "del": 371,
+    "ins": 135,
+    "words": 7756,
+    "clips": 399
+   },
+   "urgent2024": {
+    "wer": 0.1983,
+    "sub": 729,
+    "del": 675,
+    "ins": 91,
+    "words": 7540,
+    "clips": 400
+   }
+  },
+  "accent_fresh": {
+   "wer": 14.1,
+   "sub": 3242,
+   "del": 1650,
+   "ins": 370,
+   "words": 37310,
+   "clips": 2992,
+   "sub_pct": 8.69,
+   "del_pct": 4.42,
+   "ins_pct": 0.99,
+   "mean_of_sets": 12.07
+  },
+  "accent_fresh_regions": {
+   "africa": {
+    "wer": 23.06,
+    "sub": 260,
+    "del": 286,
+    "ins": 26,
+    "words": 2481,
+    "clips": 159,
+    "sub_pct": 10.48,
+    "del_pct": 11.53,
+    "ins_pct": 1.05,
+    "mean_of_sets": 23.06
+   },
+   "australia-nz": {
+    "wer": 9.33,
+    "sub": 93,
+    "del": 15,
+    "ins": 10,
+    "words": 1265,
+    "clips": 122,
+    "sub_pct": 7.35,
+    "del_pct": 1.19,
+    "ins_pct": 0.79,
+    "mean_of_sets": 9.33
+   },
+   "canada": {
+    "wer": 7.38,
+    "sub": 57,
+    "del": 8,
+    "ins": 10,
+    "words": 1016,
+    "clips": 102,
+    "sub_pct": 5.61,
+    "del_pct": 0.79,
+    "ins_pct": 0.98,
+    "mean_of_sets": 7.38
+   },
+   "england-midlands": {
+    "wer": 5.91,
+    "sub": 26,
+    "del": 4,
+    "ins": 6,
+    "words": 609,
+    "clips": 44,
+    "sub_pct": 4.27,
+    "del_pct": 0.66,
+    "ins_pct": 0.99,
+    "mean_of_sets": 5.91
+   },
+   "england-north": {
+    "wer": 5.72,
+    "sub": 97,
+    "del": 22,
+    "ins": 13,
+    "words": 2309,
+    "clips": 171,
+    "sub_pct": 4.2,
+    "del_pct": 0.95,
+    "ins_pct": 0.56,
+    "mean_of_sets": 5.72
+   },
+   "england-south": {
+    "wer": 10.53,
+    "sub": 264,
+    "del": 168,
+    "ins": 35,
+    "words": 4433,
+    "clips": 300,
+    "sub_pct": 5.96,
+    "del_pct": 3.79,
+    "ins_pct": 0.79,
+    "mean_of_sets": 10.53
+   },
+   "india-south-asia": {
+    "wer": 17.31,
+    "sub": 387,
+    "del": 113,
+    "ins": 22,
+    "words": 3015,
+    "clips": 300,
+    "sub_pct": 12.84,
+    "del_pct": 3.75,
+    "ins_pct": 0.73,
+    "mean_of_sets": 17.31
+   },
+   "ireland": {
+    "wer": 22.33,
+    "sub": 232,
+    "del": 160,
+    "ins": 26,
+    "words": 1872,
+    "clips": 106,
+    "sub_pct": 12.39,
+    "del_pct": 8.55,
+    "ins_pct": 1.39,
+    "mean_of_sets": 22.33
+   },
+   "northern-ireland": {
+    "wer": 1.92,
+    "sub": 1,
+    "del": 0,
+    "ins": 0,
+    "words": 52,
+    "clips": 5,
+    "sub_pct": 1.92,
+    "del_pct": 0.0,
+    "ins_pct": 0.0,
+    "mean_of_sets": 1.92
+   },
+   "other-l2": {
+    "wer": 16.94,
+    "sub": 360,
+    "del": 218,
+    "ins": 44,
+    "words": 3671,
+    "clips": 300,
+    "sub_pct": 9.81,
+    "del_pct": 5.94,
+    "ins_pct": 1.2,
+    "mean_of_sets": 16.94
+   },
+   "scotland": {
+    "wer": 11.72,
+    "sub": 238,
+    "del": 88,
+    "ins": 32,
+    "words": 3054,
+    "clips": 213,
+    "sub_pct": 7.79,
+    "del_pct": 2.88,
+    "ins_pct": 1.05,
+    "mean_of_sets": 11.72
+   },
+   "uk-general": {
+    "wer": 12.91,
+    "sub": 296,
+    "del": 55,
+    "ins": 34,
+    "words": 2983,
+    "clips": 300,
+    "sub_pct": 9.92,
+    "del_pct": 1.84,
+    "ins_pct": 1.14,
+    "mean_of_sets": 12.91
+   },
+   "us-aae": {
+    "wer": 22.07,
+    "sub": 450,
+    "del": 385,
+    "ins": 46,
+    "words": 3992,
+    "clips": 300,
+    "sub_pct": 11.27,
+    "del_pct": 9.64,
+    "ins_pct": 1.15,
+    "mean_of_sets": 22.07
+   },
+   "us-general": {
+    "wer": 12.17,
+    "sub": 262,
+    "del": 73,
+    "ins": 44,
+    "words": 3113,
+    "clips": 300,
+    "sub_pct": 8.42,
+    "del_pct": 2.35,
+    "ins_pct": 1.41,
+    "mean_of_sets": 12.17
+   },
+   "us-hispanic": {
+    "wer": 12.5,
+    "sub": 4,
+    "del": 0,
+    "ins": 1,
+    "words": 40,
+    "clips": 5,
+    "sub_pct": 10.0,
+    "del_pct": 0.0,
+    "ins_pct": 2.5,
+    "mean_of_sets": 12.5
+   },
+   "us-midwest": {
+    "wer": 14.02,
+    "sub": 51,
+    "del": 15,
+    "ins": 2,
+    "words": 485,
+    "clips": 35,
+    "sub_pct": 10.52,
+    "del_pct": 3.09,
+    "ins_pct": 0.41,
+    "mean_of_sets": 14.02
+   },
+   "us-northeast": {
+    "wer": 11.04,
+    "sub": 10,
+    "del": 6,
+    "ins": 2,
+    "words": 163,
+    "clips": 15,
+    "sub_pct": 6.13,
+    "del_pct": 3.68,
+    "ins_pct": 1.23,
+    "mean_of_sets": 11.04
+   },
+   "us-south": {
+    "wer": 11.76,
+    "sub": 12,
+    "del": 1,
+    "ins": 1,
+    "words": 119,
+    "clips": 12,
+    "sub_pct": 10.08,
+    "del_pct": 0.84,
+    "ins_pct": 0.84,
+    "mean_of_sets": 11.76
+   },
+   "us-west": {
+    "wer": 5.12,
+    "sub": 13,
+    "del": 6,
+    "ins": 0,
+    "words": 371,
+    "clips": 29,
+    "sub_pct": 3.5,
+    "del_pct": 1.62,
+    "ins_pct": 0.0,
+    "mean_of_sets": 5.12
+   },
+   "wales": {
+    "wer": 7.59,
+    "sub": 129,
+    "del": 27,
+    "ins": 16,
+    "words": 2267,
+    "clips": 174,
+    "sub_pct": 5.69,
+    "del_pct": 1.19,
+    "ins_pct": 0.71,
+    "mean_of_sets": 7.59
+   }
+  },
+  "accent_fresh_groups": {
+   "US regional (Midwest, West, Northeast, South, Hispanic)": {
+    "wer": 10.53,
+    "sub": 90,
+    "del": 28,
+    "ins": 6,
+    "words": 1178,
+    "clips": 96,
+    "sub_pct": 7.64,
+    "del_pct": 2.38,
+    "ins_pct": 0.51,
+    "mean_of_sets": 10.89
+   },
+   "Ireland and Northern Ireland": {
+    "wer": 21.78,
+    "sub": 233,
+    "del": 160,
+    "ins": 26,
+    "words": 1924,
+    "clips": 111,
+    "sub_pct": 12.11,
+    "del_pct": 8.32,
+    "ins_pct": 1.35,
+    "mean_of_sets": 12.12
+   }
+  },
+  "hard_cont": {
+   "wer": 9.07,
+   "sub": 723,
+   "del": 335,
+   "ins": 177,
+   "words": 13610,
+   "clips": 370,
+   "sub_pct": 5.31,
+   "del_pct": 2.46,
+   "ins_pct": 1.3,
+   "mean_of_sets": 9.11
+  },
+  "hard_cont_sets": {
+   "gaming": {
+    "wer": 8.84,
+    "sub": 192,
+    "del": 76,
+    "ins": 63,
+    "words": 3745,
+    "clips": 100,
+    "sub_pct": 5.13,
+    "del_pct": 2.03,
+    "ins_pct": 1.68,
+    "mean_of_sets": 8.84
+   },
+   "names": {
+    "wer": 8.59,
+    "sub": 168,
+    "del": 50,
+    "ins": 46,
+    "words": 3072,
+    "clips": 90,
+    "sub_pct": 5.47,
+    "del_pct": 1.63,
+    "ins_pct": 1.5,
+    "mean_of_sets": 8.59
+   },
+   "numbers": {
+    "wer": 10.21,
+    "sub": 167,
+    "del": 100,
+    "ins": 35,
+    "words": 2957,
+    "clips": 90,
+    "sub_pct": 5.65,
+    "del_pct": 3.38,
+    "ins_pct": 1.18,
+    "mean_of_sets": 10.21
+   },
+   "streaming": {
+    "wer": 8.81,
+    "sub": 196,
+    "del": 109,
+    "ins": 33,
+    "words": 3836,
+    "clips": 90,
+    "sub_pct": 5.11,
+    "del_pct": 2.84,
+    "ins_pct": 0.86,
+    "mean_of_sets": 8.81
+   }
+  }
+ },
+ "v4": {
+  "esb_cont": {
+   "wer": 12.23,
+   "sub": 3535,
+   "del": 2194,
+   "ins": 879,
+   "words": 54033,
+   "clips": 3175,
+   "sub_pct": 6.54,
+   "del_pct": 4.06,
+   "ins_pct": 1.63,
+   "mean_of_sets": 13.04
+  },
+  "esb_cont_sets": {
+   "librispeech-clean": {
+    "wer": 0.0328,
+    "sub": 202,
+    "del": 22,
+    "ins": 37,
+    "words": 7964,
+    "clips": 400
+   },
+   "librispeech-other": {
+    "wer": 0.0741,
+    "sub": 410,
+    "del": 66,
+    "ins": 73,
+    "words": 7405,
+    "clips": 400
+   },
+   "common_voice": {
+    "wer": 0.1749,
+    "sub": 462,
+    "del": 112,
+    "ins": 105,
+    "words": 3882,
+    "clips": 400
+   },
+   "ami": {
+    "wer": 0.1551,
+    "sub": 197,
+    "del": 219,
+    "ins": 50,
+    "words": 3005,
+    "clips": 376
+   },
+   "voxpopuli": {
+    "wer": 0.089,
+    "sub": 390,
+    "del": 306,
+    "ins": 160,
+    "words": 9623,
+    "clips": 400
+   },
+   "earnings22": {
+    "wer": 0.1626,
+    "sub": 507,
+    "del": 433,
+    "ins": 181,
+    "words": 6894,
+    "clips": 400
+   },
+   "gigaspeech": {
+    "wer": 0.1395,
+    "sub": 593,
+    "del": 374,
+    "ins": 149,
+    "words": 8002,
+    "clips": 399
+   },
+   "urgent2024": {
+    "wer": 0.2149,
+    "sub": 774,
+    "del": 662,
+    "ins": 124,
+    "words": 7258,
+    "clips": 400
+   }
+  },
+  "other_clips_cont": {
+   "wer": 11.5,
+   "sub": 3378,
+   "del": 2123,
+   "ins": 741,
+   "words": 54279,
+   "clips": 3168,
+   "sub_pct": 6.22,
+   "del_pct": 3.91,
+   "ins_pct": 1.37,
+   "mean_of_sets": 12.33
+  },
+  "other_clips_cont_sets": {
+   "librispeech-clean": {
+    "wer": 0.0293,
+    "sub": 189,
+    "del": 33,
+    "ins": 29,
+    "words": 8566,
+    "clips": 400
+   },
+   "librispeech-other": {
+    "wer": 0.0691,
+    "sub": 357,
+    "del": 49,
+    "ins": 69,
+    "words": 6872,
+    "clips": 400
+   },
+   "common_voice": {
+    "wer": 0.1568,
+    "sub": 438,
+    "del": 120,
+    "ins": 53,
+    "words": 3896,
+    "clips": 400
+   },
+   "ami": {
+    "wer": 0.1614,
+    "sub": 183,
+    "del": 200,
+    "ins": 51,
+    "words": 2689,
+    "clips": 369
+   },
+   "voxpopuli": {
+    "wer": 0.0829,
+    "sub": 374,
+    "del": 270,
+    "ins": 145,
+    "words": 9519,
+    "clips": 400
+   },
+   "earnings22": {
+    "wer": 0.1586,
+    "sub": 536,
+    "del": 483,
+    "ins": 161,
+    "words": 7441,
+    "clips": 400
+   },
+   "gigaspeech": {
+    "wer": 0.1304,
+    "sub": 520,
+    "del": 359,
+    "ins": 132,
+    "words": 7756,
+    "clips": 399
+   },
+   "urgent2024": {
+    "wer": 0.1977,
+    "sub": 781,
+    "del": 609,
+    "ins": 101,
+    "words": 7540,
+    "clips": 400
+   }
+  },
+  "accent_cont": {
+   "wer": 13.47,
+   "sub": 3062,
+   "del": 1550,
+   "ins": 412,
+   "words": 37310,
+   "clips": 2992,
+   "sub_pct": 8.21,
+   "del_pct": 4.15,
+   "ins_pct": 1.1,
+   "mean_of_sets": 11.53
+  },
+  "accent_cont_regions": {
+   "africa": {
+    "wer": 22.77,
+    "sub": 258,
+    "del": 281,
+    "ins": 26,
+    "words": 2481,
+    "clips": 159,
+    "sub_pct": 10.4,
+    "del_pct": 11.33,
+    "ins_pct": 1.05,
+    "mean_of_sets": 22.77
+   },
+   "australia-nz": {
+    "wer": 8.93,
+    "sub": 94,
+    "del": 13,
+    "ins": 6,
+    "words": 1265,
+    "clips": 122,
+    "sub_pct": 7.43,
+    "del_pct": 1.03,
+    "ins_pct": 0.47,
+    "mean_of_sets": 8.93
+   },
+   "canada": {
+    "wer": 7.28,
+    "sub": 55,
+    "del": 7,
+    "ins": 12,
+    "words": 1016,
+    "clips": 102,
+    "sub_pct": 5.41,
+    "del_pct": 0.69,
+    "ins_pct": 1.18,
+    "mean_of_sets": 7.28
+   },
+   "england-midlands": {
+    "wer": 6.24,
+    "sub": 26,
+    "del": 6,
+    "ins": 6,
+    "words": 609,
+    "clips": 44,
+    "sub_pct": 4.27,
+    "del_pct": 0.99,
+    "ins_pct": 0.99,
+    "mean_of_sets": 6.24
+   },
+   "england-north": {
+    "wer": 6.45,
+    "sub": 109,
+    "del": 20,
+    "ins": 20,
+    "words": 2309,
+    "clips": 171,
+    "sub_pct": 4.72,
+    "del_pct": 0.87,
+    "ins_pct": 0.87,
+    "mean_of_sets": 6.45
+   },
+   "england-south": {
+    "wer": 9.84,
+    "sub": 235,
+    "del": 161,
+    "ins": 40,
+    "words": 4433,
+    "clips": 300,
+    "sub_pct": 5.3,
+    "del_pct": 3.63,
+    "ins_pct": 0.9,
+    "mean_of_sets": 9.84
+   },
+   "india-south-asia": {
+    "wer": 16.85,
+    "sub": 370,
+    "del": 116,
+    "ins": 22,
+    "words": 3015,
+    "clips": 300,
+    "sub_pct": 12.27,
+    "del_pct": 3.85,
+    "ins_pct": 0.73,
+    "mean_of_sets": 16.85
+   },
+   "ireland": {
+    "wer": 20.19,
+    "sub": 211,
+    "del": 135,
+    "ins": 32,
+    "words": 1872,
+    "clips": 106,
+    "sub_pct": 11.27,
+    "del_pct": 7.21,
+    "ins_pct": 1.71,
+    "mean_of_sets": 20.19
+   },
+   "northern-ireland": {
+    "wer": 3.85,
+    "sub": 2,
+    "del": 0,
+    "ins": 0,
+    "words": 52,
+    "clips": 5,
+    "sub_pct": 3.85,
+    "del_pct": 0.0,
+    "ins_pct": 0.0,
+    "mean_of_sets": 3.85
+   },
+   "other-l2": {
+    "wer": 17.0,
+    "sub": 354,
+    "del": 223,
+    "ins": 47,
+    "words": 3671,
+    "clips": 300,
+    "sub_pct": 9.64,
+    "del_pct": 6.07,
+    "ins_pct": 1.28,
+    "mean_of_sets": 17.0
+   },
+   "scotland": {
+    "wer": 10.74,
+    "sub": 206,
+    "del": 83,
+    "ins": 39,
+    "words": 3054,
+    "clips": 213,
+    "sub_pct": 6.75,
+    "del_pct": 2.72,
+    "ins_pct": 1.28,
+    "mean_of_sets": 10.74
+   },
+   "uk-general": {
+    "wer": 13.01,
+    "sub": 291,
+    "del": 62,
+    "ins": 35,
+    "words": 2983,
+    "clips": 300,
+    "sub_pct": 9.76,
+    "del_pct": 2.08,
+    "ins_pct": 1.17,
+    "mean_of_sets": 13.01
+   },
+   "us-aae": {
+    "wer": 19.41,
+    "sub": 398,
+    "del": 323,
+    "ins": 54,
+    "words": 3992,
+    "clips": 300,
+    "sub_pct": 9.97,
+    "del_pct": 8.09,
+    "ins_pct": 1.35,
+    "mean_of_sets": 19.41
+   },
+   "us-general": {
+    "wer": 11.89,
+    "sub": 256,
+    "del": 69,
+    "ins": 45,
+    "words": 3113,
+    "clips": 300,
+    "sub_pct": 8.22,
+    "del_pct": 2.22,
+    "ins_pct": 1.45,
+    "mean_of_sets": 11.89
+   },
+   "us-hispanic": {
+    "wer": 10.0,
+    "sub": 2,
+    "del": 0,
+    "ins": 2,
+    "words": 40,
+    "clips": 5,
+    "sub_pct": 5.0,
+    "del_pct": 0.0,
+    "ins_pct": 5.0,
+    "mean_of_sets": 10.0
+   },
+   "us-midwest": {
+    "wer": 14.23,
+    "sub": 48,
+    "del": 17,
+    "ins": 4,
+    "words": 485,
+    "clips": 35,
+    "sub_pct": 9.9,
+    "del_pct": 3.51,
+    "ins_pct": 0.82,
+    "mean_of_sets": 14.23
+   },
+   "us-northeast": {
+    "wer": 9.2,
+    "sub": 11,
+    "del": 1,
+    "ins": 3,
+    "words": 163,
+    "clips": 15,
+    "sub_pct": 6.75,
+    "del_pct": 0.61,
+    "ins_pct": 1.84,
+    "mean_of_sets": 9.2
+   },
+   "us-south": {
+    "wer": 10.92,
+    "sub": 11,
+    "del": 1,
+    "ins": 1,
+    "words": 119,
+    "clips": 12,
+    "sub_pct": 9.24,
+    "del_pct": 0.84,
+    "ins_pct": 0.84,
+    "mean_of_sets": 10.92
+   },
+   "us-west": {
+    "wer": 4.85,
+    "sub": 12,
+    "del": 6,
+    "ins": 0,
+    "words": 371,
+    "clips": 29,
+    "sub_pct": 3.23,
+    "del_pct": 1.62,
+    "ins_pct": 0.0,
+    "mean_of_sets": 4.85
+   },
+   "wales": {
+    "wer": 6.93,
+    "sub": 113,
+    "del": 26,
+    "ins": 18,
+    "words": 2267,
+    "clips": 174,
+    "sub_pct": 4.98,
+    "del_pct": 1.15,
+    "ins_pct": 0.79,
+    "mean_of_sets": 6.93
+   }
+  },
+  "accent_cont_groups": {
+   "US regional (Midwest, West, Northeast, South, Hispanic)": {
+    "wer": 10.1,
+    "sub": 84,
+    "del": 25,
+    "ins": 10,
+    "words": 1178,
+    "clips": 96,
+    "sub_pct": 7.13,
+    "del_pct": 2.12,
+    "ins_pct": 0.85,
+    "mean_of_sets": 9.84
+   },
+   "Ireland and Northern Ireland": {
+    "wer": 19.75,
+    "sub": 213,
+    "del": 135,
+    "ins": 32,
+    "words": 1924,
+    "clips": 111,
+    "sub_pct": 11.07,
+    "del_pct": 7.02,
+    "ins_pct": 1.66,
+    "mean_of_sets": 12.02
+   }
+  },
+  "esb_fresh": {
+   "wer": 12.09,
+   "sub": 3520,
+   "del": 2161,
+   "ins": 851,
+   "words": 54033,
+   "clips": 3175,
+   "sub_pct": 6.51,
+   "del_pct": 4.0,
+   "ins_pct": 1.57,
+   "mean_of_sets": 12.89
+  },
+  "esb_fresh_sets": {
+   "librispeech-clean": {
+    "wer": 0.0309,
+    "sub": 190,
+    "del": 23,
+    "ins": 33,
+    "words": 7964,
+    "clips": 400
+   },
+   "librispeech-other": {
+    "wer": 0.0737,
+    "sub": 409,
+    "del": 71,
+    "ins": 66,
+    "words": 7405,
+    "clips": 400
+   },
+   "common_voice": {
+    "wer": 0.1754,
+    "sub": 479,
+    "del": 86,
+    "ins": 116,
+    "words": 3882,
+    "clips": 400
+   },
+   "ami": {
+    "wer": 0.1517,
+    "sub": 217,
+    "del": 188,
+    "ins": 51,
+    "words": 3005,
+    "clips": 376
+   },
+   "voxpopuli": {
+    "wer": 0.089,
+    "sub": 379,
+    "del": 313,
+    "ins": 164,
+    "words": 9623,
+    "clips": 400
+   },
+   "earnings22": {
+    "wer": 0.1651,
+    "sub": 523,
+    "del": 451,
+    "ins": 164,
+    "words": 6894,
+    "clips": 400
+   },
+   "gigaspeech": {
+    "wer": 0.136,
+    "sub": 571,
+    "del": 369,
+    "ins": 148,
+    "words": 8002,
+    "clips": 399
+   },
+   "urgent2024": {
+    "wer": 0.2096,
+    "sub": 752,
+    "del": 660,
+    "ins": 109,
+    "words": 7258,
+    "clips": 400
+   }
+  },
+  "other_clips_fresh": {
+   "wer": 11.27,
+   "sub": 3294,
+   "del": 2102,
+   "ins": 720,
+   "words": 54279,
+   "clips": 3168,
+   "sub_pct": 6.07,
+   "del_pct": 3.87,
+   "ins_pct": 1.33,
+   "mean_of_sets": 11.94
+  },
+  "other_clips_fresh_sets": {
+   "librispeech-clean": {
+    "wer": 0.0321,
+    "sub": 209,
+    "del": 33,
+    "ins": 33,
+    "words": 8566,
+    "clips": 400
+   },
+   "librispeech-other": {
+    "wer": 0.068,
+    "sub": 352,
+    "del": 55,
+    "ins": 60,
+    "words": 6872,
+    "clips": 400
+   },
+   "common_voice": {
+    "wer": 0.153,
+    "sub": 425,
+    "del": 118,
+    "ins": 53,
+    "words": 3896,
+    "clips": 400
+   },
+   "ami": {
+    "wer": 0.1417,
+    "sub": 179,
+    "del": 161,
+    "ins": 41,
+    "words": 2689,
+    "clips": 369
+   },
+   "voxpopuli": {
+    "wer": 0.0809,
+    "sub": 377,
+    "del": 249,
+    "ins": 144,
+    "words": 9519,
+    "clips": 400
+   },
+   "earnings22": {
+    "wer": 0.1563,
+    "sub": 533,
+    "del": 472,
+    "ins": 158,
+    "words": 7441,
+    "clips": 400
+   },
+   "gigaspeech": {
+    "wer": 0.1289,
+    "sub": 488,
+    "del": 372,
+    "ins": 140,
+    "words": 7756,
+    "clips": 399
+   },
+   "urgent2024": {
+    "wer": 0.1942,
+    "sub": 731,
+    "del": 642,
+    "ins": 91,
+    "words": 7540,
+    "clips": 400
+   }
+  },
+  "accent_fresh": {
+   "wer": 14.06,
+   "sub": 3217,
+   "del": 1641,
+   "ins": 386,
+   "words": 37310,
+   "clips": 2992,
+   "sub_pct": 8.62,
+   "del_pct": 4.4,
+   "ins_pct": 1.03,
+   "mean_of_sets": 12.45
+  },
+  "accent_fresh_regions": {
+   "africa": {
+    "wer": 23.54,
+    "sub": 260,
+    "del": 295,
+    "ins": 29,
+    "words": 2481,
+    "clips": 159,
+    "sub_pct": 10.48,
+    "del_pct": 11.89,
+    "ins_pct": 1.17,
+    "mean_of_sets": 23.54
+   },
+   "australia-nz": {
+    "wer": 9.33,
+    "sub": 98,
+    "del": 12,
+    "ins": 8,
+    "words": 1265,
+    "clips": 122,
+    "sub_pct": 7.75,
+    "del_pct": 0.95,
+    "ins_pct": 0.63,
+    "mean_of_sets": 9.33
+   },
+   "canada": {
+    "wer": 7.58,
+    "sub": 59,
+    "del": 5,
+    "ins": 13,
+    "words": 1016,
+    "clips": 102,
+    "sub_pct": 5.81,
+    "del_pct": 0.49,
+    "ins_pct": 1.28,
+    "mean_of_sets": 7.58
+   },
+   "england-midlands": {
+    "wer": 6.24,
+    "sub": 26,
+    "del": 6,
+    "ins": 6,
+    "words": 609,
+    "clips": 44,
+    "sub_pct": 4.27,
+    "del_pct": 0.99,
+    "ins_pct": 0.99,
+    "mean_of_sets": 6.24
+   },
+   "england-north": {
+    "wer": 5.85,
+    "sub": 99,
+    "del": 23,
+    "ins": 13,
+    "words": 2309,
+    "clips": 171,
+    "sub_pct": 4.29,
+    "del_pct": 1.0,
+    "ins_pct": 0.56,
+    "mean_of_sets": 5.85
+   },
+   "england-south": {
+    "wer": 10.67,
+    "sub": 272,
+    "del": 159,
+    "ins": 42,
+    "words": 4433,
+    "clips": 300,
+    "sub_pct": 6.14,
+    "del_pct": 3.59,
+    "ins_pct": 0.95,
+    "mean_of_sets": 10.67
+   },
+   "india-south-asia": {
+    "wer": 16.35,
+    "sub": 358,
+    "del": 114,
+    "ins": 21,
+    "words": 3015,
+    "clips": 300,
+    "sub_pct": 11.87,
+    "del_pct": 3.78,
+    "ins_pct": 0.7,
+    "mean_of_sets": 16.35
+   },
+   "ireland": {
+    "wer": 22.12,
+    "sub": 234,
+    "del": 154,
+    "ins": 26,
+    "words": 1872,
+    "clips": 106,
+    "sub_pct": 12.5,
+    "del_pct": 8.23,
+    "ins_pct": 1.39,
+    "mean_of_sets": 22.12
+   },
+   "northern-ireland": {
+    "wer": 5.77,
+    "sub": 3,
+    "del": 0,
+    "ins": 0,
+    "words": 52,
+    "clips": 5,
+    "sub_pct": 5.77,
+    "del_pct": 0.0,
+    "ins_pct": 0.0,
+    "mean_of_sets": 5.77
+   },
+   "other-l2": {
+    "wer": 17.19,
+    "sub": 364,
+    "del": 223,
+    "ins": 44,
+    "words": 3671,
+    "clips": 300,
+    "sub_pct": 9.92,
+    "del_pct": 6.07,
+    "ins_pct": 1.2,
+    "mean_of_sets": 17.19
+   },
+   "scotland": {
+    "wer": 11.56,
+    "sub": 219,
+    "del": 98,
+    "ins": 36,
+    "words": 3054,
+    "clips": 213,
+    "sub_pct": 7.17,
+    "del_pct": 3.21,
+    "ins_pct": 1.18,
+    "mean_of_sets": 11.56
+   },
+   "uk-general": {
+    "wer": 12.47,
+    "sub": 290,
+    "del": 52,
+    "ins": 30,
+    "words": 2983,
+    "clips": 300,
+    "sub_pct": 9.72,
+    "del_pct": 1.74,
+    "ins_pct": 1.01,
+    "mean_of_sets": 12.47
+   },
+   "us-aae": {
+    "wer": 21.74,
+    "sub": 438,
+    "del": 380,
+    "ins": 50,
+    "words": 3992,
+    "clips": 300,
+    "sub_pct": 10.97,
+    "del_pct": 9.52,
+    "ins_pct": 1.25,
+    "mean_of_sets": 21.74
+   },
+   "us-general": {
+    "wer": 12.14,
+    "sub": 275,
+    "del": 60,
+    "ins": 43,
+    "words": 3113,
+    "clips": 300,
+    "sub_pct": 8.83,
+    "del_pct": 1.93,
+    "ins_pct": 1.38,
+    "mean_of_sets": 12.14
+   },
+   "us-hispanic": {
+    "wer": 12.5,
+    "sub": 3,
+    "del": 0,
+    "ins": 2,
+    "words": 40,
+    "clips": 5,
+    "sub_pct": 7.5,
+    "del_pct": 0.0,
+    "ins_pct": 5.0,
+    "mean_of_sets": 12.5
+   },
+   "us-midwest": {
+    "wer": 16.08,
+    "sub": 55,
+    "del": 19,
+    "ins": 4,
+    "words": 485,
+    "clips": 35,
+    "sub_pct": 11.34,
+    "del_pct": 3.92,
+    "ins_pct": 0.82,
+    "mean_of_sets": 16.08
+   },
+   "us-northeast": {
+    "wer": 9.82,
+    "sub": 10,
+    "del": 3,
+    "ins": 3,
+    "words": 163,
+    "clips": 15,
+    "sub_pct": 6.13,
+    "del_pct": 1.84,
+    "ins_pct": 1.84,
+    "mean_of_sets": 9.82
+   },
+   "us-south": {
+    "wer": 15.13,
+    "sub": 15,
+    "del": 1,
+    "ins": 2,
+    "words": 119,
+    "clips": 12,
+    "sub_pct": 12.61,
+    "del_pct": 0.84,
+    "ins_pct": 1.68,
+    "mean_of_sets": 15.13
+   },
+   "us-west": {
+    "wer": 5.39,
+    "sub": 13,
+    "del": 7,
+    "ins": 0,
+    "words": 371,
+    "clips": 29,
+    "sub_pct": 3.5,
+    "del_pct": 1.89,
+    "ins_pct": 0.0,
+    "mean_of_sets": 5.39
+   },
+   "wales": {
+    "wer": 7.5,
+    "sub": 126,
+    "del": 30,
+    "ins": 14,
+    "words": 2267,
+    "clips": 174,
+    "sub_pct": 5.56,
+    "del_pct": 1.32,
+    "ins_pct": 0.62,
+    "mean_of_sets": 7.5
+   }
+  },
+  "accent_fresh_groups": {
+   "US regional (Midwest, West, Northeast, South, Hispanic)": {
+    "wer": 11.63,
+    "sub": 96,
+    "del": 30,
+    "ins": 11,
+    "words": 1178,
+    "clips": 96,
+    "sub_pct": 8.15,
+    "del_pct": 2.55,
+    "ins_pct": 0.93,
+    "mean_of_sets": 11.78
+   },
+   "Ireland and Northern Ireland": {
+    "wer": 21.67,
+    "sub": 237,
+    "del": 154,
+    "ins": 26,
+    "words": 1924,
+    "clips": 111,
+    "sub_pct": 12.32,
+    "del_pct": 8.0,
+    "ins_pct": 1.35,
+    "mean_of_sets": 13.95
+   }
+  },
+  "hard_cont": {
+   "wer": 8.82,
+   "sub": 704,
+   "del": 315,
+   "ins": 182,
+   "words": 13610,
+   "clips": 370,
+   "sub_pct": 5.17,
+   "del_pct": 2.31,
+   "ins_pct": 1.34,
+   "mean_of_sets": 8.86
+  },
+  "hard_cont_sets": {
+   "gaming": {
+    "wer": 8.25,
+    "sub": 182,
+    "del": 61,
+    "ins": 66,
+    "words": 3745,
+    "clips": 100,
+    "sub_pct": 4.86,
+    "del_pct": 1.63,
+    "ins_pct": 1.76,
+    "mean_of_sets": 8.25
+   },
+   "names": {
+    "wer": 8.17,
+    "sub": 162,
+    "del": 47,
+    "ins": 42,
+    "words": 3072,
+    "clips": 90,
+    "sub_pct": 5.27,
+    "del_pct": 1.53,
+    "ins_pct": 1.37,
+    "mean_of_sets": 8.17
+   },
+   "numbers": {
+    "wer": 9.98,
+    "sub": 163,
+    "del": 96,
+    "ins": 36,
+    "words": 2957,
+    "clips": 90,
+    "sub_pct": 5.51,
+    "del_pct": 3.25,
+    "ins_pct": 1.22,
+    "mean_of_sets": 9.98
+   },
+   "streaming": {
+    "wer": 9.02,
+    "sub": 197,
+    "del": 111,
+    "ins": 38,
+    "words": 3836,
+    "clips": 90,
+    "sub_pct": 5.14,
+    "del_pct": 2.89,
+    "ins_pct": 0.99,
+    "mean_of_sets": 9.02
+   }
+  }
+ }
+}

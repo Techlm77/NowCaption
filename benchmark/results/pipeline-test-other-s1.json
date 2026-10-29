@@ -6,14 +6,14 @@
   2.1
  ],
  "words": 2369,
- "errors": 155,
- "wer": 0.0654,
- "lag_s_mean": 0.185,
- "lag_s_p50": 0.213,
- "lag_s_p90": 0.379,
- "timed_words": 2215,
+ "errors": 163,
+ "wer": 0.0688,
+ "lag_s_mean": 0.169,
+ "lag_s_p50": 0.199,
+ "lag_s_p90": 0.364,
+ "timed_words": 2211,
  "audio_s": 1130.5,
- "cpu_rtf": 0.1695,
+ "cpu_rtf": 0.0719,
  "items": [
   {
    "audio": "367-293981-0001.wav",
@@ -37,8 +37,8 @@
   },
   {
    "audio": "533-131564-0014.wav",
-   "hyp": "what did you make of me and the children to be sure that were hurt death between them",
-   "errors": 4
+   "hyp": "what did you make of me and the children to be sure that were hurt to death between them",
+   "errors": 3
   },
   {
    "audio": "533-131564-0011.wav",
@@ -47,8 +47,8 @@
   },
   {
    "audio": "533-131562-0014.wav",
-   "hyp": "here benson entered the candles and there followed the brief interval of silence i sitting still in my chair and he is standing with his back to the fire silently trying in my despair",
-   "errors": 4
+   "hyp": "here benson entered the candles and there followed a brief interval of silence i sitting still in my chair and he is standing with his back to the fire silently triumphing in my despair",
+   "errors": 2
   },
   {
    "audio": "533-131556-0024.wav",
@@ -77,8 +77,8 @@
   },
   {
    "audio": "1998-29455-0013.wav",
-   "hyp": "that's all right said mister beer",
-   "errors": 2
+   "hyp": "that's all right said mister beer awkwardly",
+   "errors": 1
   },
   {
    "audio": "1998-15444-0018.wav",
@@ -107,8 +107,8 @@
   },
   {
    "audio": "2033-164915-0007.wav",
-   "hyp": "she said it hath reached me o auspicious king that when the stalker girded his ass for plight and bespake himself saying o would i knew what is become of him",
-   "errors": 4
+   "hyp": "she said it hath reached me o auspicious king that when the stalker girdeth his ass for flight and bespake himself saying o would i knew what is become of him",
+   "errors": 3
   },
   {
    "audio": "2033-164914-0007.wav",
@@ -127,8 +127,8 @@
   },
   {
    "audio": "2414-159411-0018.wav",
-   "hyp": "after this they saw and allocator and the brahmer related the matter to him hoping for a more favourable verdict",
-   "errors": 4
+   "hyp": "after this they saw and allocator and the brahman related the matter to him hoping for a more favourable verdict",
+   "errors": 3
   },
   {
    "audio": "2414-159411-0032.wav",
@@ -142,7 +142,7 @@
   },
   {
    "audio": "2609-157645-0013.wav",
-   "hyp": "go into church saint hayden thou's days must have been acquainted in the signing experience",
+   "hyp": "go into church at hayden thou today's must have been acquainted in the signing experience",
    "errors": 10
   },
   {
@@ -152,8 +152,8 @@
   },
   {
    "audio": "2609-157645-0007.wav",
-   "hyp": "one sunday says mister ditchfield he had in that pipe and josu the clerk told him that the people were getting impatient",
-   "errors": 3
+   "hyp": "one sunday says mister ditchfield handed natural pipe and jauncew the clerk told him that the people were getting impatient",
+   "errors": 5
   },
   {
    "audio": "3005-163390-0019.wav",
@@ -172,8 +172,8 @@
   },
   {
    "audio": "3005-163399-0004.wav",
-   "hyp": "when we got there she set me down in a split bottomed chair and set herself down on a little low stool in front of me holding both of my hands and says",
-   "errors": 0
+   "hyp": "when we got there she set me down in a split bottom chair and set herself down on a little low stool in front of me holding both of my hands and says",
+   "errors": 1
   },
   {
    "audio": "3080-5040-0016.wav",
@@ -197,8 +197,8 @@
   },
   {
    "audio": "3331-159605-0000.wav",
-   "hyp": "she pulled her head down turned her skirt back put her feet on the fender and took part on to her lap all of which arrangements signified that something very important had got to be thought over and settled",
-   "errors": 4
+   "hyp": "she pulled her head down turned her skirt back put her feet on the fender and took part under her lap all of which arrangements signified that something very important had got to be thought over and settled",
+   "errors": 3
   },
   {
    "audio": "3331-159605-0006.wav",
@@ -207,8 +207,8 @@
   },
   {
    "audio": "3331-159609-0012.wav",
-   "hyp": "once or twice but sort of chokingly and i thought it was only some little flirtation",
-   "errors": 1
+   "hyp": "once or twice what sort of chokingly and i thought it was only some little flirtation",
+   "errors": 2
   },
   {
    "audio": "3331-159609-0023.wav",
@@ -247,8 +247,8 @@
   },
   {
    "audio": "3538-163619-0007.wav",
-   "hyp": "well if my brother says so i must do it said the man's daughter and she flung her casket into the sea",
-   "errors": 0
+   "hyp": "well if my brother says so i must do it said the man's daughter and she flung her casket into the seat",
+   "errors": 1
   },
   {
    "audio": "3538-163622-0004.wav",
@@ -272,8 +272,8 @@
   },
   {
    "audio": "3764-168671-0029.wav",
-   "hyp": "he persisted feebly father mestiel is the grave digger",
-   "errors": 2
+   "hyp": "he persisted feebly father miss tielle is the grave digger",
+   "errors": 3
   },
   {
    "audio": "3997-180297-0005.wav",
@@ -297,7 +297,7 @@
   },
   {
    "audio": "4198-12259-0018.wav",
-   "hyp": "and i tank quam sponsors",
+   "hyp": "and i tang quam sponsors",
    "errors": 3
   },
   {
@@ -307,8 +307,8 @@
   },
   {
    "audio": "4198-12281-0012.wav",
-   "hyp": "oh the holy lady knights it said one the good sanctus oh our lady of succuas said another help help",
-   "errors": 6
+   "hyp": "oh the holy lady knights it said one the good sanctus oh our lady of succuas said another help help help",
+   "errors": 7
   },
   {
    "audio": "4198-61336-0022.wav",
@@ -327,13 +327,13 @@
   },
   {
    "audio": "4294-35475-0018.wav",
-   "hyp": "in a very short time the prince had crawled through the opening",
-   "errors": 0
+   "hyp": "into the very short time the prince had crawled through the opening",
+   "errors": 2
   },
   {
    "audio": "4294-35475-0017.wav",
-   "hyp": "as he uttered the words the scissors leaped out of his hand and began to cut through the wooden shutters as easily as through a cheese",
-   "errors": 0
+   "hyp": "as he uttered the words the scissors leaped out of his hand and began to cut through the wooden shutters as easily as through it sheaves",
+   "errors": 2
   },
   {
    "audio": "4350-10919-0020.wav",
@@ -357,8 +357,8 @@
   },
   {
    "audio": "4852-28312-0008.wav",
-   "hyp": "chris swallow his voice came back to him",
-   "errors": 2
+   "hyp": "chris swallowed his voice came back to him",
+   "errors": 1
   },
   {
    "audio": "4852-28330-0011.wav",
@@ -367,8 +367,8 @@
   },
   {
    "audio": "4852-28330-0002.wav",
-   "hyp": "next ned's silly was relieved of the helm by albert jones who took over ned went on down",
-   "errors": 4
+   "hyp": "next ned's silly was relieved of the helm by elbert jones who took over ned went on down",
+   "errors": 3
   },
   {
    "audio": "4852-28330-0009.wav",
@@ -387,8 +387,8 @@
   },
   {
    "audio": "5442-32873-0008.wav",
-   "hyp": "there was nothing very brotherly in his look as he peered into a pale sharp features during the process",
-   "errors": 1
+   "hyp": "there was nothing very brotherly in his look as he peered into her pale sharp features during the process",
+   "errors": 0
   },
   {
    "audio": "5442-41169-0007.wav",
@@ -407,13 +407,13 @@
   },
   {
    "audio": "5484-24317-0023.wav",
-   "hyp": "that is going to fall replied herman",
-   "errors": 3
+   "hyp": "that is going to fall herman",
+   "errors": 4
   },
   {
    "audio": "5484-24318-0009.wav",
-   "hyp": "the power which delivered him over to death just at that moment was not nemesis no it was a kindly deity",
-   "errors": 0
+   "hyp": "the power which delivered him over to death just at that moment was not necess a no it was a kindly deity",
+   "errors": 2
   },
   {
    "audio": "5764-299665-0037.wav",
@@ -437,13 +437,13 @@
   },
   {
    "audio": "6070-63485-0016.wav",
-   "hyp": "between saint waint and the road of la revolt at the end of the road agreed",
+   "hyp": "between saint wain and the road of la revolt at the end of the road agreed",
    "errors": 2
   },
   {
    "audio": "6070-63485-0002.wav",
-   "hyp": "by means of this strategem they followed so closely that although within a few steps of seren tom they did not hear them",
-   "errors": 3
+   "hyp": "by means of this stratagem they followed so closely that although within a few steps of seren tom they did not hear them",
+   "errors": 2
   },
   {
    "audio": "6070-86745-0016.wav",
@@ -452,7 +452,7 @@
   },
   {
    "audio": "6070-86745-0019.wav",
-   "hyp": "with the old talents you would make your fortune in three or four years",
+   "hyp": "with the autalents you would make your fortune in three or four years",
    "errors": 2
   },
   {
@@ -467,8 +467,8 @@
   },
   {
    "audio": "6128-63240-0007.wav",
-   "hyp": "these things the eyes especially with their smouldering fire might have indicated that he was to be great american statesman or on the other hand they might simply have proved that he came from carolina or alabama",
-   "errors": 1
+   "hyp": "this things the eyes especially with their smoldering fire might have indicated that he was to be great american statesman or on the other hand they might simply have proved that he came from carolina or alabama",
+   "errors": 3
   },
   {
    "audio": "6128-63240-0009.wav",
@@ -477,8 +477,8 @@
   },
   {
    "audio": "6432-63722-0023.wav",
-   "hyp": "neighbors often heard him scraping a lot and this afternoon they went at it again in hot and heavy",
-   "errors": 3
+   "hyp": "labors often heard him scraping a lot and this afternoon they went at it again in hot and heavy",
+   "errors": 4
   },
   {
    "audio": "6432-63722-0026.wav",
@@ -507,13 +507,13 @@
   },
   {
    "audio": "6938-70848-0018.wav",
-   "hyp": "but this work both ways the lap socially revolutionist decided that if the congress had no power over the executive committee then the executive committee had no power over the congress",
-   "errors": 4
+   "hyp": "but this work both ways the lack of social revolutionist decided that if the congress had no power over the executive committee then the executive committee had no power over the congress",
+   "errors": 5
   },
   {
    "audio": "6938-70848-0022.wav",
-   "hyp": "the first stage was the crushing of autocracy and the crushing of the power of the industrial capitalist and the landowners whose interests are closely related",
-   "errors": 3
+   "hyp": "the first stage was the crushing of autocracy and the crushing of the power of the industrial capitalist and the landowners whose interest are closely related",
+   "errors": 4
   },
   {
    "audio": "7018-75789-0015.wav",
@@ -542,8 +542,8 @@
   },
   {
    "audio": "7105-2340-0025.wav",
-   "hyp": "it was a little present from my mother and myself for your silver wedding",
-   "errors": 0
+   "hyp": "it was a little present from my mother and myself four year silver wedding",
+   "errors": 2
   },
   {
    "audio": "7105-2340-0003.wav",
@@ -557,8 +557,8 @@
   },
   {
    "audio": "7902-96594-0023.wav",
-   "hyp": "they pardon didn't mean nought sir said the sailor touching his forelock",
-   "errors": 2
+   "hyp": "began didn't mean nought sir said the sailor touching his forelock",
+   "errors": 3
   },
   {
    "audio": "7902-96595-0019.wav",
@@ -632,12 +632,12 @@
   },
   {
    "audio": "8188-269288-0049.wav",
-   "hyp": "had you managed with a candle just for once",
-   "errors": 2
+   "hyp": "cut you manage with a candle just for once",
+   "errors": 1
   },
   {
    "audio": "8280-266249-0007.wav",
-   "hyp": "and when it dears little fellow he is just about the age of our herald i should judge",
+   "hyp": "and when it does little fellow he is just about the age of our herald i should judge",
    "errors": 4
   },
   {
@@ -652,8 +652,8 @@
   },
   {
    "audio": "8280-266249-0027.wav",
-   "hyp": "it must require a good deal of resolution for one who has become fond of the indulgence to give it up remarks mister daly",
-   "errors": 1
+   "hyp": "it must require a good deal of resolution for one who has become fond of the indulgence to give it up remarked mister daly",
+   "errors": 0
   },
   {
    "audio": "8461-278226-0007.wav",
@@ -667,8 +667,8 @@
   },
   {
    "audio": "8461-281231-0028.wav",
-   "hyp": "during all this time isaac of york sat mournfully apart grieving for the loss of his daily loved daughter rebecca",
-   "errors": 1
+   "hyp": "during all this time isaac of york sat mournfully apart grieving for the loss of his dearly loved daughter rebecca",
+   "errors": 0
   },
   {
    "audio": "8461-258277-0007.wav",

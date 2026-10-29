@@ -1,0 +1,591 @@
+{
+ "base": "v3",
+ "modes": {
+  "cont": {
+   "rows": [
+    {
+     "model": "v4",
+     "mode": "cont",
+     "sets": {
+      "librispeech-clean": {
+       "wer": 0.0293,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1416,
+       "peak_rss_mb": 282,
+       "resets": null,
+       "clips": null
+      },
+      "librispeech-other": {
+       "wer": 0.0691,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1394,
+       "peak_rss_mb": 287,
+       "resets": null,
+       "clips": null
+      },
+      "common_voice": {
+       "wer": 0.1568,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1381,
+       "peak_rss_mb": 276,
+       "resets": null,
+       "clips": null
+      },
+      "ami": {
+       "wer": 0.1614,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.13,
+       "peak_rss_mb": 273,
+       "resets": null,
+       "clips": null
+      },
+      "voxpopuli": {
+       "wer": 0.0829,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1493,
+       "peak_rss_mb": 286,
+       "resets": null,
+       "clips": null
+      },
+      "earnings22": {
+       "wer": 0.1586,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.14,
+       "peak_rss_mb": 282,
+       "resets": null,
+       "clips": null
+      },
+      "gigaspeech": {
+       "wer": 0.1304,
+       "settled_p50": null,
+       "loops": 1,
+       "cpu_rtf": 0.1445,
+       "peak_rss_mb": 278,
+       "resets": null,
+       "clips": null
+      },
+      "urgent2024": {
+       "wer": 0.1977,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1423,
+       "peak_rss_mb": 279,
+       "resets": null,
+       "clips": null
+      }
+     },
+     "avg_wer": 0.12327499999999998,
+     "cv_wer": 0.1568,
+     "settled": [
+      null,
+      null,
+      null
+     ],
+     "first": [
+      null,
+      null,
+      null
+     ],
+     "timed": 0,
+     "loops": 1,
+     "cpu_rtf": 0.14065,
+     "peak_rss_mb": 287,
+     "vs_base": {
+      "sets": {
+       "librispeech-clean": [
+        -0.001634368433341116,
+        -0.0037381986879549867,
+        0.0004446090808826403
+       ],
+       "librispeech-other": [
+        -0.0018917345750873108,
+        -0.005440660825124824,
+        0.0016563848350698814
+       ],
+       "common_voice": [
+        -0.002566735112936345,
+        -0.01171623379083841,
+        0.00530532518550851
+       ],
+       "ami": [
+        0.002231312755671253,
+        -0.006795636896665824,
+        0.01114421215277591
+       ],
+       "voxpopuli": [
+        0.0005252652589557726,
+        -0.0023402907844585676,
+        0.0035919722257595267
+       ],
+       "earnings22": [
+        0.0016126864668727322,
+        -0.004252679333283722,
+        0.007446907870035522
+       ],
+       "gigaspeech": [
+        -0.0009025270758122744,
+        -0.005447135467685832,
+        0.003544475161216123
+       ],
+       "urgent2024": [
+        -0.005039787798408488,
+        -0.010800690547845732,
+        0.0005471734624434365
+       ]
+      },
+      "avg_wer": [
+       -0.0009582360642607221,
+       -0.0030181912300678852,
+       0.001133486279911156
+      ],
+      "settled_p50": null,
+      "settled_p90": null,
+      "paired_words": 0
+     },
+     "after_pause": {
+      "first": [
+       978,
+       6191,
+       null
+      ],
+      "rest": [
+       4523,
+       48088,
+       null
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       143,
+       800,
+       null
+      ],
+      "rest": [
+       415,
+       3096,
+       null
+      ]
+     }
+    },
+    {
+     "model": "v3",
+     "mode": "cont",
+     "sets": {
+      "librispeech-clean": {
+       "wer": 0.0309,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1958,
+       "peak_rss_mb": 336,
+       "resets": null,
+       "clips": 400
+      },
+      "librispeech-other": {
+       "wer": 0.071,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1956,
+       "peak_rss_mb": 339,
+       "resets": null,
+       "clips": 400
+      },
+      "common_voice": {
+       "wer": 0.1594,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1824,
+       "peak_rss_mb": 334,
+       "resets": null,
+       "clips": 400
+      },
+      "ami": {
+       "wer": 0.1592,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1865,
+       "peak_rss_mb": 334,
+       "resets": null,
+       "clips": 400
+      },
+      "voxpopuli": {
+       "wer": 0.0824,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1959,
+       "peak_rss_mb": 343,
+       "resets": null,
+       "clips": 400
+      },
+      "earnings22": {
+       "wer": 0.157,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1909,
+       "peak_rss_mb": 337,
+       "resets": null,
+       "clips": 400
+      },
+      "gigaspeech": {
+       "wer": 0.1313,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.196,
+       "peak_rss_mb": 337,
+       "resets": null,
+       "clips": 400
+      },
+      "urgent2024": {
+       "wer": 0.2028,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1956,
+       "peak_rss_mb": 337,
+       "resets": null,
+       "clips": 400
+      }
+     },
+     "avg_wer": 0.12425,
+     "cv_wer": 0.1594,
+     "settled": [
+      null,
+      null,
+      null
+     ],
+     "first": [
+      null,
+      null,
+      null
+     ],
+     "timed": 0,
+     "loops": 0,
+     "cpu_rtf": 0.1923375,
+     "peak_rss_mb": 343,
+     "after_pause": {
+      "first": [
+       1012,
+       6191,
+       null
+      ],
+      "rest": [
+       4561,
+       48088,
+       null
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       149,
+       800,
+       null
+      ],
+      "rest": [
+       416,
+       3096,
+       null
+      ]
+     }
+    }
+   ],
+   "pareto": []
+  },
+  "fresh": {
+   "rows": [
+    {
+     "model": "v4",
+     "mode": "fresh",
+     "sets": {
+      "librispeech-clean": {
+       "wer": 0.0321,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1298,
+       "peak_rss_mb": 283,
+       "resets": null,
+       "clips": null
+      },
+      "librispeech-other": {
+       "wer": 0.068,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.133,
+       "peak_rss_mb": 283,
+       "resets": null,
+       "clips": null
+      },
+      "common_voice": {
+       "wer": 0.153,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1115,
+       "peak_rss_mb": 279,
+       "resets": null,
+       "clips": null
+      },
+      "ami": {
+       "wer": 0.1417,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.095,
+       "peak_rss_mb": 277,
+       "resets": null,
+       "clips": null
+      },
+      "voxpopuli": {
+       "wer": 0.0809,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1023,
+       "peak_rss_mb": 283,
+       "resets": null,
+       "clips": null
+      },
+      "earnings22": {
+       "wer": 0.1563,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1292,
+       "peak_rss_mb": 279,
+       "resets": null,
+       "clips": null
+      },
+      "gigaspeech": {
+       "wer": 0.1289,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1385,
+       "peak_rss_mb": 278,
+       "resets": null,
+       "clips": null
+      },
+      "urgent2024": {
+       "wer": 0.1942,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1254,
+       "peak_rss_mb": 281,
+       "resets": null,
+       "clips": null
+      }
+     },
+     "avg_wer": 0.1193875,
+     "cv_wer": 0.153,
+     "settled": [
+      null,
+      null,
+      null
+     ],
+     "first": [
+      null,
+      null,
+      null
+     ],
+     "timed": 0,
+     "loops": 0,
+     "cpu_rtf": 0.12058750000000001,
+     "peak_rss_mb": 283,
+     "vs_base": {
+      "sets": {
+       "librispeech-clean": [
+        -0.00011674060238150829,
+        -0.0016444181901090246,
+        0.0014952502021744894
+       ],
+       "librispeech-other": [
+        0.0,
+        -0.0031690442336348283,
+        0.00319535262325497
+       ],
+       "common_voice": [
+        -0.002053388090349076,
+        -0.009271873350562924,
+        0.0049136423439471045
+       ],
+       "ami": [
+        -0.00669393826701376,
+        -0.015730477120598843,
+        0.0017674246026329644
+       ],
+       "voxpopuli": [
+        -0.00042021220716461814,
+        -0.0028884740653333037,
+        0.0019713838159561726
+       ],
+       "earnings22": [
+        -0.005644402634054563,
+        -0.012492376196693872,
+        0.0004563425049510256
+       ],
+       "gigaspeech": [
+        -0.0014182568334192883,
+        -0.005450588046279029,
+        0.0025595905678370127
+       ],
+       "urgent2024": [
+        -0.004111405835543766,
+        -0.009862784385558043,
+        0.0014598354564755828
+       ]
+      },
+      "avg_wer": [
+       -0.0025572930587408225,
+       -0.004662862598453777,
+       -0.00061912020222846
+      ],
+      "settled_p50": null,
+      "settled_p90": null,
+      "paired_words": 0
+     },
+     "after_pause": {
+      "first": [
+       984,
+       6191,
+       null
+      ],
+      "rest": [
+       4412,
+       48088,
+       null
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       136,
+       800,
+       null
+      ],
+      "rest": [
+       407,
+       3096,
+       null
+      ]
+     }
+    },
+    {
+     "model": "v3",
+     "mode": "fresh",
+     "sets": {
+      "librispeech-clean": {
+       "wer": 0.0322,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.2092,
+       "peak_rss_mb": 346,
+       "resets": 400,
+       "clips": 400
+      },
+      "librispeech-other": {
+       "wer": 0.068,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.2081,
+       "peak_rss_mb": 336,
+       "resets": 400,
+       "clips": 400
+      },
+      "common_voice": {
+       "wer": 0.155,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.2065,
+       "peak_rss_mb": 331,
+       "resets": 401,
+       "clips": 400
+      },
+      "ami": {
+       "wer": 0.1484,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.2226,
+       "peak_rss_mb": 331,
+       "resets": 400,
+       "clips": 400
+      },
+      "voxpopuli": {
+       "wer": 0.0813,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1861,
+       "peak_rss_mb": 345,
+       "resets": 400,
+       "clips": 400
+      },
+      "earnings22": {
+       "wer": 0.1619,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.209,
+       "peak_rss_mb": 343,
+       "resets": 400,
+       "clips": 400
+      },
+      "gigaspeech": {
+       "wer": 0.1304,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.2164,
+       "peak_rss_mb": 339,
+       "resets": 400,
+       "clips": 400
+      },
+      "urgent2024": {
+       "wer": 0.1983,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.199,
+       "peak_rss_mb": 335,
+       "resets": 400,
+       "clips": 400
+      }
+     },
+     "avg_wer": 0.1219375,
+     "cv_wer": 0.155,
+     "settled": [
+      null,
+      null,
+      null
+     ],
+     "first": [
+      null,
+      null,
+      null
+     ],
+     "timed": 0,
+     "loops": 0,
+     "cpu_rtf": 0.2071125,
+     "peak_rss_mb": 346,
+     "after_pause": {
+      "first": [
+       993,
+       6191,
+       null
+      ],
+      "rest": [
+       4508,
+       48088,
+       null
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       140,
+       800,
+       null
+      ],
+      "rest": [
+       407,
+       3096,
+       null
+      ]
+     }
+    }
+   ],
+   "pareto": []
+  }
+ }
+}

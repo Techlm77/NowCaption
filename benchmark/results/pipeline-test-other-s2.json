@@ -6,14 +6,14 @@
   2.1
  ],
  "words": 2369,
- "errors": 158,
- "wer": 0.0667,
- "lag_s_mean": 0.186,
- "lag_s_p50": 0.209,
- "lag_s_p90": 0.376,
- "timed_words": 2213,
+ "errors": 162,
+ "wer": 0.0684,
+ "lag_s_mean": 0.168,
+ "lag_s_p50": 0.191,
+ "lag_s_p90": 0.359,
+ "timed_words": 2212,
  "audio_s": 1130.2,
- "cpu_rtf": 0.1731,
+ "cpu_rtf": 0.0724,
  "items": [
   {
    "audio": "367-293981-0001.wav",
@@ -42,13 +42,13 @@
   },
   {
    "audio": "533-131564-0011.wav",
-   "hyp": "now don't pour into a tempest at ted",
-   "errors": 2
+   "hyp": "now don't pour into a tempest at that",
+   "errors": 1
   },
   {
    "audio": "533-131562-0014.wav",
-   "hyp": "here benson entered the candles and there followed the brief interval of silence i sitting still in my chair and he is standing with his back to the fire silently triumphing in my despair",
-   "errors": 3
+   "hyp": "here benson entered the candles and there followed a brief interval of silence i sitting still in my chair and he is standing with his back to the fire silently triumphing in my despair",
+   "errors": 2
   },
   {
    "audio": "533-131556-0024.wav",
@@ -82,7 +82,7 @@
   },
   {
    "audio": "1998-15444-0018.wav",
-   "hyp": "the pure acolytes was the exception of morphine in its crystalline form are soluble in ether",
+   "hyp": "the pure icoloids was the exception of morphine in its crystalline form are soluble in ether",
    "errors": 2
   },
   {
@@ -92,8 +92,8 @@
   },
   {
    "audio": "1998-15444-0013.wav",
-   "hyp": "antidotes are usually given hypodermically or if their mouse and the form of tablets",
-   "errors": 3
+   "hyp": "antidotes are usually given hypodermically or if their mouse in the form of tablets",
+   "errors": 2
   },
   {
    "audio": "2033-164915-0001.wav",
@@ -107,12 +107,12 @@
   },
   {
    "audio": "2033-164915-0007.wav",
-   "hyp": "she said it hath reached me o auspicious king that when the stalker girdeth his ass for flight and bestpake himself saying o would i knew what is become of him",
-   "errors": 4
+   "hyp": "she said it hath reached me o auspicious king that when the stalker girdeth his ass for flight and bespake himself saying o would i knew what is become of him",
+   "errors": 3
   },
   {
    "audio": "2033-164914-0007.wav",
-   "hyp": "and he also improvised the two following this stitch",
+   "hyp": "and he also improvised the two following this teach",
    "errors": 2
   },
   {
@@ -132,8 +132,8 @@
   },
   {
    "audio": "2414-159411-0032.wav",
-   "hyp": "when the brahman had turned this the jackal said oh you wicked and ungrateful tyr",
-   "errors": 2
+   "hyp": "when the brahman had turned this the jackals said oh you wicked and ungrateful tyr",
+   "errors": 3
   },
   {
    "audio": "2609-156975-0014.wav",
@@ -142,8 +142,8 @@
   },
   {
    "audio": "2609-157645-0013.wav",
-   "hyp": "going to church at hayden thou's days must have been acquainted and the signing spirits",
-   "errors": 8
+   "hyp": "go into church at hagen thou's days must have been acquainted in the signing experience",
+   "errors": 9
   },
   {
    "audio": "2609-169640-0008.wav",
@@ -152,8 +152,8 @@
   },
   {
    "audio": "2609-157645-0007.wav",
-   "hyp": "one sunday says mister ditchfield he had in that for pipe and joshua declark told him that the people were getting them patient",
-   "errors": 7
+   "hyp": "one sunday says mister ditchfield he had in that pipe and joso the clerk told him that the people were getting them patient",
+   "errors": 5
   },
   {
    "audio": "3005-163390-0019.wav",
@@ -197,8 +197,8 @@
   },
   {
    "audio": "3331-159605-0000.wav",
-   "hyp": "she pulled her head down turned her skirt back put her feet on the fender and took part on to her lap all of which arrangments signified that something very important had got to be thought over and settled",
-   "errors": 5
+   "hyp": "she pulled her head down turned her skirt back put her feet on the fender and took part on to her lap all of which arrangements signified that something very important had got to be thought over and settled",
+   "errors": 4
   },
   {
    "audio": "3331-159605-0006.wav",
@@ -207,8 +207,8 @@
   },
   {
    "audio": "3331-159609-0012.wav",
-   "hyp": "once or twice but sort of chokingly and i thought it was only some little flirtation",
-   "errors": 1
+   "hyp": "once or twice what sort of chokingly and i thought it was only some little flirtation",
+   "errors": 2
   },
   {
    "audio": "3331-159609-0023.wav",
@@ -242,8 +242,8 @@
   },
   {
    "audio": "3538-163622-0005.wav",
-   "hyp": "then the king promised him the same punishment and the same reward but he had promised his brother",
-   "errors": 1
+   "hyp": "then the king promised him the same punishment and the same reward that he had promised his brother",
+   "errors": 0
   },
   {
    "audio": "3538-163619-0007.wav",
@@ -272,7 +272,7 @@
   },
   {
    "audio": "3764-168671-0029.wav",
-   "hyp": "he persisted feebly father mistyan is the grave digger",
+   "hyp": "but he persisted feebly father miss tienne is the grave digger",
    "errors": 2
   },
   {
@@ -307,8 +307,8 @@
   },
   {
    "audio": "4198-12281-0012.wav",
-   "hyp": "oh the holy lady knights it said one the good sanctus oh our lady of succuas said another help help",
-   "errors": 6
+   "hyp": "oh the holy lady knights it said one the good sanctus oh our lady of succuas said another help help help",
+   "errors": 7
   },
   {
    "audio": "4198-61336-0022.wav",
@@ -327,18 +327,18 @@
   },
   {
    "audio": "4294-35475-0018.wav",
-   "hyp": "in a very short time the prince had crawled through the opening",
-   "errors": 0
+   "hyp": "into the very short time the prince had crawled through the opening",
+   "errors": 2
   },
   {
    "audio": "4294-35475-0017.wav",
-   "hyp": "as he uttered the words the scissors leaped out of his hand and began to cut through the wooden shutters as easily as through its cheese",
-   "errors": 1
+   "hyp": "as he uttered the words the scissors leaped out of his hand and began to cut through the wooden shutters as easily as through its sheaves",
+   "errors": 2
   },
   {
    "audio": "4350-10919-0020.wav",
-   "hyp": "the celebrated doctor announced to the princess a feeling of what was due from him dictated his doing so that he ought to see the patient once more",
-   "errors": 0
+   "hyp": "the celebrated doctor announced that the princess a feeling of what was due from him dictated his doing so that he ought to see the patient once more",
+   "errors": 1
   },
   {
    "audio": "4350-9170-0051.wav",
@@ -367,8 +367,8 @@
   },
   {
    "audio": "4852-28330-0002.wav",
-   "hyp": "next ned silly was relieved at the helm by albert jones who took over ned went on down",
-   "errors": 2
+   "hyp": "next ned's silly was relieved of the helm by elbert jones who took over ned went on down",
+   "errors": 3
   },
   {
    "audio": "4852-28330-0009.wav",
@@ -407,8 +407,8 @@
   },
   {
    "audio": "5484-24317-0023.wav",
-   "hyp": "that is going too far replied herman",
-   "errors": 1
+   "hyp": "that is going to fall herman",
+   "errors": 4
   },
   {
    "audio": "5484-24318-0009.wav",
@@ -442,8 +442,8 @@
   },
   {
    "audio": "6070-63485-0002.wav",
-   "hyp": "by means of this strategem they followed so closely that although within a few steps of sarin tom they did not hear them",
-   "errors": 3
+   "hyp": "by means of this stratagem they followed so closely that although within a few steps of seren tom they did not hear them",
+   "errors": 2
   },
   {
    "audio": "6070-86745-0016.wav",
@@ -452,8 +452,8 @@
   },
   {
    "audio": "6070-86745-0019.wav",
-   "hyp": "with the old talents you would make your fortune in three or four years",
-   "errors": 2
+   "hyp": "with your talents you would make your fortune in three or four years",
+   "errors": 0
   },
   {
    "audio": "6128-63240-0022.wav",
@@ -467,8 +467,8 @@
   },
   {
    "audio": "6128-63240-0007.wav",
-   "hyp": "this things the eyes especially with their smouldering fire might have indicated that he was to be great american statesman or on the other hand they might simply have proved that he came from carolina or alabama",
-   "errors": 2
+   "hyp": "this things the eyes especially with their smoldering fire might have indicated that he was to be great american statesman or on the other hand they might simply have proved that he came from carolina or alabama",
+   "errors": 3
   },
   {
    "audio": "6128-63240-0009.wav",
@@ -477,18 +477,18 @@
   },
   {
    "audio": "6432-63722-0023.wav",
-   "hyp": "labors often heard him scraping a lot and this afternoon they went at it again in hot and heavy",
-   "errors": 4
+   "hyp": "labours often heard him scrap in a lot and this afternoon they went at it again in hot and heavy",
+   "errors": 5
   },
   {
    "audio": "6432-63722-0026.wav",
-   "hyp": "sure held so tight we could hardly get it out",
-   "errors": 0
+   "hyp": "shore held so tight we could hardly get it out",
+   "errors": 1
   },
   {
    "audio": "6432-63722-0004.wav",
-   "hyp": "and having put himself in a fair way as he hoped to solve some of the problems connected with the darcy case colonel ashley went down to police headquarters to learn more facts in the connection with the murder of the east indian",
-   "errors": 1
+   "hyp": "and having put himself in a fair way as he'd hoped to solve some of the problems connected with the darcy case colonel ashley went down to police headquarters to learn more facts in the connection with the murder of the east indian",
+   "errors": 2
   },
   {
    "audio": "6432-63722-0017.wav",
@@ -512,13 +512,13 @@
   },
   {
    "audio": "6938-70848-0022.wav",
-   "hyp": "the first stage was the crushing of autocracy and the crushing of the power of the industrial capitalist and the landowners whose interests are closely related",
-   "errors": 3
+   "hyp": "the first stage was the crushing of autocracy and the crushing of the power of the industrial capitalist and the landowners whose interest are closely related",
+   "errors": 4
   },
   {
    "audio": "7018-75789-0015.wav",
-   "hyp": "by allah o my lord answered i thou hast indeed overwhelmed me with thy favours and well doings but i weary for a sight of my friends and family and native country",
-   "errors": 0
+   "hyp": "by allah o my lord answered i thou hast indeed overwhelmed me with thy favors and well doings but i weary for a sight of my friends and family and native country",
+   "errors": 1
   },
   {
    "audio": "7018-75789-0024.wav",
@@ -542,8 +542,8 @@
   },
   {
    "audio": "7105-2340-0025.wav",
-   "hyp": "it was a little present for my mother and myself for your silver wedding",
-   "errors": 1
+   "hyp": "it was a little present from my mother and myself for your silver wedding",
+   "errors": 0
   },
   {
    "audio": "7105-2340-0003.wav",
@@ -617,8 +617,8 @@
   },
   {
    "audio": "8188-269288-0034.wav",
-   "hyp": "s eyes were very bright her cheeks were no longer pale and there was a brilliant colour in them",
-   "errors": 2
+   "hyp": "annie's eyes were very bright her cheeks were no longer pale and there was a brilliant colour in them",
+   "errors": 1
   },
   {
    "audio": "8188-269288-0043.wav",
@@ -632,8 +632,8 @@
   },
   {
    "audio": "8188-269288-0049.wav",
-   "hyp": "had you managed with a candle just for once",
-   "errors": 2
+   "hyp": "can you manage with a candle just for once",
+   "errors": 1
   },
   {
    "audio": "8280-266249-0007.wav",

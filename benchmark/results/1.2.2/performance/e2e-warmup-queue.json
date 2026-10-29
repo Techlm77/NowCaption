@@ -1,0 +1,16 @@
+{
+ "blocks_fed": 1151,
+ "max_backlog_blocks": 1,
+ "max_backlog_ms": 40,
+ "backlog_hist": {
+  "1": 1151
+ },
+ "overload_events": 0,
+ "dropped_audio_s": 0,
+ "block_interval_ms": {
+  "p50": 42.66,
+  "p99": 42.84,
+  "p99_9": 42.91,
+  "max": 42.92
+ }
+}

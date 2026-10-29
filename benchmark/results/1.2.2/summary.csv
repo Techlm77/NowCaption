@@ -1,0 +1,36 @@
+metric,unit,v3,v4,v4 minus v3,measured on
+"Words wrong, 8 everyday sets, continuous use (mean of sets)",%,13.3075,13.0362,-0.2713,"PC stream.py, 8 jobs at once"
+"Words wrong, 8 everyday sets, fresh stream (mean of sets)",%,13.1762,12.8925,-0.2837,PC stream.py
+"Words wrong, 400 other clips per set, continuous (mean of sets)",%,12.43,12.33,-0.1,"v3 PC, v4 server (identical transcripts)"
+"Words wrong, 400 other clips per set, fresh stream (mean of sets)",%,12.19,11.94,-0.25,"v3 PC, v4 server"
+"Words wrong, accent set, all 2,992 clips, continuous",%,13.78,13.47,-0.31,"v3 PC, v4 server"
+"Words wrong, hard cases, all 370 clips, continuous",%,9.07,8.82,-0.25,server
+"Substitutions, 8 everyday sets, continuous",words,3590,3535,-55,PC
+"Deletions, 8 everyday sets, continuous",words,2234,2194,-40,PC
+"Insertions, 8 everyday sets, continuous",words,904,879,-25,PC
+Words printed over 60 noise clips,words,0,0,0,server
+Words printed over 40 instrumental music clips,words,35,27,-8,server
+"Caption delay, continuous use, median (all words pooled)",s,0.21,0.204,-0.006,PC
+"Caption delay, continuous use, 90%",s,0.406,0.403,-0.003,PC
+"Caption delay, continuous use, 95%",s,0.472,0.468,-0.004,PC
+"Caption delay, continuous use, 99%",s,0.619,0.62,0.001,PC
+"Caption delay, continuous use, median (mean of the sets)",s,0.222,0.216,-0.006,PC
+"First two words after a pause, wrong",%,17.4486,16.9023,-0.5463,PC
+"First two words after a pause, delay median",s,0.285,0.284,-0.001,PC
+"CPU seconds per audio second, NowCaption alone (VoxPopuli, 78 min)",core,0.1613,0.0734,-0.0879,PC core 2
+"CPU seconds per audio second, eight at once",core,0.1905,0.1405,-0.05,PC
+"Sustained real time, speech model only (10 min)",% of a core,17.7,7.2,-10.5,PC core 2
+"Model step (160 ms of audio), median",ms,28.1,11.1,-17.0,PC
+"Model step, slowest 1%",ms,37.0,13.4,-23.6,PC
+"Peak resident memory, NowCaption alone",MB,352,331,-21,PC
+"Peak resident memory, eight at once (largest)",MB,348,333,-15,PC
+Real capture test-clean: median lag,s,0.201,0.192,-0.009,PC e2e.py
+Real capture test-clean: p99 lag,s,0.534,0.491,-0.043,PC e2e.py
+Real capture test-clean: CPU while playing,core,0.195,0.093,-0.102,PC e2e.py
+Real capture test-clean: peak memory,MB,353,336,-17,PC e2e.py
+Real capture test-clean: audio dropped,s,,0,,PC e2e.py
+Real capture test-other: median lag,s,0.24,0.226,-0.014,PC e2e.py
+Real capture test-other: p99 lag,s,0.588,0.586,-0.002,PC e2e.py
+Real capture test-other: CPU while playing,core,0.191,0.093,-0.098,PC e2e.py
+Real capture test-other: peak memory,MB,350,334,-16,PC e2e.py
+Real capture test-other: audio dropped,s,,0,,PC e2e.py

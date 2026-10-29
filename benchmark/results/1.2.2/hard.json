@@ -1,0 +1,210 @@
+{
+ "base": "v3",
+ "modes": {
+  "cont": {
+   "rows": [
+    {
+     "model": "v4",
+     "mode": "cont",
+     "sets": {
+      "gaming": {
+       "wer": 0.0825,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1482,
+       "peak_rss_mb": 275,
+       "resets": null,
+       "clips": null
+      },
+      "names": {
+       "wer": 0.0817,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.151,
+       "peak_rss_mb": 279,
+       "resets": null,
+       "clips": null
+      },
+      "numbers": {
+       "wer": 0.0998,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1471,
+       "peak_rss_mb": 278,
+       "resets": null,
+       "clips": null
+      },
+      "streaming": {
+       "wer": 0.0902,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1515,
+       "peak_rss_mb": 277,
+       "resets": null,
+       "clips": null
+      }
+     },
+     "avg_wer": 0.08855,
+     "cv_wer": null,
+     "settled": [
+      null,
+      null,
+      null
+     ],
+     "first": [
+      0.191,
+      0.363,
+      0.53
+     ],
+     "timed": 0,
+     "loops": 0,
+     "cpu_rtf": 0.14945,
+     "peak_rss_mb": 279,
+     "vs_base": {
+      "sets": {
+       "gaming": [
+        -0.005874499332443258,
+        -0.012640844633203058,
+        0.0010233760652014708
+       ],
+       "names": [
+        -0.004231770833333333,
+        -0.010652538623563803,
+        0.0019758133929171843
+       ],
+       "numbers": [
+        -0.0023672641190395673,
+        -0.00914854493824591,
+        0.003954675687911239
+       ],
+       "streaming": [
+        0.0020855057351407717,
+        -0.004549609162460318,
+        0.008584539077503946
+       ]
+      },
+      "avg_wer": [
+       -0.0025970071374188464,
+       -0.005864788041938037,
+       0.0006958757377525079
+      ],
+      "settled_p50": null,
+      "settled_p90": null,
+      "paired_words": 0
+     },
+     "after_pause": {
+      "first": [
+       108,
+       740,
+       null
+      ],
+      "rest": [
+       911,
+       12870,
+       null
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       108,
+       740,
+       null
+      ],
+      "rest": [
+       911,
+       12870,
+       null
+      ]
+     }
+    },
+    {
+     "model": "v3",
+     "mode": "cont",
+     "sets": {
+      "gaming": {
+       "wer": 0.0884,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.2055,
+       "peak_rss_mb": 310,
+       "resets": null,
+       "clips": null
+      },
+      "names": {
+       "wer": 0.0859,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.2035,
+       "peak_rss_mb": 310,
+       "resets": null,
+       "clips": null
+      },
+      "numbers": {
+       "wer": 0.1021,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.1977,
+       "peak_rss_mb": 307,
+       "resets": null,
+       "clips": null
+      },
+      "streaming": {
+       "wer": 0.0881,
+       "settled_p50": null,
+       "loops": 0,
+       "cpu_rtf": 0.2045,
+       "peak_rss_mb": 307,
+       "resets": null,
+       "clips": null
+      }
+     },
+     "avg_wer": 0.091125,
+     "cv_wer": null,
+     "settled": [
+      null,
+      null,
+      null
+     ],
+     "first": [
+      0.199,
+      0.37,
+      0.521
+     ],
+     "timed": 0,
+     "loops": 0,
+     "cpu_rtf": 0.2028,
+     "peak_rss_mb": 310,
+     "after_pause": {
+      "first": [
+       111,
+       740,
+       null
+      ],
+      "rest": [
+       947,
+       12870,
+       null
+      ]
+     },
+     "after_pause_cv": {
+      "first": [
+       111,
+       740,
+       null
+      ],
+      "rest": [
+       947,
+       12870,
+       null
+      ]
+     }
+    }
+   ],
+   "pareto": []
+  },
+  "fresh": {
+   "rows": [],
+   "pareto": []
+  }
+ }
+}

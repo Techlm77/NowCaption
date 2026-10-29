@@ -1,0 +1,222 @@
+{
+ "model_files_sha256": {
+  "v4 (release archive contents)": {
+   "encoder.int8.onnx": "3346e333cf42a42a48f7bd64c4627a719dbeba77c51eb69ebee2630a113fa943",
+   "decoder.int8.onnx": "47b74c5bfa2c66e1ca902055aa8715c8960f85bdc06d934d3c934fbc135969b2",
+   "joiner.int8.onnx": "5cd8f63e2b7a184fc13eef3ed7cbc4eb2cca65b0c5511121a3b0a91857fa03e9",
+   "tokens.txt": "618dc110fc2213886b52e063ff42329bbdf37a266ca7705184090fa5f39f3131"
+  },
+  "v4 (as benchmarked on the PC)": {
+   "encoder.int8.onnx": "3346e333cf42a42a48f7bd64c4627a719dbeba77c51eb69ebee2630a113fa943",
+   "decoder.int8.onnx": "47b74c5bfa2c66e1ca902055aa8715c8960f85bdc06d934d3c934fbc135969b2",
+   "joiner.int8.onnx": "5cd8f63e2b7a184fc13eef3ed7cbc4eb2cca65b0c5511121a3b0a91857fa03e9",
+   "tokens.txt": "618dc110fc2213886b52e063ff42329bbdf37a266ca7705184090fa5f39f3131"
+  },
+  "v3 (as benchmarked on the PC, shipped in 1.2.0 and 1.2.1)": {
+   "encoder.int8.onnx": "56aa4b512075376ff521b63b0707acf1776c9473ddf36e807b4f15e36e103eef",
+   "decoder.int8.onnx": "d11edd685c801ff1576fcba0ef99426f7b6db6fe937453104ac1a5b430e255df",
+   "joiner.int8.onnx": "03e3c27df10764e6a8a13d8dd7a8944a5bca0ebdd44c8a56e1b59a3f76f749ad",
+   "tokens.txt": "618dc110fc2213886b52e063ff42329bbdf37a266ca7705184090fa5f39f3131"
+  }
+ },
+ "checkpoint": {
+  "name": "kd2-step0043775.nemo",
+  "sha256": "59f2b5eb2faece6cd80255a8267f5c4f041cc71869a326a65bfaac684c31c37d"
+ },
+ "runtime": "sherpa-onnx 1.13.8 (its own ONNX Runtime), 1 thread, greedy search, on the PC and the server",
+ "caption_code": {
+  "engine.py sha256": "d49d6b70c2ad0a7816c4e7e3e041b7073c46fdc926f1b5a14ecaec5cad9e62e1",
+  "note": "live.py imports nowcaption.engine from the 1.2.1/1.2.2 source; engine.py is identical in both apart from ASR_DIR"
+ },
+ "machines": {
+  "PC": "The benchmark PC: AMD Ryzen 7 7800X3D (8 cores, 96 MB L3), 31 GB RAM, Arch Linux, kernel 7.2.11, amd-pstate-epp, governor powersave, EPP balance_performance, boost on",
+  "server": "A second machine: AMD Ryzen 9 7900X, Ubuntu 24.04 (used only for accuracy runs whose transcripts are machine-independent)"
+ },
+ "test_set_fingerprints": {
+  "eval/ami": {
+   "refs_jsonl_sha256_16": "405c069ec67efe3e",
+   "all_wavs_sha256_16": "e6d8bab4fc880567"
+  },
+  "eval/common_voice": {
+   "refs_jsonl_sha256_16": "caafcd23547490ed",
+   "all_wavs_sha256_16": "6371be34d261b003"
+  },
+  "eval/earnings22": {
+   "refs_jsonl_sha256_16": "35bf8631459a0237",
+   "all_wavs_sha256_16": "3931ab6fbc4fefb1"
+  },
+  "eval/gigaspeech": {
+   "refs_jsonl_sha256_16": "fd1b4d6457270ed8",
+   "all_wavs_sha256_16": "f5c43004ecad9aaf"
+  },
+  "eval/librispeech-clean": {
+   "refs_jsonl_sha256_16": "cacec08562ff05bf",
+   "all_wavs_sha256_16": "8940ac7d3821d94b"
+  },
+  "eval/librispeech-other": {
+   "refs_jsonl_sha256_16": "c31540cd8bd65b36",
+   "all_wavs_sha256_16": "7246718a0a7052ee"
+  },
+  "eval/urgent2024": {
+   "refs_jsonl_sha256_16": "23aef7c896f086b7",
+   "all_wavs_sha256_16": "3543d974bf858a58"
+  },
+  "eval/voxpopuli": {
+   "refs_jsonl_sha256_16": "104c0ddc5da20381",
+   "all_wavs_sha256_16": "bf710d211e351568"
+  },
+  "eval-fresh/ami": {
+   "refs_jsonl_sha256_16": "10d63555e3fb01cb",
+   "all_wavs_sha256_16": "1154018c324f9bea"
+  },
+  "eval-fresh/common_voice": {
+   "refs_jsonl_sha256_16": "27fb4c3eb0509dd1",
+   "all_wavs_sha256_16": "a0d879b77d2c745f"
+  },
+  "eval-fresh/earnings22": {
+   "refs_jsonl_sha256_16": "38ec473233185014",
+   "all_wavs_sha256_16": "3db7995b2292ce65"
+  },
+  "eval-fresh/gigaspeech": {
+   "refs_jsonl_sha256_16": "2a361c38ded6b38d",
+   "all_wavs_sha256_16": "a06cb66f6e361a1c"
+  },
+  "eval-fresh/librispeech-clean": {
+   "refs_jsonl_sha256_16": "2de4140302521063",
+   "all_wavs_sha256_16": "2d35cf437c153679"
+  },
+  "eval-fresh/librispeech-other": {
+   "refs_jsonl_sha256_16": "78724937adfdba1f",
+   "all_wavs_sha256_16": "c3f6f0a4ebb72de7"
+  },
+  "eval-fresh/urgent2024": {
+   "refs_jsonl_sha256_16": "f54fc2024df9d92a",
+   "all_wavs_sha256_16": "8a82a1c0a76272bb"
+  },
+  "eval-fresh/voxpopuli": {
+   "refs_jsonl_sha256_16": "08fcc081cc9788f9",
+   "all_wavs_sha256_16": "8165b146d56accba"
+  },
+  "accent/africa": {
+   "refs_jsonl_sha256_16": "4db34e82c67a5eed",
+   "all_wavs_sha256_16": "33973563d430a710"
+  },
+  "accent/australia-nz": {
+   "refs_jsonl_sha256_16": "2985a5db8df5a133",
+   "all_wavs_sha256_16": "1196eaba3d38745b"
+  },
+  "accent/canada": {
+   "refs_jsonl_sha256_16": "e9ea369f20a2dc7e",
+   "all_wavs_sha256_16": "c55ae34cdb7bd9fc"
+  },
+  "accent/england-midlands": {
+   "refs_jsonl_sha256_16": "7e3c7c6e4d007cf2",
+   "all_wavs_sha256_16": "a2cafa183d18a64e"
+  },
+  "accent/england-north": {
+   "refs_jsonl_sha256_16": "2e1a606978cf4ec8",
+   "all_wavs_sha256_16": "a98d85e30d93aec7"
+  },
+  "accent/england-south": {
+   "refs_jsonl_sha256_16": "dac9b316ddd9d022",
+   "all_wavs_sha256_16": "fb169405adee39ef"
+  },
+  "accent/india-south-asia": {
+   "refs_jsonl_sha256_16": "34041cc6f98395c7",
+   "all_wavs_sha256_16": "6c9e9fc400bf258b"
+  },
+  "accent/ireland": {
+   "refs_jsonl_sha256_16": "efc3aeca77d61f59",
+   "all_wavs_sha256_16": "d70a056ffe2f32d8"
+  },
+  "accent/northern-ireland": {
+   "refs_jsonl_sha256_16": "6b80006e48f8574d",
+   "all_wavs_sha256_16": "de05c81c93a34b1b"
+  },
+  "accent/other-l2": {
+   "refs_jsonl_sha256_16": "8cfddd81cefa0605",
+   "all_wavs_sha256_16": "aad94c597c3fc89f"
+  },
+  "accent/scotland": {
+   "refs_jsonl_sha256_16": "bb9c52d9fe66c17a",
+   "all_wavs_sha256_16": "13c3b464f6da9d32"
+  },
+  "accent/uk-general": {
+   "refs_jsonl_sha256_16": "035faae7f79b20dd",
+   "all_wavs_sha256_16": "4effee6acfaa4115"
+  },
+  "accent/us-aae": {
+   "refs_jsonl_sha256_16": "fae6c615e11002b5",
+   "all_wavs_sha256_16": "73907e12d7f21a8d"
+  },
+  "accent/us-general": {
+   "refs_jsonl_sha256_16": "0d468a61b13f6537",
+   "all_wavs_sha256_16": "7ecba2ee10c7e491"
+  },
+  "accent/us-hispanic": {
+   "refs_jsonl_sha256_16": "f97d96c05692c0e0",
+   "all_wavs_sha256_16": "3fbb11dd32cca8c6"
+  },
+  "accent/us-midwest": {
+   "refs_jsonl_sha256_16": "118494c971493367",
+   "all_wavs_sha256_16": "e2071b021ff2c044"
+  },
+  "accent/us-northeast": {
+   "refs_jsonl_sha256_16": "9a3e8507dd3b39b7",
+   "all_wavs_sha256_16": "ddb5b5db82e366a6"
+  },
+  "accent/us-south": {
+   "refs_jsonl_sha256_16": "6bf317009863a10e",
+   "all_wavs_sha256_16": "0ccc29974754f86f"
+  },
+  "accent/us-west": {
+   "refs_jsonl_sha256_16": "66e3ea1515d96c98",
+   "all_wavs_sha256_16": "20122ac0c21f4a2b"
+  },
+  "accent/wales": {
+   "refs_jsonl_sha256_16": "de7e95042bab3bb2",
+   "all_wavs_sha256_16": "76b29f8370208b79"
+  },
+  "hard/gaming": {
+   "refs_jsonl_sha256_16": "3b841d0cd2e994e4",
+   "all_wavs_sha256_16": "8515790a2b4f0265"
+  },
+  "hard/names": {
+   "refs_jsonl_sha256_16": "581d2ef9c824bd7d",
+   "all_wavs_sha256_16": "4f603e886bd962f2"
+  },
+  "hard/numbers": {
+   "refs_jsonl_sha256_16": "de0b51d95864083a",
+   "all_wavs_sha256_16": "6fda82fa17b78d52"
+  },
+  "hard/streaming": {
+   "refs_jsonl_sha256_16": "ea67ae3f10c5d39d",
+   "all_wavs_sha256_16": "d4a16b5681338654"
+  },
+  "nonspeech/music": {
+   "refs_jsonl_sha256_16": "dc9056ffa9bebc98",
+   "all_wavs_sha256_16": "83de1ce07779ade7"
+  },
+  "nonspeech/noise": {
+   "refs_jsonl_sha256_16": "d627b77504279492",
+   "all_wavs_sha256_16": "2b73855c97db79ae"
+  }
+ },
+ "cross_machine_check": {
+  "v4_clips_identical": "3200 of 3200 (8 ESB sets, continuous use)",
+  "v3_clips_identical": "12592 of 12592 (8 ESB sets, 400 other clips per set both modes, accent set)"
+ },
+ "sources": {
+  "ESB 8 sets, continuous and fresh (v4)": "PC, bench_v3.py, 8 jobs at once on 8 pinned cores; results/live/v3b-kd2s43-{cont,fresh}-*.json, 2026-10-28/29",
+  "ESB 8 sets (v3)": "PC, the same script and settings; results/live/v3b-a3-i25-{cont,fresh}-*.json, 2026-10-26 (published with 1.2.0)",
+  "other 400 clips per set (v4)": "server, scripts/v3/live.py; fresh-kd2s43-* (continuous) and freshrs-kd2s43-* (fresh stream), 2026-10-28/29",
+  "other 400 clips per set (v3)": "PC, results/live/v3bef-a3-i25-*.json, 2026-10-26 (published with 1.2.0)",
+  "accents (v4)": "PC, results/live/v3bacc-kd2s43-{cont,fresh}-*.json, 2026-10-29 (continuous transcripts identical to the server run x-kd2s43-*)",
+  "accents (v3)": "PC, results/live/v3bacc-a3-i25-*.json, 2026-10-26 (published with 1.2.0)",
+  "hard cases": "server, x-kd2s43-* and x-v3stock-*, 2026-10-28/29",
+  "noise and music": "server, ns-kd2s43-* and ns-v3stock-*, 2026-10-28/29",
+  "alone CPU and memory": "PC core 2, VoxPopuli continuous (78 min of audio): solo3-kd2s43 2026-10-28, solo-a3-i25 2026-10-27",
+  "sustained real time, real capture, engine-only, pipeline (v4)": "PC, 2026-10-29, results/v4-final/pc",
+  "sustained real time, real capture, engine-only, pipeline (v3)": "published in benchmark/README.md for 1.2.0 (2026-10-26)"
+ }
+}

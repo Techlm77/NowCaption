@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420" role="img" aria-labelledby="latency-t latency-d">
+<title id="latency-t">Caption delay in continuous use: how long after a word ends it shows (lower is better)</title>
+<desc id="latency-d">Every timed word of the 8 everyday sets pooled (about 46,000 words), compute time included. Median: v3 0.210 s, v4 0.204 s; 90% of words: v3 0.406 s, v4 0.403 s; 95% of words: v3 0.472 s, v4 0.468 s; 99% of words: v3 0.619 s, v4 0.620 s</desc>
+<style>
+  .bg{fill:#ffffff} .t1{fill:#0b0b0b} .t2{fill:#52514e} .t3{fill:#6b6a65} .grid{stroke:#e1e0d9} .axis{stroke:#c3c2b7}
+  .v3{fill:#eb6834} .v4{fill:#2a78d6}
+  @media (prefers-color-scheme: dark){
+    .bg{fill:#0d1117} .t1{fill:#f0efec} .t2{fill:#c3c2b7} .t3{fill:#a3a29b} .grid{stroke:#2c2c2a} .axis{stroke:#383835}
+    .v3{fill:#d95926} .v4{fill:#3987e5}
+  }
+  text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  .title{font-size:16px;font-weight:600} .sub{font-size:12.5px} .lab{font-size:13px} .note{font-size:11.5px}
+  .val{font-size:12.5px;font-variant-numeric:tabular-nums} .tick{font-size:11px;font-variant-numeric:tabular-nums}
+  rect.hit{fill:transparent} g.bar:hover path{opacity:.85}
+</style>
+<rect class="bg" width="800" height="420" rx="8"/>
+<text class="title t1" x="20" y="30">Caption delay in continuous use: how long after a word ends it shows (lower is better)</text>
+<text class="sub t2" x="20" y="50">Every timed word of the 8 everyday sets pooled (about 46,000 words), compute time included</text>
+<rect class="v3" x="20" y="63" width="12" height="12" rx="3"/><text class="lab t1" x="38" y="73.5">v3 (NowCaption 1.2.0 and 1.2.1)</text>
+<rect class="v4" x="280.1" y="63" width="12" height="12" rx="3"/><text class="lab t1" x="298.1" y="73.5">v4 (NowCaption 1.2.2)</text>
+<line class="grid" x1="290.0" x2="290.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="290.0" y="360" text-anchor="middle">0.0 s</text>
+<line class="grid" x1="380.0" x2="380.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="380.0" y="360" text-anchor="middle">0.2 s</text>
+<line class="grid" x1="470.0" x2="470.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="470.0" y="360" text-anchor="middle">0.4 s</text>
+<line class="grid" x1="560.0" x2="560.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="560.0" y="360" text-anchor="middle">0.6 s</text>
+<line class="grid" x1="650.0" x2="650.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="650.0" y="360" text-anchor="middle">0.8 s</text>
+<line class="axis" x1="290" x2="290" y1="90" y2="344" stroke-width="1"/>
+<text class="lab t1" x="278" y="120.0" text-anchor="end">Median</text>
+<text class="note t3" x="278" y="141.0" text-anchor="end">half of all words sooner</text>
+<g class="bar"><title>Median, v3: 0.210 s</title><rect class="hit" x="290" y="105.0" width="94.5" height="18"/><path class="v3" d="M290.0,106.0h90.5a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-90.5z"/></g>
+<g class="bar"><title>Median, v4: 0.204 s</title><rect class="hit" x="290" y="123.0" width="91.8" height="18"/><path class="v4" d="M290.0,124.0h87.8a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-87.8z"/></g>
+<text class="val t1" x="394.5" y="127.5">0.210 s → <tspan font-weight="600">0.204 s</tspan></text>
+<text class="lab t1" x="278" y="182.0" text-anchor="end">90% of words</text>
+<g class="bar"><title>90% of words, v3: 0.406 s</title><rect class="hit" x="290" y="167.0" width="182.7" height="18"/><path class="v3" d="M290.0,168.0h178.7a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-178.7z"/></g>
+<g class="bar"><title>90% of words, v4: 0.403 s</title><rect class="hit" x="290" y="185.0" width="181.4" height="18"/><path class="v4" d="M290.0,186.0h177.4a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-177.4z"/></g>
+<text class="val t1" x="482.7" y="189.5">0.406 s → <tspan font-weight="600">0.403 s</tspan></text>
+<text class="lab t1" x="278" y="244.0" text-anchor="end">95% of words</text>
+<g class="bar"><title>95% of words, v3: 0.472 s</title><rect class="hit" x="290" y="229.0" width="212.4" height="18"/><path class="v3" d="M290.0,230.0h208.4a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-208.4z"/></g>
+<g class="bar"><title>95% of words, v4: 0.468 s</title><rect class="hit" x="290" y="247.0" width="210.6" height="18"/><path class="v4" d="M290.0,248.0h206.6a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-206.6z"/></g>
+<text class="val t1" x="512.4" y="251.5">0.472 s → <tspan font-weight="600">0.468 s</tspan></text>
+<text class="lab t1" x="278" y="306.0" text-anchor="end">99% of words</text>
+<text class="note t3" x="278" y="327.0" text-anchor="end">the slowest 1% take longer</text>
+<g class="bar"><title>99% of words, v3: 0.619 s</title><rect class="hit" x="290" y="291.0" width="278.5" height="18"/><path class="v3" d="M290.0,292.0h274.5a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-274.5z"/></g>
+<g class="bar"><title>99% of words, v4: 0.620 s</title><rect class="hit" x="290" y="309.0" width="279.0" height="18"/><path class="v4" d="M290.0,310.0h275.0a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-275.0z"/></g>
+<text class="val t1" x="579.0" y="313.5">0.619 s → <tspan font-weight="600">0.620 s</tspan></text>
+<text class="note t3" x="20" y="388">One model step (160 ms of audio) takes 11 ms with v4 and 28 ms with v3 (median, real time). The rest is</text>
+<text class="note t3" x="20" y="406">waiting for the next step and the model&#x27;s 80 ms lookahead, the same for both models.</text>
+</svg>

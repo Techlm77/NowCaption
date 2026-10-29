@@ -6,14 +6,14 @@
   2.1
  ],
  "words": 2369,
- "errors": 160,
- "wer": 0.0675,
- "lag_s_mean": 0.187,
- "lag_s_p50": 0.208,
- "lag_s_p90": 0.379,
- "timed_words": 2215,
+ "errors": 165,
+ "wer": 0.0696,
+ "lag_s_mean": 0.17,
+ "lag_s_p50": 0.193,
+ "lag_s_p90": 0.36,
+ "timed_words": 2210,
  "audio_s": 1129.9,
- "cpu_rtf": 0.1752,
+ "cpu_rtf": 0.0739,
  "items": [
   {
    "audio": "367-293981-0001.wav",
@@ -32,8 +32,8 @@
   },
   {
    "audio": "367-130732-0023.wav",
-   "hyp": "all the better class restaurants however will serve them if you order them",
-   "errors": 1
+   "hyp": "all of the better class restaurants however will serve them if you order them",
+   "errors": 0
   },
   {
    "audio": "533-131564-0014.wav",
@@ -67,8 +67,8 @@
   },
   {
    "audio": "1688-142285-0091.wav",
-   "hyp": "my dear said mister hale alarmed pray don't go off on that idea",
-   "errors": 0
+   "hyp": "my dear said mister hall alarmed pray don't go off on that idea",
+   "errors": 1
   },
   {
    "audio": "1688-142285-0035.wav",
@@ -92,8 +92,8 @@
   },
   {
    "audio": "1998-15444-0013.wav",
-   "hyp": "and usually given hypodermically or if their mouth and the form of tablets",
-   "errors": 4
+   "hyp": "antidotes are usually given hypodermically or if their mouth and the form of tablets",
+   "errors": 2
   },
   {
    "audio": "2033-164915-0001.wav",
@@ -107,7 +107,7 @@
   },
   {
    "audio": "2033-164915-0007.wav",
-   "hyp": "she said it hath reached me o auspicious king that when the stalker girded his ass for flight and bestake himself saying o would i knew what is become of him",
+   "hyp": "she said it hath reached me o auspicious king that when this talker girdeth his ass for flight and bespake himself saying o would i knew what is become of him",
    "errors": 4
   },
   {
@@ -122,13 +122,13 @@
   },
   {
    "audio": "2414-128292-0032.wav",
-   "hyp": "wish thou have a rest and a home this evening",
-   "errors": 1
+   "hyp": "wilt thou have a rest and a home this evening",
+   "errors": 0
   },
   {
    "audio": "2414-159411-0018.wav",
-   "hyp": "after this they saw and allocator and the brahmer related the matter to him hoping for a more favourable verdict",
-   "errors": 4
+   "hyp": "after this they saw and allocator and the brahman related the matter to him hoping for a more favourable verdict",
+   "errors": 3
   },
   {
    "audio": "2414-159411-0032.wav",
@@ -142,7 +142,7 @@
   },
   {
    "audio": "2609-157645-0013.wav",
-   "hyp": "go into church saint hayes and thus days must have been acquainted and these signing experience",
+   "hyp": "go into church at hage and thou's days must have been acquainted in the assigning experience",
    "errors": 9
   },
   {
@@ -152,7 +152,7 @@
   },
   {
    "audio": "2609-157645-0007.wav",
-   "hyp": "one sunday says mister ditchfield handed natural pipe and joshua the clerk told him that the people were getting them patient",
+   "hyp": "one sunday says mister ditchfield hand in natural pipe and joshua the clerk told him that the people were getting them patient",
    "errors": 6
   },
   {
@@ -182,8 +182,8 @@
   },
   {
    "audio": "3080-5032-0022.wav",
-   "hyp": "i know not how my brother comes to be so well informed as you say but i am certain he knows the utmost of the injuries you have received from her",
-   "errors": 0
+   "hyp": "i know not how my brother comes to be so well informed as you say but i am certain he knows yet most of the injuries you have received from her",
+   "errors": 2
   },
   {
    "audio": "3080-5032-0003.wav",
@@ -202,13 +202,13 @@
   },
   {
    "audio": "3331-159605-0006.wav",
-   "hyp": "let me see how can i begin",
-   "errors": 0
+   "hyp": "that me see how can i begin",
+   "errors": 1
   },
   {
    "audio": "3331-159609-0012.wav",
-   "hyp": "once or twice but sort of chokingly and i thought it was only some little flirtation",
-   "errors": 1
+   "hyp": "once or twice what sort of chokingly and i thought it was only some little flirtation",
+   "errors": 2
   },
   {
    "audio": "3331-159609-0023.wav",
@@ -272,7 +272,7 @@
   },
   {
    "audio": "3764-168671-0029.wav",
-   "hyp": "he persisted feebly father miss tienne is the grave digger",
+   "hyp": "he persisted feebly father miss tianne is the grave digger",
    "errors": 3
   },
   {
@@ -297,8 +297,8 @@
   },
   {
    "audio": "4198-12259-0018.wav",
-   "hyp": "and i tangquawam sponsors",
-   "errors": 2
+   "hyp": "and i tang quam sponsors",
+   "errors": 3
   },
   {
    "audio": "4198-12259-0015.wav",
@@ -307,8 +307,8 @@
   },
   {
    "audio": "4198-12281-0012.wav",
-   "hyp": "oh the holy lady knightsitch said one the good sanktis oh our lady of succuas said another help help",
-   "errors": 5
+   "hyp": "oh the holy lady knightsitch said one the good sanktus oh our lady of sukurus said another help help help",
+   "errors": 6
   },
   {
    "audio": "4198-61336-0022.wav",
@@ -332,13 +332,13 @@
   },
   {
    "audio": "4294-35475-0017.wav",
-   "hyp": "as he uttered the words the scissors leaped out of his hand and began to cut through the wooden shutters as easily as through a cheese",
-   "errors": 0
+   "hyp": "as he uttered the words the scissors leaped out of his hand and began to cut through the wooden shutters as easily as through it sheaves",
+   "errors": 2
   },
   {
    "audio": "4350-10919-0020.wav",
-   "hyp": "the celebrated doctor announced to the princess a feeling of what was due from him dictated his doing so that he ought to see the patient once more",
-   "errors": 0
+   "hyp": "the celebrated doctor announced that the princess a feeling of what was due from him dictated his doing so that he ought to see the patient once more",
+   "errors": 1
   },
   {
    "audio": "4350-9170-0051.wav",
@@ -367,8 +367,8 @@
   },
   {
    "audio": "4852-28330-0002.wav",
-   "hyp": "next ned silly was relieved of the helm by elbert jones who took over ned went on down",
-   "errors": 2
+   "hyp": "next ned silly was relieved of the helm by albert jones who took over ned went on down",
+   "errors": 3
   },
   {
    "audio": "4852-28330-0009.wav",
@@ -377,8 +377,8 @@
   },
   {
    "audio": "5442-41168-0010.wav",
-   "hyp": "but levin forgot all that and it was painful to him to see all these excellent persons for whom he had a respect in such an unpleasant and vicious state of excitement",
-   "errors": 0
+   "hyp": "but leven forgot all that and it was painful to him to see all these excellent persons for whom he had a respect in such an unpleasant and vicious state of excitement",
+   "errors": 1
   },
   {
    "audio": "5442-41168-0023.wav",
@@ -397,8 +397,8 @@
   },
   {
    "audio": "5484-24318-0028.wav",
-   "hyp": "she himself on the way to expose himself to the malice and mockery of the whole city",
-   "errors": 1
+   "hyp": "he himself on the way to expose himself to the malice and mockery of the whole city",
+   "errors": 0
   },
   {
    "audio": "5484-24317-0029.wav",
@@ -442,7 +442,7 @@
   },
   {
    "audio": "6070-63485-0002.wav",
-   "hyp": "by means of this stratagem they followed so closely that although within a few steps of sarin tom they did not hear them",
+   "hyp": "by means of this stratagem they followed so closely that although within a few steps of seren tom they did not hear them",
    "errors": 2
   },
   {
@@ -452,8 +452,8 @@
   },
   {
    "audio": "6070-86745-0019.wav",
-   "hyp": "with your talents you would make your fortune in three or four years",
-   "errors": 0
+   "hyp": "with the old talents you would make your fortune in three or four years",
+   "errors": 2
   },
   {
    "audio": "6128-63240-0022.wav",
@@ -467,8 +467,8 @@
   },
   {
    "audio": "6128-63240-0007.wav",
-   "hyp": "these things the eyes especially with their smouldering fire might have indicated that he was to be great american statesman or on the other hand there might simply have proved that he came from carolina or alabama",
-   "errors": 2
+   "hyp": "these things the eyes especially with their smouldering fire might have indicated that he was to be great american statesman or on the other hand they might simply have proved that he came from carolina or alabama",
+   "errors": 1
   },
   {
    "audio": "6128-63240-0009.wav",
@@ -477,13 +477,13 @@
   },
   {
    "audio": "6432-63722-0023.wav",
-   "hyp": "neighbors often heard him scraping a lot and this half noon they went at it again in hot and heavy",
-   "errors": 5
+   "hyp": "neighbors often heard him scraping a lot and this afternoon they went at it again in hot and heavy",
+   "errors": 3
   },
   {
    "audio": "6432-63722-0026.wav",
-   "hyp": "sure held so tight we could hardly get it out",
-   "errors": 0
+   "hyp": "shore held so tight we could hardly get it out",
+   "errors": 1
   },
   {
    "audio": "6432-63722-0004.wav",
@@ -507,7 +507,7 @@
   },
   {
    "audio": "6938-70848-0018.wav",
-   "hyp": "but this work both ways the lack of socially revolutionist decided that if the congress had no power over the executive committee then the executive committee had no power over the congress",
+   "hyp": "but this work both vagues the lack socially revolutionist decided that if the congress had no power over the executive committee then the executive committee had no power over the congress",
    "errors": 5
   },
   {
@@ -617,8 +617,8 @@
   },
   {
    "audio": "8188-269288-0034.wav",
-   "hyp": "and his eyes were very bright her cheeks were no longer pale and there was a brilliant colour in them",
-   "errors": 3
+   "hyp": "hennie's eyes were very bright her cheeks were no longer pale and there was a brilliant colour in them",
+   "errors": 2
   },
   {
    "audio": "8188-269288-0043.wav",

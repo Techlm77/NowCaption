@@ -1,0 +1,42 @@
+{
+ "v3_noise": {
+  "clips": 60,
+  "words_printed": 0,
+  "clips_with_words": [],
+  "per_clip": {},
+  "minutes": 9.4
+ },
+ "v3_music": {
+  "clips": 40,
+  "words_printed": 35,
+  "clips_with_words": [
+   "0036.wav",
+   "0039.wav"
+  ],
+  "per_clip": {
+   "0036.wav": 11,
+   "0039.wav": 24
+  },
+  "minutes": 8.1
+ },
+ "v4_noise": {
+  "clips": 60,
+  "words_printed": 0,
+  "clips_with_words": [],
+  "per_clip": {},
+  "minutes": 9.4
+ },
+ "v4_music": {
+  "clips": 40,
+  "words_printed": 27,
+  "clips_with_words": [
+   "0036.wav",
+   "0039.wav"
+  ],
+  "per_clip": {
+   "0036.wav": 5,
+   "0039.wav": 22
+  },
+  "minutes": 8.1
+ }
+}

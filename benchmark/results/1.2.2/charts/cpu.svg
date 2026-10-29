@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 402" width="800" height="402" role="img" aria-labelledby="cpu-t cpu-d">
+<title id="cpu-t">CPU time per second of audio (lower is better)</title>
+<desc id="cpu-d">CPU seconds used for each second of speech captioned, one thread. NowCaption alone: v3 0.161, v4 0.073; Sustained real time: v3 0.177, v4 0.072; Real audio capture: v3 0.195, v4 0.093; Eight captioning at once: v3 0.191, v4 0.141</desc>
+<style>
+  .bg{fill:#ffffff} .t1{fill:#0b0b0b} .t2{fill:#52514e} .t3{fill:#6b6a65} .grid{stroke:#e1e0d9} .axis{stroke:#c3c2b7}
+  .v3{fill:#eb6834} .v4{fill:#2a78d6}
+  @media (prefers-color-scheme: dark){
+    .bg{fill:#0d1117} .t1{fill:#f0efec} .t2{fill:#c3c2b7} .t3{fill:#a3a29b} .grid{stroke:#2c2c2a} .axis{stroke:#383835}
+    .v3{fill:#d95926} .v4{fill:#3987e5}
+  }
+  text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  .title{font-size:16px;font-weight:600} .sub{font-size:12.5px} .lab{font-size:13px} .note{font-size:11.5px}
+  .val{font-size:12.5px;font-variant-numeric:tabular-nums} .tick{font-size:11px;font-variant-numeric:tabular-nums}
+  rect.hit{fill:transparent} g.bar:hover path{opacity:.85}
+</style>
+<rect class="bg" width="800" height="402" rx="8"/>
+<text class="title t1" x="20" y="30">CPU time per second of audio (lower is better)</text>
+<text class="sub t2" x="20" y="50">CPU seconds used for each second of speech captioned, one thread</text>
+<rect class="v3" x="20" y="63" width="12" height="12" rx="3"/><text class="lab t1" x="38" y="73.5">v3 (NowCaption 1.2.0 and 1.2.1)</text>
+<rect class="v4" x="280.1" y="63" width="12" height="12" rx="3"/><text class="lab t1" x="298.1" y="73.5">v4 (NowCaption 1.2.2)</text>
+<line class="grid" x1="290.0" x2="290.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="290.0" y="360" text-anchor="middle">0.00</text>
+<line class="grid" x1="362.0" x2="362.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="362.0" y="360" text-anchor="middle">0.05</text>
+<line class="grid" x1="434.0" x2="434.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="434.0" y="360" text-anchor="middle">0.10</text>
+<line class="grid" x1="506.0" x2="506.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="506.0" y="360" text-anchor="middle">0.15</text>
+<line class="grid" x1="578.0" x2="578.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="578.0" y="360" text-anchor="middle">0.20</text>
+<line class="grid" x1="650.0" x2="650.0" y1="90" y2="344" stroke-width="1"/><text class="tick t3" x="650.0" y="360" text-anchor="middle">0.25</text>
+<line class="axis" x1="290" x2="290" y1="90" y2="344" stroke-width="1"/>
+<text class="lab t1" x="278" y="120.0" text-anchor="end">NowCaption alone</text>
+<text class="note t3" x="278" y="141.0" text-anchor="end">78 min of VoxPopuli, whole caption process</text>
+<g class="bar"><title>NowCaption alone, v3: 0.161</title><rect class="hit" x="290" y="105.0" width="232.3" height="18"/><path class="v3" d="M290.0,106.0h228.3a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-228.3z"/></g>
+<g class="bar"><title>NowCaption alone, v4: 0.073</title><rect class="hit" x="290" y="123.0" width="105.7" height="18"/><path class="v4" d="M290.0,124.0h101.7a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-101.7z"/></g>
+<text class="val t1" x="532.3" y="127.5">0.161 → <tspan font-weight="600">0.073</tspan></text>
+<text class="lab t1" x="278" y="182.0" text-anchor="end">Sustained real time</text>
+<text class="note t3" x="278" y="203.0" text-anchor="end">10 min LibriSpeech, speech model only</text>
+<g class="bar"><title>Sustained real time, v3: 0.177</title><rect class="hit" x="290" y="167.0" width="254.9" height="18"/><path class="v3" d="M290.0,168.0h250.9a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-250.9z"/></g>
+<g class="bar"><title>Sustained real time, v4: 0.072</title><rect class="hit" x="290" y="185.0" width="103.7" height="18"/><path class="v4" d="M290.0,186.0h99.7a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-99.7z"/></g>
+<text class="val t1" x="554.9" y="189.5">0.177 → <tspan font-weight="600">0.072</tspan></text>
+<text class="lab t1" x="278" y="244.0" text-anchor="end">Real audio capture</text>
+<text class="note t3" x="278" y="265.0" text-anchor="end">PipeWire to caption, while speech plays</text>
+<g class="bar"><title>Real audio capture, v3: 0.195</title><rect class="hit" x="290" y="229.0" width="280.8" height="18"/><path class="v3" d="M290.0,230.0h276.8a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-276.8z"/></g>
+<g class="bar"><title>Real audio capture, v4: 0.093</title><rect class="hit" x="290" y="247.0" width="133.9" height="18"/><path class="v4" d="M290.0,248.0h129.9a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-129.9z"/></g>
+<text class="val t1" x="580.8" y="251.5">0.195 → <tspan font-weight="600">0.093</tspan></text>
+<text class="lab t1" x="278" y="306.0" text-anchor="end">Eight captioning at once</text>
+<text class="note t3" x="278" y="327.0" text-anchor="end">8 everyday sets on 8 cores</text>
+<g class="bar"><title>Eight captioning at once, v3: 0.191</title><rect class="hit" x="290" y="291.0" width="274.4" height="18"/><path class="v3" d="M290.0,292.0h270.4a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-270.4z"/></g>
+<g class="bar"><title>Eight captioning at once, v4: 0.141</title><rect class="hit" x="290" y="309.0" width="202.4" height="18"/><path class="v4" d="M290.0,310.0h198.4a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-198.4z"/></g>
+<text class="val t1" x="574.4" y="313.5">0.191 → <tspan font-weight="600">0.141</tspan></text>
+<text class="note t3" x="20" y="388">0.100 = a tenth of one CPU core. Ryzen 7 7800X3D at its normal power profile (amd-pstate-epp, balance_performance).</text>
+</svg>

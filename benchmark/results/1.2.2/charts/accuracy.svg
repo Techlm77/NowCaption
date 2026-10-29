@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 544" width="800" height="544" role="img" aria-labelledby="accuracy-t accuracy-d">
+<title id="accuracy-t">Words wrong: speech model v4 against v3 (lower is better)</title>
+<desc id="accuracy-d">NowCaption&#x27;s own caption pipeline, one thread, 40 ms audio blocks, Whisper English normaliser. Everyday speech, continuous use: v3 13.31%, v4 13.04%; Everyday speech, fresh stream: v3 13.18%, v4 12.89%; Unseen clips, continuous use: v3 12.43%, v4 12.33%; Unseen clips, fresh stream: v3 12.19%, v4 11.94%; Accents, continuous use: v3 13.78%, v4 13.47%; Hard cases, continuous use: v3 9.07%, v4 8.82%</desc>
+<style>
+  .bg{fill:#ffffff} .t1{fill:#0b0b0b} .t2{fill:#52514e} .t3{fill:#6b6a65} .grid{stroke:#e1e0d9} .axis{stroke:#c3c2b7}
+  .v3{fill:#eb6834} .v4{fill:#2a78d6}
+  @media (prefers-color-scheme: dark){
+    .bg{fill:#0d1117} .t1{fill:#f0efec} .t2{fill:#c3c2b7} .t3{fill:#a3a29b} .grid{stroke:#2c2c2a} .axis{stroke:#383835}
+    .v3{fill:#d95926} .v4{fill:#3987e5}
+  }
+  text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  .title{font-size:16px;font-weight:600} .sub{font-size:12.5px} .lab{font-size:13px} .note{font-size:11.5px}
+  .val{font-size:12.5px;font-variant-numeric:tabular-nums} .tick{font-size:11px;font-variant-numeric:tabular-nums}
+  rect.hit{fill:transparent} g.bar:hover path{opacity:.85}
+</style>
+<rect class="bg" width="800" height="544" rx="8"/>
+<text class="title t1" x="20" y="30">Words wrong: speech model v4 against v3 (lower is better)</text>
+<text class="sub t2" x="20" y="50">NowCaption&#x27;s own caption pipeline, one thread, 40 ms audio blocks, Whisper English normaliser</text>
+<rect class="v3" x="20" y="63" width="12" height="12" rx="3"/><text class="lab t1" x="38" y="73.5">v3 (NowCaption 1.2.0 and 1.2.1)</text>
+<rect class="v4" x="280.1" y="63" width="12" height="12" rx="3"/><text class="lab t1" x="298.1" y="73.5">v4 (NowCaption 1.2.2)</text>
+<line class="grid" x1="290.0" x2="290.0" y1="90" y2="468" stroke-width="1"/><text class="tick t3" x="290.0" y="484" text-anchor="middle">0%</text>
+<line class="grid" x1="380.0" x2="380.0" y1="90" y2="468" stroke-width="1"/><text class="tick t3" x="380.0" y="484" text-anchor="middle">4%</text>
+<line class="grid" x1="470.0" x2="470.0" y1="90" y2="468" stroke-width="1"/><text class="tick t3" x="470.0" y="484" text-anchor="middle">8%</text>
+<line class="grid" x1="560.0" x2="560.0" y1="90" y2="468" stroke-width="1"/><text class="tick t3" x="560.0" y="484" text-anchor="middle">12%</text>
+<line class="grid" x1="650.0" x2="650.0" y1="90" y2="468" stroke-width="1"/><text class="tick t3" x="650.0" y="484" text-anchor="middle">16%</text>
+<line class="axis" x1="290" x2="290" y1="90" y2="468" stroke-width="1"/>
+<text class="lab t1" x="278" y="120.0" text-anchor="end">Everyday speech, continuous use</text>
+<text class="note t3" x="278" y="141.0" text-anchor="end">8 ESB sets, 3,200 clips (mean of the sets)</text>
+<g class="bar"><title>Everyday speech, continuous use, v3: 13.31%</title><rect class="hit" x="290" y="105.0" width="299.5" height="18"/><path class="v3" d="M290.0,106.0h295.5a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-295.5z"/></g>
+<g class="bar"><title>Everyday speech, continuous use, v4: 13.04%</title><rect class="hit" x="290" y="123.0" width="293.4" height="18"/><path class="v4" d="M290.0,124.0h289.4a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-289.4z"/></g>
+<text class="val t1" x="599.5" y="127.5">13.31% → <tspan font-weight="600">13.04%</tspan></text>
+<text class="lab t1" x="278" y="182.0" text-anchor="end">Everyday speech, fresh stream</text>
+<text class="note t3" x="278" y="203.0" text-anchor="end">the same clips, a new stream for each</text>
+<g class="bar"><title>Everyday speech, fresh stream, v3: 13.18%</title><rect class="hit" x="290" y="167.0" width="296.5" height="18"/><path class="v3" d="M290.0,168.0h292.5a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-292.5z"/></g>
+<g class="bar"><title>Everyday speech, fresh stream, v4: 12.89%</title><rect class="hit" x="290" y="185.0" width="290.0" height="18"/><path class="v4" d="M290.0,186.0h286.0a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-286.0z"/></g>
+<text class="val t1" x="596.5" y="189.5">13.18% → <tspan font-weight="600">12.89%</tspan></text>
+<text class="lab t1" x="278" y="244.0" text-anchor="end">Unseen clips, continuous use</text>
+<text class="note t3" x="278" y="265.0" text-anchor="end">400 other clips per set, never used to choose</text>
+<g class="bar"><title>Unseen clips, continuous use, v3: 12.43%</title><rect class="hit" x="290" y="229.0" width="279.7" height="18"/><path class="v3" d="M290.0,230.0h275.7a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-275.7z"/></g>
+<g class="bar"><title>Unseen clips, continuous use, v4: 12.33%</title><rect class="hit" x="290" y="247.0" width="277.4" height="18"/><path class="v4" d="M290.0,248.0h273.4a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-273.4z"/></g>
+<text class="val t1" x="579.7" y="251.5">12.43% → <tspan font-weight="600">12.33%</tspan></text>
+<text class="lab t1" x="278" y="306.0" text-anchor="end">Unseen clips, fresh stream</text>
+<text class="note t3" x="278" y="327.0" text-anchor="end">the same 3,200 other clips</text>
+<g class="bar"><title>Unseen clips, fresh stream, v3: 12.19%</title><rect class="hit" x="290" y="291.0" width="274.3" height="18"/><path class="v3" d="M290.0,292.0h270.3a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-270.3z"/></g>
+<g class="bar"><title>Unseen clips, fresh stream, v4: 11.94%</title><rect class="hit" x="290" y="309.0" width="268.6" height="18"/><path class="v4" d="M290.0,310.0h264.6a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-264.6z"/></g>
+<text class="val t1" x="574.3" y="313.5">12.19% → <tspan font-weight="600">11.94%</tspan></text>
+<text class="lab t1" x="278" y="368.0" text-anchor="end">Accents, continuous use</text>
+<text class="note t3" x="278" y="389.0" text-anchor="end">2,992 clips in 20 regions (all clips)</text>
+<g class="bar"><title>Accents, continuous use, v3: 13.78%</title><rect class="hit" x="290" y="353.0" width="310.0" height="18"/><path class="v3" d="M290.0,354.0h306.0a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-306.0z"/></g>
+<g class="bar"><title>Accents, continuous use, v4: 13.47%</title><rect class="hit" x="290" y="371.0" width="303.1" height="18"/><path class="v4" d="M290.0,372.0h299.1a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-299.1z"/></g>
+<text class="val t1" x="610.0" y="375.5">13.78% → <tspan font-weight="600">13.47%</tspan></text>
+<text class="lab t1" x="278" y="430.0" text-anchor="end">Hard cases, continuous use</text>
+<text class="note t3" x="278" y="451.0" text-anchor="end">gaming, names, numbers, streams; 370 clips</text>
+<g class="bar"><title>Hard cases, continuous use, v3: 9.07%</title><rect class="hit" x="290" y="415.0" width="204.1" height="18"/><path class="v3" d="M290.0,416.0h200.1a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-200.1z"/></g>
+<g class="bar"><title>Hard cases, continuous use, v4: 8.82%</title><rect class="hit" x="290" y="433.0" width="198.5" height="18"/><path class="v4" d="M290.0,434.0h194.5a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-194.5z"/></g>
+<text class="val t1" x="504.1" y="437.5">9.07% → <tspan font-weight="600">8.82%</tspan></text>
+<text class="note t3" x="20" y="512">Ryzen 7 7800X3D, sherpa-onnx 1.13.8. v3 measured on 26 Oct 2026 (published with 1.2.0), v4 on 28-29 Oct 2026.</text>
+<text class="note t3" x="20" y="530">Hard-case references are the text two NVIDIA models agreed on, one of them the model that wrote v4&#x27;s transcripts.</text>
+</svg>

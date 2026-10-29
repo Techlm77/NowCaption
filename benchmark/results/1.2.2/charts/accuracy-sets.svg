@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 650" width="800" height="650" role="img" aria-labelledby="accuracy-sets-t accuracy-sets-d">
+<title id="accuracy-sets-t">Words wrong per everyday test set, continuous use (lower is better)</title>
+<desc id="accuracy-sets-d">400 clips per set joined by 2 s pauses into one stream, as the app hears speech. URGENT 2024 noisy speech: v3 22.15%, v4 21.49%; Common Voice: v3 17.49%, v4 17.49%; Earnings-22 calls: v3 16.77%, v4 16.26%; AMI meetings: v3 16.41%, v4 15.51%; GigaSpeech podcasts: v3 13.96%, v4 13.95%; VoxPopuli speeches: v3 8.96%, v4 8.90%; LibriSpeech other: v3 7.32%, v4 7.41%; LibriSpeech clean: v3 3.40%, v4 3.28%</desc>
+<style>
+  .bg{fill:#ffffff} .t1{fill:#0b0b0b} .t2{fill:#52514e} .t3{fill:#6b6a65} .grid{stroke:#e1e0d9} .axis{stroke:#c3c2b7}
+  .v3{fill:#eb6834} .v4{fill:#2a78d6}
+  @media (prefers-color-scheme: dark){
+    .bg{fill:#0d1117} .t1{fill:#f0efec} .t2{fill:#c3c2b7} .t3{fill:#a3a29b} .grid{stroke:#2c2c2a} .axis{stroke:#383835}
+    .v3{fill:#d95926} .v4{fill:#3987e5}
+  }
+  text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  .title{font-size:16px;font-weight:600} .sub{font-size:12.5px} .lab{font-size:13px} .note{font-size:11.5px}
+  .val{font-size:12.5px;font-variant-numeric:tabular-nums} .tick{font-size:11px;font-variant-numeric:tabular-nums}
+  rect.hit{fill:transparent} g.bar:hover path{opacity:.85}
+</style>
+<rect class="bg" width="800" height="650" rx="8"/>
+<text class="title t1" x="20" y="30">Words wrong per everyday test set, continuous use (lower is better)</text>
+<text class="sub t2" x="20" y="50">400 clips per set joined by 2 s pauses into one stream, as the app hears speech</text>
+<rect class="v3" x="20" y="63" width="12" height="12" rx="3"/><text class="lab t1" x="38" y="73.5">v3 (NowCaption 1.2.0 and 1.2.1)</text>
+<rect class="v4" x="280.1" y="63" width="12" height="12" rx="3"/><text class="lab t1" x="298.1" y="73.5">v4 (NowCaption 1.2.2)</text>
+<line class="grid" x1="290.0" x2="290.0" y1="90" y2="592" stroke-width="1"/><text class="tick t3" x="290.0" y="608" text-anchor="middle">0%</text>
+<line class="grid" x1="362.0" x2="362.0" y1="90" y2="592" stroke-width="1"/><text class="tick t3" x="362.0" y="608" text-anchor="middle">5%</text>
+<line class="grid" x1="434.0" x2="434.0" y1="90" y2="592" stroke-width="1"/><text class="tick t3" x="434.0" y="608" text-anchor="middle">10%</text>
+<line class="grid" x1="506.0" x2="506.0" y1="90" y2="592" stroke-width="1"/><text class="tick t3" x="506.0" y="608" text-anchor="middle">15%</text>
+<line class="grid" x1="578.0" x2="578.0" y1="90" y2="592" stroke-width="1"/><text class="tick t3" x="578.0" y="608" text-anchor="middle">20%</text>
+<line class="grid" x1="650.0" x2="650.0" y1="90" y2="592" stroke-width="1"/><text class="tick t3" x="650.0" y="608" text-anchor="middle">25%</text>
+<line class="axis" x1="290" x2="290" y1="90" y2="592" stroke-width="1"/>
+<text class="lab t1" x="278" y="120.0" text-anchor="end">URGENT 2024 noisy speech</text>
+<text class="note t3" x="278" y="141.0" text-anchor="end">noise and distortion</text>
+<g class="bar"><title>URGENT 2024 noisy speech, v3: 22.15%</title><rect class="hit" x="290" y="105.0" width="319.0" height="18"/><path class="v3" d="M290.0,106.0h315.0a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-315.0z"/></g>
+<g class="bar"><title>URGENT 2024 noisy speech, v4: 21.49%</title><rect class="hit" x="290" y="123.0" width="309.5" height="18"/><path class="v4" d="M290.0,124.0h305.5a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-305.5z"/></g>
+<text class="val t1" x="619.0" y="127.5">22.15% → <tspan font-weight="600">21.49%</tspan></text>
+<text class="lab t1" x="278" y="182.0" text-anchor="end">Common Voice</text>
+<text class="note t3" x="278" y="203.0" text-anchor="end">cheap microphones, accents</text>
+<g class="bar"><title>Common Voice, v3: 17.49%</title><rect class="hit" x="290" y="167.0" width="251.9" height="18"/><path class="v3" d="M290.0,168.0h247.9a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-247.9z"/></g>
+<g class="bar"><title>Common Voice, v4: 17.49%</title><rect class="hit" x="290" y="185.0" width="251.9" height="18"/><path class="v4" d="M290.0,186.0h247.9a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-247.9z"/></g>
+<text class="val t1" x="551.9" y="189.5">17.49% → <tspan font-weight="600">17.49%</tspan></text>
+<text class="lab t1" x="278" y="244.0" text-anchor="end">Earnings-22 calls</text>
+<text class="note t3" x="278" y="265.0" text-anchor="end">business calls, accents</text>
+<g class="bar"><title>Earnings-22 calls, v3: 16.77%</title><rect class="hit" x="290" y="229.0" width="241.5" height="18"/><path class="v3" d="M290.0,230.0h237.5a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-237.5z"/></g>
+<g class="bar"><title>Earnings-22 calls, v4: 16.26%</title><rect class="hit" x="290" y="247.0" width="234.1" height="18"/><path class="v4" d="M290.0,248.0h230.1a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-230.1z"/></g>
+<text class="val t1" x="541.5" y="251.5">16.77% → <tspan font-weight="600">16.26%</tspan></text>
+<text class="lab t1" x="278" y="306.0" text-anchor="end">AMI meetings</text>
+<text class="note t3" x="278" y="327.0" text-anchor="end">distant microphones, crosstalk</text>
+<g class="bar"><title>AMI meetings, v3: 16.41%</title><rect class="hit" x="290" y="291.0" width="236.3" height="18"/><path class="v3" d="M290.0,292.0h232.3a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-232.3z"/></g>
+<g class="bar"><title>AMI meetings, v4: 15.51%</title><rect class="hit" x="290" y="309.0" width="223.3" height="18"/><path class="v4" d="M290.0,310.0h219.3a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-219.3z"/></g>
+<text class="val t1" x="536.3" y="313.5">16.41% → <tspan font-weight="600">15.51%</tspan></text>
+<text class="lab t1" x="278" y="368.0" text-anchor="end">GigaSpeech podcasts</text>
+<text class="note t3" x="278" y="389.0" text-anchor="end">podcasts and YouTube</text>
+<g class="bar"><title>GigaSpeech podcasts, v3: 13.96%</title><rect class="hit" x="290" y="353.0" width="201.0" height="18"/><path class="v3" d="M290.0,354.0h197.0a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-197.0z"/></g>
+<g class="bar"><title>GigaSpeech podcasts, v4: 13.95%</title><rect class="hit" x="290" y="371.0" width="200.9" height="18"/><path class="v4" d="M290.0,372.0h196.9a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-196.9z"/></g>
+<text class="val t1" x="501.0" y="375.5">13.96% → <tspan font-weight="600">13.95%</tspan></text>
+<text class="lab t1" x="278" y="430.0" text-anchor="end">VoxPopuli speeches</text>
+<text class="note t3" x="278" y="451.0" text-anchor="end">European Parliament</text>
+<g class="bar"><title>VoxPopuli speeches, v3: 8.96%</title><rect class="hit" x="290" y="415.0" width="129.0" height="18"/><path class="v3" d="M290.0,416.0h125.0a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-125.0z"/></g>
+<g class="bar"><title>VoxPopuli speeches, v4: 8.90%</title><rect class="hit" x="290" y="433.0" width="128.2" height="18"/><path class="v4" d="M290.0,434.0h124.2a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-124.2z"/></g>
+<text class="val t1" x="429.0" y="437.5">8.96% → <tspan font-weight="600">8.90%</tspan></text>
+<text class="lab t1" x="278" y="492.0" text-anchor="end">LibriSpeech other</text>
+<text class="note t3" x="278" y="513.0" text-anchor="end">harder audiobook speakers</text>
+<g class="bar"><title>LibriSpeech other, v3: 7.32%</title><rect class="hit" x="290" y="477.0" width="105.4" height="18"/><path class="v3" d="M290.0,478.0h101.4a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-101.4z"/></g>
+<g class="bar"><title>LibriSpeech other, v4: 7.41%</title><rect class="hit" x="290" y="495.0" width="106.7" height="18"/><path class="v4" d="M290.0,496.0h102.7a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-102.7z"/></g>
+<text class="val t1" x="406.7" y="499.5">7.32% → <tspan font-weight="600">7.41%</tspan></text>
+<text class="lab t1" x="278" y="554.0" text-anchor="end">LibriSpeech clean</text>
+<text class="note t3" x="278" y="575.0" text-anchor="end">read audiobooks</text>
+<g class="bar"><title>LibriSpeech clean, v3: 3.40%</title><rect class="hit" x="290" y="539.0" width="49.0" height="18"/><path class="v3" d="M290.0,540.0h45.0a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-45.0z"/></g>
+<g class="bar"><title>LibriSpeech clean, v4: 3.28%</title><rect class="hit" x="290" y="557.0" width="47.2" height="18"/><path class="v4" d="M290.0,558.0h43.2a4,4 0 0 1 4,4v8a4,4 0 0 1 -4,4h-43.2z"/></g>
+<text class="val t1" x="349.0" y="561.5">3.40% → <tspan font-weight="600">3.28%</tspan></text>
+<text class="note t3" x="20" y="636">Ryzen 7 7800X3D, one thread. Differences under about 1 point on one set can be chance; see esb.md for the 95% ranges.</text>
+</svg>

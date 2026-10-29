@@ -6,22 +6,22 @@
   2.1
  ],
  "words": 3151,
- "errors": 87,
- "wer": 0.0276,
- "lag_s_mean": 0.137,
- "lag_s_p50": 0.164,
- "lag_s_p90": 0.315,
- "timed_words": 3055,
+ "errors": 82,
+ "wer": 0.026,
+ "lag_s_mean": 0.122,
+ "lag_s_p50": 0.148,
+ "lag_s_p90": 0.3,
+ "timed_words": 3060,
  "audio_s": 1482.2,
- "cpu_rtf": 0.1711,
+ "cpu_rtf": 0.0727,
  "stage_ms_per_audio_s": {
-  "speech model (decode_stream: encoder and greedy search)": 155.56,
-  "punctuation and casing": 11.59,
-  "reading the recognised text (get_result)": 2.35,
-  "audio features (accept_waveform)": 1.08,
-  "is_ready": 0.05,
+  "speech model (decode_stream: encoder and greedy search)": 57.82,
+  "punctuation and casing": 11.22,
+  "reading the recognised text (get_result)": 2.16,
+  "audio features (accept_waveform)": 1.05,
+  "is_ready": 0.04,
   "new stream": 0.0,
-  "everything else (Python)": 0.46
+  "everything else (Python)": 0.41
  },
  "items": [
   {
@@ -31,7 +31,7 @@
   },
   {
    "audio": "61-70970-0004.wav",
-   "hyp": "but take it whilst i live and where montfichet's shield in the days when my eyes can be rejoiced by so brave a sight for you will never disgrace our study and i warrant me",
+   "hyp": "but take it whilst i live and where montfiche's shield in the days when my eyes can be rejoiced by so brave a sight for you will never disgrace our studchean i warrant me",
    "errors": 4
   },
   {
@@ -131,8 +131,8 @@
   },
   {
    "audio": "908-157963-0013.wav",
-   "hyp": "and why it scatters its bright beauty through the human air",
-   "errors": 2
+   "hyp": "and why it scatters its bright beauty through the humid air",
+   "errors": 1
   },
   {
    "audio": "908-157963-0024.wav",
@@ -156,13 +156,13 @@
   },
   {
    "audio": "1089-134691-0017.wav",
-   "hyp": "the europe they had come from lay out there beyond the irish sea europe of strange tongues and valleyed and would be girt and citadel and of entrenched and martialed races",
-   "errors": 5
+   "hyp": "the europe they had come from lay out there beyond the irish sea europe of strange tongues and valleyed and wood begirt and citadel and of entrenched and martialed races",
+   "errors": 4
   },
   {
    "audio": "1089-134686-0025.wav",
-   "hyp": "a gentle kick from the tall boy in the bench beneath urged stephen to ask a difficult question",
-   "errors": 1
+   "hyp": "a gentle kick from the tall boy in the bench behind urged stephen to ask a difficult question",
+   "errors": 0
   },
   {
    "audio": "1188-133604-0022.wav",
@@ -171,7 +171,7 @@
   },
   {
    "audio": "1188-133604-0027.wav",
-   "hyp": "now here is rafael exactly between the two trees still drawn leaf by leaf wholly formal but beautiful mist coming gradually into the distance",
+   "hyp": "now here is raphael exactly between the two trees still drawn leaf by leaf holy formal but beautiful mist coming gradually into the distance",
    "errors": 1
   },
   {
@@ -196,8 +196,8 @@
   },
   {
    "audio": "1221-135767-0018.wav",
-   "hyp": "little pearl who was as greatly pleased with the gleaming armor as she had been with the glittering frontispiece of the house spent some time looking into the polished mirror of the breastplate",
-   "errors": 1
+   "hyp": "little pearl who was as greatly pleased with the gleaming armor as she had been with the glittering frontispiece of the house spent some time looking into the polished mirror of the breast plate",
+   "errors": 3
   },
   {
    "audio": "1221-135767-0019.wav",
@@ -236,8 +236,8 @@
   },
   {
    "audio": "1320-122612-0003.wav",
-   "hyp": "he often stopped to examine the trees nor did he cross a rivulet without attentively considering the quantity the velocity and the color of its waters",
-   "errors": 0
+   "hyp": "he often stopped to examine the trees nor did he cross a rivulet without attentively considering the quantity the velocity and the colour of its waters",
+   "errors": 1
   },
   {
    "audio": "1320-122617-0037.wav",
@@ -296,8 +296,8 @@
   },
   {
    "audio": "2094-142345-0039.wav",
-   "hyp": "i've strong assurance that no evil will happen to you and my uncle and the children from anything i have done",
-   "errors": 2
+   "hyp": "i've strong assurance that no evil will happen to you and my uncle in the children from anything i've done",
+   "errors": 1
   },
   {
    "audio": "2094-142345-0032.wav",
@@ -366,8 +366,8 @@
   },
   {
    "audio": "3570-5694-0006.wav",
-   "hyp": "drunkenness and the other pathological consequences of the free use of stimulants therefore tend in their turn to become honorific as being a mark at the second remove of the superior state of those who are able to afford the indulgence",
-   "errors": 1
+   "hyp": "drunkenness and the other pathological consequences of the free use of stimulants therefore tend in their turn to become honorific as being a mark at the second remove of the superior status of those who are able to afford the indulgence",
+   "errors": 0
   },
   {
    "audio": "3570-5694-0021.wav",
@@ -411,7 +411,7 @@
   },
   {
    "audio": "3729-6852-0007.wav",
-   "hyp": "two years before her death i saw her perform the character of marianne in the comedy of in spite of her age and declining health the illusion was complete",
+   "hyp": "two years before her death i saw her perform the character of mary anne in the comedy of marivaux and in spite of her age and declining health the illusion was complete",
    "errors": 2
   },
   {
@@ -471,8 +471,8 @@
   },
   {
    "audio": "4507-16021-0036.wav",
-   "hyp": "facts form one of these and is the other",
-   "errors": 1
+   "hyp": "facts form one of these and ideas the other",
+   "errors": 0
   },
   {
    "audio": "4507-16021-0031.wav",
@@ -526,8 +526,8 @@
   },
   {
    "audio": "5105-28240-0007.wav",
-   "hyp": "servadac took it for granted that the dobrina was endeavouring to put in",
-   "errors": 2
+   "hyp": "servadac took it for granted that the dobrina was endeavoring to put in",
+   "errors": 1
   },
   {
    "audio": "5105-28241-0002.wav",
@@ -621,8 +621,8 @@
   },
   {
    "audio": "6829-68769-0033.wav",
-   "hyp": "it was better for him to think the girl unfeiling than to know the truth",
-   "errors": 1
+   "hyp": "it was better for him to think the girl unfeeling than to know the truth",
+   "errors": 0
   },
   {
    "audio": "6930-81414-0015.wav",
@@ -631,8 +631,8 @@
   },
   {
    "audio": "6930-75918-0017.wav",
-   "hyp": "but in this friendly pressure raoul could detect the nervous agitation of a great internal conflict",
-   "errors": 0
+   "hyp": "but in this friendly pressure rao could detect the nervous agitation of a great internal conflict",
+   "errors": 1
   },
   {
    "audio": "6930-81414-0021.wav",
@@ -676,12 +676,12 @@
   },
   {
    "audio": "7127-75947-0024.wav",
-   "hyp": "luck yonder do you not see the moon slowly rising silvering the topmost branches of the chestnuts and the oaks",
-   "errors": 1
+   "hyp": "look yonder do you not see the moon slowly rising silvering the topmost branches of the chestnuts and the oaks",
+   "errors": 0
   },
   {
    "audio": "7127-75947-0027.wav",
-   "hyp": "to say nothing said montalais so that when mademoiselle de tonnisherant thinks athenay is the only one who knows it",
+   "hyp": "to say nothing said montalais so that when mademoiselle de tonyerant thinks athenay is the only one who knows it",
    "errors": 3
   },
   {
@@ -731,8 +731,8 @@
   },
   {
    "audio": "8224-274381-0003.wav",
-   "hyp": "the king's ears were now open to montrose's councils who proposed none but the boldest and most daring agreeably to the desperate state of the royal cause in scotland",
-   "errors": 1
+   "hyp": "the king's ears were now open to montrose's counsels who proposed none but the boldest and most daring agreeably to the desperate state of the royal cause in scotland",
+   "errors": 0
   },
   {
    "audio": "8224-274384-0007.wav",
@@ -756,7 +756,7 @@
   },
   {
    "audio": "8230-279154-0030.wav",
-   "hyp": "simmons two books mentioned in an earlier lecture do not touch knowledge memory at all closely",
+   "hyp": "symonds two books mentioned in an earlier lecture do not touch knowledge memory at all closely",
    "errors": 1
   },
   {
@@ -791,8 +791,8 @@
   },
   {
    "audio": "8463-294828-0035.wav",
-   "hyp": "and so if i had been delayed by a quarter of an hour or even less the frigate would have gone without me and i would have missed out on this unearthly extraordinary and inconceivable expedition whose true story might well meet with some skepticism",
-   "errors": 2
+   "hyp": "and so if i had been delayed by a quarter of an hour or even less the frigate would have gone without me and i would have missed out on this unearthly extraordinary and inconceivable expedition whose true story might well meet with some scepticism",
+   "errors": 3
   },
   {
    "audio": "8463-287645-0011.wav",
@@ -801,7 +801,7 @@
   },
   {
    "audio": "8463-294828-0028.wav",
-   "hyp": "i opened a line of credit sufficient to cover the barbarossa and conseil at my heels i jumped into a carriage",
+   "hyp": "i opened a line of credit sufficient to cover the barbaroosa and conseil at my heels i jumped into a carriage",
    "errors": 1
   },
   {
