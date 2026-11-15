@@ -1,5 +1,6 @@
 """More options: the window for what the caption box's menu has no room for, with a sample caption
 (Preview) that shows how new words arrive."""
+import os
 import weakref
 
 import gi
@@ -282,7 +283,7 @@ class OptionsWindow(Adw.Window):
     # --- start at login and keyboard shortcuts ----------------------------------------------
 
     def start_group(self):
-        command = f'flatpak run {APP_ID}' if portal.in_flatpak() else 'nowcaption'
+        command = self.launch_command()
         group = Adw.PreferencesGroup(
             title='Start and shortcuts',
             description=f'Any desktop can also run these from a shortcut of its own: “{command} --toggle” '
@@ -302,6 +303,14 @@ class OptionsWindow(Adw.Window):
         self.change_row.add_suffix(change)
         group.add(self.change_row)
         return group
+
+    @staticmethod
+    def launch_command():
+        """What a desktop shortcut runs to reach this NowCaption: the Flatpak, the AppImage
+        (it has no command of its own) or the installed `nowcaption`."""
+        if portal.in_flatpak():
+            return f'flatpak run {APP_ID}'
+        return os.environ.get('APPIMAGE') or 'nowcaption'
 
     def on_login(self, row, pspec):
         if self.quiet:

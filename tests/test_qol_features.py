@@ -29,11 +29,11 @@ try:
     gi.require_version('Gtk', '4.0')
     gi.require_version('Adw', '1')
     from nowcaption import app as nc
-    from nowcaption import caption_window, portal
+    from nowcaption import caption_window, options_window, portal
 except (ImportError, ValueError) as e:
     if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
         raise
-    nc = caption_window = portal = None
+    nc = caption_window = options_window = portal = None
     SKIP = f'PyGObject with GTK 4 and libadwaita is not available: {e}'
 
 NVIDIA = [('in video', 'Nvidia'), ('and video', 'Nvidia')]
@@ -250,6 +250,16 @@ class AppTests(unittest.TestCase):
         self.assertEqual(self.app.settings.get('font'), 'DejaVu Serif')
         self.assertEqual(self.window.look[1], 'DejaVu Serif')
         self.assertIn('"DejaVu Serif"', self.window.css.to_string())
+
+    def test_more_options_names_the_command_this_install_has(self):
+        OW = options_window.OptionsWindow
+        with patch.object(portal, 'in_flatpak', lambda: True):
+            self.assertEqual(OW.launch_command(), 'flatpak run io.github.Techlm77.NowCaption')
+        with patch.object(portal, 'in_flatpak', lambda: False), patch.dict(os.environ, APPIMAGE='/opt/NowCaption.AppImage'):
+            self.assertEqual(OW.launch_command(), '/opt/NowCaption.AppImage')
+        with patch.object(portal, 'in_flatpak', lambda: False), patch.dict(os.environ, clear=False) as env:
+            env.pop('APPIMAGE', None)
+            self.assertEqual(OW.launch_command(), 'nowcaption')
 
     def test_word_fixes_added_in_more_options_reach_the_worker_and_the_file(self):
         self.app.open_options()

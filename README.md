@@ -85,7 +85,7 @@ keys that work in any app: Ctrl+Alt+C shows or hides the captions and Ctrl+Alt+P
 pauses them (your desktop may let you pick others; KDE Plasma 6 and GNOME 48 or newer).
 On any desktop you can also make your own shortcut that runs `nowcaption --toggle` or
 `nowcaption --pause` (`flatpak run io.github.Techlm77.NowCaption --toggle` for the
-Flatpak). Hidden captions keep captioning into the transcript; starting NowCaption again
+Flatpak, or the AppImage's path followed by `--toggle`). Hidden captions keep captioning into the transcript; starting NowCaption again
 also brings them back.
 
 **Text colour.** Captions are white by default. If another colour is easier for you to
