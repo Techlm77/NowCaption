@@ -244,7 +244,9 @@ class LaunchTests(unittest.TestCase):
             self.assertEqual(desktop.get_string(group, 'Exec'), f'nowcaption --{action}')
             self.assertTrue(self.app.has_action(action))
             names[action] = desktop.get_string(group, 'Name')
-        self.assertEqual(names, {'transcript': 'Open transcript', 'options': 'More options', 'quit': 'Quit'})
+        self.assertEqual(names, {'transcript': 'Open transcript', 'options': 'More options',
+                                 'toggle': 'Show or hide captions', 'pause': 'Pause or resume captions',
+                                 'quit': 'Quit'})
 
 
 # The NowCaption already running, without a window, models or audio: it prints what it is asked

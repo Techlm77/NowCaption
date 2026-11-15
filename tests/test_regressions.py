@@ -32,7 +32,7 @@ def load_app_methods():
               'on_monitor_geometry', 'disconnect_monitors', 'on_monitors_changed',
               'cancel_recognition_retry', 'retry_recognition', 'request_quit', 'on_window_close', 'threads_finished',
               'save_transcript', 'write_transcript', 'start_save', 'begin_save', 'finish_save',
-              'full_transcript', 'earlier_sessions',
+              'full_transcript', 'earlier_sessions', 'history_days',
               'show_text', 'show_status', 'show_failure', 'clear_failure', 'end_status',
               'render', 'show_footer', 'caption_height', 'box_height'}
     classes = []
@@ -57,7 +57,7 @@ APP = load_app_methods()
 
 def app_with_fakes():
     a = APP['NowCaption']()
-    settings = {'source': 'desktop'}
+    settings = {'source': 'desktop', 'history_days': engine.HISTORY_DAYS}
     a.settings = NS(get=settings.get, set=settings.__setitem__)
     a.window = NS(text='', statuses=[])
     a.window.show_text = lambda text: setattr(a.window, 'text', text)
@@ -72,6 +72,8 @@ def app_with_fakes():
     a.pending_saves = 0
     a.save_queues = {}
     a.quit_requested = False
+    a.paused = a.hidden = False
+    a.shortcuts = None
     a.transcript = None
     a.started = 1792760700.0
     a.history_path = engine.history_file(a.started)

@@ -675,7 +675,8 @@ class OptionsWindowTests(unittest.TestCase):
 
     def test_choices_show_in_the_sample_and_reach_the_captions_only_with_apply(self):
         checks = self.checks()
-        self.assertEqual(set(checks), set(nc.WORD_EFFECTS) | {'desktop', 'mic'})
+        self.assertEqual(set(checks), set(nc.WORD_EFFECTS) | {'desktop', 'mic'} |
+                         {str(days) for days in nc.engine.HISTORY_CHOICES})
         self.assertFalse(self.window.apply_button.get_sensitive())
         checks['assemble'].activate()
         speeds = {b.get_label(): b for b in self.find(self.window, nc.Gtk.ToggleButton)

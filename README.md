@@ -41,11 +41,14 @@ move, drag an edge to resize. **Right-click** for the menu:
 - **Appearance:** text size, background and text colour
 - **Position:** floating, or docked along an edge of the screen; reset the position and size
 - **Transcript:** open the transcript, keep history, or clear this session
-- **More options…:** what to listen to, desktop audio or your microphone, and how
-  new words appear
+- **Pause captions:** stop listening until you turn it off again
+- **More options…:** what to listen to, desktop audio or your microphone; the caption
+  font and how new words appear; how long transcripts are kept; word fixes; starting
+  when you log in; keyboard shortcuts
 
 On a touchscreen, touch and hold the captions for the menu, and right-click NowCaption in
-your app launcher for **Open transcript**, **More options** and **Quit**.
+your app launcher for **Open transcript**, **More options**, **Show or hide captions**,
+**Pause or resume captions** and **Quit**.
 
 **Transcript.** **Open transcript** shows everything captioned, in a window you can
 scroll, select and copy from, and search with Ctrl+F. Earlier sessions are listed under
@@ -53,11 +56,37 @@ their date, and the current one updates as each line is finished. **Copy all** a
 **Save** give the whole transcript; **Delete history** removes it.
 
 **History.** NowCaption keeps each session's transcript for 7 days, then deletes it,
-so it never fills up your disk. It stays on your computer, readable only by you, in
+so it never fills up your disk. Under **More options…**, **Keep transcripts for** can
+make that 1, 30 or 90 days, or keep them until you delete them. It stays on your computer,
+readable only by you, in
 `~/.var/app/io.github.Techlm77.NowCaption/data/nowcaption/history` (Flatpak) or
 `~/.local/share/nowcaption/history` (AppImage). Untick **Keep 7 days of history** in
 the menu to stop keeping it. **Clear this session** also removes the current session
 from the history.
+
+**Pause.** **Pause captions** in the menu stops listening altogether: nothing is
+captured, captioned or kept until you turn it off. The words already heard stay in the
+transcript.
+
+**Word fixes.** The speech model sometimes mishears names it was never taught, such as
+"Nvidia" written as "in video". Under **More options…**, **Word fixes** tells NowCaption
+to show the right word whenever it writes the wrong one. Leave **When NowCaption writes**
+empty to only set how a word is spelled, such as NVIDIA or KDE. A fix applies to
+everything heard from then on, so pick words you would not otherwise say: a fix for
+"in video" also changes "in video calls".
+
+**Font.** Captions use your desktop's font. Under **More options…**, **Caption font**
+picks any installed font, for example one made for easy reading; the sample caption
+shows it before you press **Apply**.
+
+**Start at login and shortcuts.** Under **More options…**, **Start when you log in**
+starts NowCaption with your desktop. **Keyboard shortcuts** asks your desktop for two
+keys that work in any app: Ctrl+Alt+C shows or hides the captions and Ctrl+Alt+P
+pauses them (your desktop may let you pick others; KDE Plasma 6 and GNOME 48 or newer).
+On any desktop you can also make your own shortcut that runs `nowcaption --toggle` or
+`nowcaption --pause` (`flatpak run io.github.Techlm77.NowCaption --toggle` for the
+Flatpak). Hidden captions keep captioning into the transcript; starting NowCaption again
+also brings them back.
 
 **Text colour.** Captions are white by default. If another colour is easier for you to
 read, pick one of the dots under **Text colour**: yellow, lime, cyan, orange, pink,

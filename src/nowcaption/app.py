@@ -28,7 +28,7 @@ try:
 except (ValueError, ImportError):
     LayerShell = None
 
-from . import __version__, audio, engine  # noqa: E402
+from . import __version__, audio, engine, portal, words  # noqa: E402
 
 APP_ID = 'io.github.Techlm77.NowCaption'
 LOG = logging.getLogger('nowcaption')
@@ -87,10 +87,23 @@ ALONG = {'top': ('left', 'right'), 'bottom': ('left', 'right'), 'left': ('top', 
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
             'width': -1, 'rows': ROWS, 'colour': 'white', 'history': True,
             'position': 'floating', 'dock_rows': ROWS, 'dock_width': -1,
-            'word_effect': 'fade', 'word_speed': 'normal', 'unfloated': ''}
+            'word_effect': 'fade', 'word_speed': 'normal', 'unfloated': '',
+            'history_days': engine.HISTORY_DAYS, 'font': '', 'shortcuts': False, 'autostart': False}
 LIMITS = {'size': (SIZES[0], SIZES[-1]), 'opacity': (0.2, 1.0), 'rows': (1, 100), 'dock_rows': (1, 100)}
 CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS), 'position': tuple(POSITIONS),
-           'word_effect': tuple(WORD_EFFECTS), 'word_speed': tuple(WORD_SPEEDS)}
+           'word_effect': tuple(WORD_EFFECTS), 'word_speed': tuple(WORD_SPEEDS),
+           'history_days': engine.HISTORY_CHOICES}
+
+
+def css_font(family):
+    """A font family name as a CSS string (it may hold spaces, quotes or backslashes)."""
+    family = ' '.join(family.split())
+    return '"' + family.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+
+def history_title(days):
+    """How the transcript window says what it shows, for sessions kept this long."""
+    return 'Last 24 hours' if days == 1 else f'Last {days} days' if days else 'Every kept session'
 
 
 # On KDE Plasma, docked captions float over a fullscreen app on their screen (which hides the
@@ -1280,6 +1293,10 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.popover.add_child(self.position_row(), 'position')
         self.show_values()
 
+    def refresh_menu(self):
+        """Build the menu again, for an item whose label changed."""
+        self.update_menu(self.layer and self.monitor_count() > 1)
+
     def position_row(self):
         """The Position row: the chosen position's name, and a little screen for each position
         showing where the captions go; like the colour dots, they keep the menu open."""
@@ -1427,19 +1444,21 @@ class CaptionWindow(Gtk.ApplicationWindow):
         afresh, moving words between them, and stopped the glide and the words arriving."""
         px, alpha = self.settings.get('size'), self.settings.get('opacity')
         colour = COLOURS[self.settings.get('colour')][1]
-        before, self.look = getattr(self, 'look', None), (px, alpha, colour)
-        recoloured = before is not None and before[0] == px and before != self.look
+        font = self.settings.get('font')
+        family = f'font-family: {css_font(font)};' if font.strip() else ''
+        before, self.look = getattr(self, 'look', None), (px, font, alpha, colour)
+        recoloured = before is not None and before[:2] == self.look[:2] and before != self.look
         swatches = ''.join(f'window.nowcaption .colour-{name} {{ background: {rgb}; }}\n'
                            for name, (_, rgb) in COLOURS.items())
         self.css.load_from_string(f"""
             window.nowcaption {{ background: transparent; }}
             window.nowcaption .caption-box {{ background: rgba(0, 0, 0, {alpha}); border-radius: 14px;
                                              transition: background-color {CHANGE_MS}ms ease-out; }}
-            window.nowcaption .caption-text {{ color: {colour}; font-size: {px}px; font-weight: 500;
+            window.nowcaption .caption-text {{ color: {colour}; font-size: {px}px; font-weight: 500; {family}
                                               transition: color {CHANGE_MS}ms ease-out; }}
             .caption-preview {{ background: rgba(0, 0, 0, {alpha}); border-radius: 14px; }}
             .caption-preview .caption-text {{ color: {colour}; font-size: {min(px, Preview.MAX_SIZE)}px;
-                                             font-weight: 500; transition: color {CHANGE_MS}ms ease-out; }}
+                                             font-weight: 500; {family} transition: color {CHANGE_MS}ms ease-out; }}
             window.nowcaption .caption-status {{ color: #cccccc; font-size: {max(14, round(px * 0.55))}px;
                                                 padding: 0 {PAD_X}px {PAD_Y}px; }}
             window.nowcaption.docked .caption-box {{ border-radius: 0; }}
@@ -1967,11 +1986,11 @@ class TranscriptWindow(Adw.Window):
 
     def show_title(self):
         keep = self.app.settings.get('history')
-        self.title.set_subtitle(f'Last {engine.HISTORY_DAYS} days' if keep else 'This session only')
+        self.title.set_subtitle(history_title(self.app.history_days()) if keep else 'This session only')
 
     def reload(self):
         """Read the kept sessions again and fetch this one."""
-        engine.prune_history()
+        self.app.prune_history()
         if self.current:
             self.buffer.delete_mark(self.current)
         self.buffer.set_text('')
@@ -2102,10 +2121,10 @@ class TranscriptWindow(Adw.Window):
         self.toasts.add_toast(Adw.Toast(title='Transcript copied', timeout=2))
 
     def confirm_delete(self):
-        dialog = Adw.AlertDialog(
-            heading='Delete all transcripts?',
-            body=f'This deletes everything NowCaption has kept from the last {engine.HISTORY_DAYS} '
-                 'days, including this session, and clears the captions on screen.')
+        span = engine.history_span(self.app.history_days())
+        kept = f'everything NowCaption has kept from the last {span}' if span else 'every transcript NowCaption has kept'
+        dialog = Adw.AlertDialog(heading='Delete all transcripts?',
+                                 body=f'This deletes {kept}, including this session, and clears the captions on screen.')
         dialog.add_response('cancel', 'Cancel')
         dialog.add_response('delete', 'Delete')
         dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)
@@ -2185,11 +2204,15 @@ def weakly(method):
 
 
 class OptionsWindow(Adw.Window):
-    """More options, for what the caption box's menu has no room for: what to listen to, and
-    how new words arrive (with a sample caption showing it) and how fast. Choices show in the
-    sample first and reach the captions only with Apply; closing without it drops them."""
+    """More options, for what the caption box's menu has no room for: what to listen to, the
+    font and how new words arrive (with a sample caption showing them), how long transcripts are
+    kept, the word list, starting at login and keyboard shortcuts. Choices show in the sample first
+    and reach the captions only with Apply; closing without it drops them. The word list, starting
+    at login and the shortcuts are not choices to compare, so they apply at once."""
 
-    SETTINGS = {'source': 'source', 'word-effect': 'word_effect', 'word-speed': 'word_speed'}  # action: key
+    SETTINGS = {'source': 'source', 'word-effect': 'word_effect', 'word-speed': 'word_speed',
+                'history-days': 'history_days', 'font': 'font'}  # action: key
+    HISTORY = {1: '1 day', 7: '7 days', 30: '30 days', 90: '90 days', 0: 'Until you delete them'}
 
     def __init__(self, app):
         super().__init__(application=app, title='More options', default_width=560, default_height=760)
@@ -2197,9 +2220,14 @@ class OptionsWindow(Adw.Window):
         self.chosen = Gio.SimpleActionGroup()  # the choices made here, until Apply
         for name, key in self.SETTINGS.items():
             action = Gio.SimpleAction.new_stateful(name, GLib.VariantType.new('s'),
-                                                   GLib.Variant('s', app.settings.get(key)))
+                                                   GLib.Variant('s', str(app.settings.get(key))))
             action.connect('activate', weakly(self.on_choice))
             self.chosen.add_action(action)
+        self.sample_css = Gtk.CssProvider()  # the sample's font, chosen here but not applied yet
+        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.sample_css,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
+        self.connect('close-request', weakly(self.on_close))
+        self.quiet = False  # set while a control is set from here, not by the user
         self.insert_action_group('options', self.chosen)
         page = Adw.PreferencesPage()
         listen = Adw.PreferencesGroup(title='Listen to')
@@ -2212,7 +2240,9 @@ class OptionsWindow(Adw.Window):
         again.add_suffix(restart)
         listen.add(again)
         page.add(listen)
+        page.add(self.font_group())
         self.preview = Preview(app)
+        self.preview.add_css_class('options-sample')
         sample = Adw.PreferencesGroup(title='New words', description='How each new word appears in the captions')
         sample.add(self.preview)
         page.add(sample)
@@ -2230,6 +2260,16 @@ class OptionsWindow(Adw.Window):
         motion = Adw.PreferencesGroup(description='With animations turned off for your desktop, new words '
                                                   'appear at once, whichever way is chosen.')
         page.add(motion)
+        page.add(self.words_group())
+        self.fixes = Adw.PreferencesGroup()  # the word list's fixes, one row each
+        self.fix_rows = []
+        page.add(self.fixes)
+        history = Adw.PreferencesGroup(title='Keep transcripts for',
+                                       description='Finished sessions stay in the transcript this long. A shorter '
+                                                   'time deletes the older ones when you press Apply.')
+        self.choices(history, 'options.history-days', ((str(days), title, None) for days, title in self.HISTORY.items()))
+        page.add(history)
+        page.add(self.start_group())
         self.apply_button = Gtk.Button(label='Apply', css_classes=['suggested-action'],
                                        tooltip_text='Use these choices for the captions')
         self.apply_button.connect('clicked', weakly(self.apply))
@@ -2243,19 +2283,190 @@ class OptionsWindow(Adw.Window):
                                             Gtk.NamedAction.new('window.close')))
         self.add_controller(close)
         self.show_choices()
+        self.show_fixes()
+        self.show_shortcuts()
+
+    def on_close(self, window):
+        Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), self.sample_css)
+        return False
 
     def choice(self, name):
         return self.chosen.lookup_action(name).get_state().get_string()
 
     def changed(self):
         """The choices that differ from what the captions use."""
-        return [name for name, key in self.SETTINGS.items() if self.choice(name) != self.app.settings.get(key)]
+        return [name for name, key in self.SETTINGS.items() if self.choice(name) != str(self.app.settings.get(key))]
+
+    # --- font -------------------------------------------------------------------------------
+
+    @staticmethod
+    def desktop_font():
+        return Pango.FontDescription.from_string(Gtk.Settings.get_default().get_property('gtk-font-name') or 'Sans')
+
+    def font_group(self):
+        """The caption font: any installed family, or the desktop's own (the default)."""
+        group = Adw.PreferencesGroup(title='Font')
+        self.font_button = Gtk.FontDialogButton(dialog=Gtk.FontDialog(title='Caption font'), level=Gtk.FontLevel.FAMILY,
+                                                use_font=True, valign=Gtk.Align.CENTER)
+        family = self.choice('font')
+        self.font_button.set_font_desc(Pango.FontDescription.from_string(family) if family else self.desktop_font())
+        self.font_button.connect('notify::font-desc', weakly(self.on_font_picked))
+        self.font_reset = Gtk.Button(icon_name='edit-undo-symbolic', tooltip_text='Use the desktop\'s font',
+                                     valign=Gtk.Align.CENTER, css_classes=['flat'])
+        self.font_reset.update_property([Gtk.AccessibleProperty.LABEL], ['Use the desktop\'s font'])
+        self.font_reset.connect('clicked', weakly(self.on_font_reset))
+        self.font_row = Adw.ActionRow(title='Caption font', activatable_widget=self.font_button)
+        self.font_row.add_suffix(self.font_reset)
+        self.font_row.add_suffix(self.font_button)
+        group.add(self.font_row)
+        return group
+
+    def on_font_picked(self, button, pspec):
+        desc = button.get_font_desc()
+        if not self.quiet and desc and desc.get_family():
+            self.chosen.lookup_action('font').activate(GLib.Variant('s', desc.get_family()))
+
+    def on_font_reset(self, button):
+        self.quiet = True
+        self.font_button.set_font_desc(self.desktop_font())
+        self.quiet = False
+        self.chosen.lookup_action('font').activate(GLib.Variant('s', ''))
+
+    def show_font(self):
+        family = self.choice('font')
+        self.font_row.set_subtitle(family or 'Your desktop\'s font')
+        self.font_reset.set_visible(bool(family))
+        self.sample_css.load_from_string(f'.caption-preview.options-sample .caption-text {{ font-family: '
+                                         f'{css_font(family) if family else "inherit"}; }}')
+
+    # --- word list --------------------------------------------------------------------------
+
+    def words_group(self):
+        """Adding a fix: what NowCaption writes for a word it gets wrong, and what to show."""
+        group = Adw.PreferencesGroup(
+            title='Word fixes',
+            description='For names and words NowCaption gets wrong, such as Nvidia written as “in video”. '
+                        'Leave the first box empty to only fix how a word is spelled, such as NVIDIA. '
+                        'Fixes apply at once, to everything heard from then on.')
+        self.heard_entry = Adw.EntryRow(title='When NowCaption writes')
+        self.write_entry = Adw.EntryRow(title='Show instead')
+        add = Gtk.Button(label='Add', valign=Gtk.Align.CENTER, css_classes=['suggested-action'])
+        add.connect('clicked', weakly(self.add_fix))
+        self.write_entry.add_suffix(add)
+        for entry in (self.heard_entry, self.write_entry):
+            entry.connect('entry-activated', weakly(self.add_fix))
+        group.add(self.heard_entry)
+        group.add(self.write_entry)
+        return group
+
+    def add_fix(self, *args):
+        write = ' '.join(self.write_entry.get_text().split())
+        heard = ' '.join(self.heard_entry.get_text().split())
+        if not write:
+            self.write_entry.grab_focus()
+            return
+        fixes = [f for f in self.app.word_list if f[0].lower() != heard.lower() or (not heard and f[1] != write)]
+        self.save_fixes(fixes + [(heard, write)])
+        self.heard_entry.set_text('')
+        self.write_entry.set_text('')
+        self.heard_entry.grab_focus()
+
+    def remove_fix(self, fix):
+        self.save_fixes([f for f in self.app.word_list if f != fix])
+
+    def save_fixes(self, fixes):
+        error = self.app.set_words(fixes)
+        self.show_fixes()
+        if error:
+            self.fixes.set_description(error)
+
+    def show_fixes(self):
+        for row in self.fix_rows:
+            self.fixes.remove(row)
+        self.fix_rows = []
+        self.fixes.set_description(None if self.app.word_list else 'No fixes yet.')
+        for heard, write in self.app.word_list:
+            row = Adw.ActionRow(title=GLib.markup_escape_text(write),
+                                subtitle=GLib.markup_escape_text(f'instead of “{heard}”' if heard else 'spelling only'))
+            remove = Gtk.Button(icon_name='user-trash-symbolic', tooltip_text='Remove this fix',
+                                valign=Gtk.Align.CENTER, css_classes=['flat'])
+            remove.update_property([Gtk.AccessibleProperty.LABEL], [f'Remove the fix for {write}'])
+            remove.connect('clicked', weakly(self.on_remove_fix), (heard, write))
+            row.add_suffix(remove)
+            self.fixes.add(row)
+            self.fix_rows.append(row)
+
+    def on_remove_fix(self, button, fix):
+        self.remove_fix(fix)
+
+    # --- start at login and keyboard shortcuts ----------------------------------------------
+
+    def start_group(self):
+        command = f'flatpak run {APP_ID}' if portal.in_flatpak() else 'nowcaption'
+        group = Adw.PreferencesGroup(
+            title='Start and shortcuts',
+            description=f'Any desktop can also run these from a shortcut of its own: “{command} --toggle” '
+                        f'shows or hides the captions, “{command} --pause” pauses them.')
+        self.login_row = Adw.SwitchRow(title='Start when you log in', subtitle='Captions are ready straight away')
+        self.login_row.set_active(self.app.starts_at_login())
+        self.login_row.connect('notify::active', weakly(self.on_login))
+        group.add(self.login_row)
+        self.keys_row = Adw.SwitchRow(title='Keyboard shortcuts')
+        self.keys_row.set_active(self.app.settings.get('shortcuts'))
+        self.keys_row.connect('notify::active', weakly(self.on_keys))
+        group.add(self.keys_row)
+        change = Gtk.Button(label='Change…', valign=Gtk.Align.CENTER)
+        change.connect('clicked', weakly(self.on_change_keys))
+        self.change_row = Adw.ActionRow(title='Change the keys', subtitle='In your desktop\'s settings',
+                                        activatable_widget=change)
+        self.change_row.add_suffix(change)
+        group.add(self.change_row)
+        return group
+
+    def on_login(self, row, pspec):
+        if self.quiet:
+            return
+        row.set_sensitive(False)  # until the desktop answers
+        self.app.set_autostart(row.get_active(), weakly(self.login_answered))
+
+    def login_answered(self, on, message):
+        self.quiet = True
+        self.login_row.set_active(on)
+        self.quiet = False
+        self.login_row.set_sensitive(True)
+        self.login_row.set_subtitle(message or 'Captions are ready straight away')
+
+    def on_keys(self, row, pspec):
+        if not self.quiet:
+            self.app.set_shortcuts(row.get_active())
+
+    def on_change_keys(self, button):
+        if self.app.shortcuts:
+            self.app.shortcuts.configure()
+
+    def show_shortcuts(self):
+        keys = self.app.shortcuts
+        on = self.app.settings.get('shortcuts')
+        if not on:
+            text = 'Show or hide and pause the captions from any app'
+        elif not keys:
+            text = 'Not available: NowCaption is not on a session bus'
+        elif keys.error and not keys.bound:
+            text = keys.error
+        elif keys.bound:
+            names = dict((sid, text) for sid, text, _ in keys.SHORTCUTS)
+            text = ' · '.join(f'{keys.bound.get(sid) or "No key"}: {names[sid].lower()}' for sid in names)
+        else:
+            text = 'Asking your desktop…'
+        self.keys_row.set_subtitle(GLib.markup_escape_text(text))
+        self.change_row.set_visible(bool(on and keys and keys.available and keys.can_configure))
 
     def on_choice(self, action, value):
         action.set_state(value)
         self.show_choices()
 
     def show_choices(self):
+        self.show_font()
         effect = self.choice('word-effect')
         self.preview.caption.set_effect(effect, WORD_SPEEDS[self.choice('word-speed')][1])
         self.speed.set_sensitive(effect != 'none')  # no speed for words that appear at once
@@ -2287,7 +2498,9 @@ class NowCaption(Adw.Application):
 
     # the desktop file's actions run `nowcaption --transcript` and so on: see on_command_line
     LAUNCH_OPTIONS = (('transcript', 'Open the transcript'), ('options', 'Open More options'),
+                      ('toggle', 'Show or hide the captions'), ('pause', 'Pause or resume the captions'),
                       ('quit', 'Quit NowCaption if it is running'))
+    RUNNING_ONLY = ('toggle', 'pause')  # for a NowCaption already running; starting one just starts it
 
     def __init__(self):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
@@ -2311,6 +2524,10 @@ class NowCaption(Adw.Application):
         self.fading_out = False
         self.fullscreen_watch = FullscreenWatch(APP_ID)
         self.panel_float = PanelFloat(self.settings)
+        self.paused = False  # Pause captions: nothing is captured until it is turned off
+        self.hidden = False  # the captions were hidden (toggle_captions); they keep captioning
+        self.word_list = words.load_words()  # [(heard, write)], edited under More options
+        self.shortcuts = self.autostart = None  # see portals(), once on the session bus
         self.capture = audio.Capture(
             on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
             on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
@@ -2344,11 +2561,12 @@ class NowCaption(Adw.Application):
         if several_screens:
             place.append(item('Move to next screen', 'app.next-screen'))
         menu.append_item(section(None, *place))
+        span = engine.history_span(self.history_days())
         menu.append_item(section('Transcript', item('Open transcript', 'app.transcript'),
-                                 item(f'Keep {engine.HISTORY_DAYS} days of history', 'app.history'),
+                                 item(f'Keep {span} of history' if span else 'Keep history', 'app.history'),
                                  item('Clear this session', 'app.clear')))
-        menu.append_item(section(None, item('More options…', 'app.options'), item('About NowCaption', 'app.about'),
-                                 item('Quit', 'app.quit')))
+        menu.append_item(section(None, item('Pause captions', 'app.pause'), item('More options…', 'app.options'),
+                                 item('About NowCaption', 'app.about'), item('Quit', 'app.quit')))
         return menu
 
     def add_actions(self):
@@ -2376,14 +2594,20 @@ class NowCaption(Adw.Application):
         position.connect('activate', self.on_position)
         self.add_action(position)
         for name, key, handler in (('word-effect', 'word_effect', self.on_word_effect),
-                                   ('word-speed', 'word_speed', self.on_word_speed)):
+                                   ('word-speed', 'word_speed', self.on_word_speed),
+                                   ('history-days', 'history_days', self.on_history_days),
+                                   ('font', 'font', self.on_font)):
             action = Gio.SimpleAction.new_stateful(name, GLib.VariantType.new('s'),
-                                                   GLib.Variant('s', self.settings.get(key)))
+                                                   GLib.Variant('s', str(self.settings.get(key))))
             action.connect('activate', handler)
             self.add_action(action)
         history = Gio.SimpleAction.new_stateful('history', None, GLib.Variant('b', self.settings.get('history')))
         history.connect('activate', self.on_history)
         self.add_action(history)
+        pause = Gio.SimpleAction.new_stateful('pause', None, GLib.Variant('b', False))
+        pause.connect('activate', lambda action, value: self.set_paused(not self.paused))
+        self.add_action(pause)
+        act('toggle', self.toggle_captions)
         act('transcript', self.open_transcript, ['<Control>t'])
         act('options', self.open_options, ['<Control>comma'])
         act('restart-listening', self.restart_listening)
@@ -2454,6 +2678,133 @@ class NowCaption(Adw.Application):
         self.options = None
         return False
 
+    def on_history_days(self, action, value):
+        """Keep sessions this many days (0: until deleted). A shorter time deletes the older ones now."""
+        try:
+            days = int(value.get_string())
+        except ValueError:
+            return
+        if days not in engine.HISTORY_CHOICES:
+            return
+        action.set_state(value)
+        self.settings.set('history_days', days)
+        self.prune_history()
+        if self.window:
+            self.window.refresh_menu()
+        if self.transcript:
+            self.transcript.show_title()
+            self.transcript.reload()
+
+    def history_days(self):
+        """How many days sessions are kept, 0 for until deleted."""
+        return self.settings.get('history_days')
+
+    def prune_history(self):
+        engine.prune_history(days=self.history_days())
+
+    def on_font(self, action, value):
+        action.set_state(value)
+        self.settings.set('font', ' '.join(value.get_string().split()))
+        if self.window:
+            self.window.restyle()
+
+    def set_words(self, fixes):
+        """Use and save a new word list ([(heard, write)]). Returns an error message, or ''."""
+        self.word_list = [(heard, write) for heard, write in fixes if write.strip()]
+        if self.worker:
+            self.worker.set_words(words.WordFixes(self.word_list))
+        try:
+            words.save_words(self.word_list)
+        except OSError as e:
+            LOG.warning('Could not save the word list: %s', e)
+            return f'Could not save the word list: {e.strerror or e}'
+        return ''
+
+    # --- pause and show/hide ----------------------------------------------------------------
+
+    def set_paused(self, paused):
+        """Pause captions: capture stops, so nothing is heard or kept, and the words already
+        heard become a finished line. Resuming listens again from the chosen source."""
+        if paused == self.paused or self.closing or self.quit_requested:
+            return
+        self.paused = paused
+        self.lookup_action('pause').set_state(GLib.Variant('b', paused))
+        if paused:
+            self.cancel_recognition_retry(reset=True)
+            if self.retry_id:
+                GLib.source_remove(self.retry_id)
+                self.retry_id = None
+            self.source_gen += 1  # audio still on its way from the old capture is dropped
+            if self.worker:
+                self.worker.set_source(self.source_gen)  # the words being spoken become a line
+            self.capture.stop()
+            if self.window:
+                self.window.clear_failure('capture')
+                self.window.show_failure('paused', 'Captions paused. Nothing is being listened to.')
+        else:
+            if self.window:
+                self.window.clear_failure('paused')
+            self.start_capture()
+
+    def toggle_captions(self):
+        """Hide the captions, or show them again (they keep captioning while hidden, so the
+        transcript has everything). Starting NowCaption again also shows them."""
+        window = self.window
+        if not window:
+            return
+        self.hidden = not self.hidden
+        if self.hidden:
+            window.popover.popdown()
+            window.set_visible(False)
+            self.panel_float.dock(None)  # a hidden strip does not touch the panels
+        else:
+            window.present()
+            window.touch_panels()
+
+    # --- desktop portals --------------------------------------------------------------------
+
+    def portals(self):
+        """Shortcut keys and starting at login, through the desktop's portals."""
+        p = portal.portal_for(self)
+        if not p:
+            return
+        self.shortcuts = portal.GlobalShortcuts(p, self.on_shortcut, self.on_shortcuts_changed)
+        self.autostart = portal.Autostart(p, APP_ID)
+        if self.settings.get('shortcuts'):
+            self.shortcuts.start(bind=True)
+
+    def on_shortcut(self, shortcut):
+        if shortcut == 'show-hide':
+            self.toggle_captions()
+        elif shortcut == 'pause':
+            self.set_paused(not self.paused)
+
+    def on_shortcuts_changed(self):
+        if self.options:
+            self.options.show_shortcuts()
+
+    def set_shortcuts(self, on):
+        """Turn the keys on (the desktop may ask to confirm them) or off."""
+        self.settings.set('shortcuts', on)
+        if self.shortcuts:
+            self.shortcuts.set_up() if on else self.shortcuts.stop()
+        self.on_shortcuts_changed()
+
+    def starts_at_login(self):
+        if self.autostart and not portal.in_flatpak():
+            return self.autostart.path().exists()
+        return self.settings.get('autostart')
+
+    def set_autostart(self, on, done):
+        """Start at login, or not; done(on, message) says what now happens."""
+        if not self.autostart:
+            return done(self.starts_at_login(), 'Not available: NowCaption is not on a session bus.')
+
+        def answered(now, message):
+            self.settings.set('autostart', now)
+            done(now, message)
+        self.autostart.set(on, answered)
+
     def on_history(self, action, value):
         keep = not action.get_state().get_boolean()
         action.set_state(GLib.Variant('b', keep))
@@ -2476,7 +2827,7 @@ class NowCaption(Adw.Application):
     def earlier_sessions(self):
         """Kept sessions before this one, oldest first, as (start time, text)."""
         sessions = []
-        cutoff = engine.history_cutoff()
+        cutoff = engine.history_cutoff(self.history_days())
         for started, path in engine.history_files():
             if path == self.history_path:
                 continue
@@ -2558,14 +2909,20 @@ class NowCaption(Adw.Application):
             if self.window:
                 self.activate_action('quit', None)
             return 0
+        if not self.window:  # starting NowCaption shows its captions and listens
+            chosen = [name for name in chosen if name not in self.RUNNING_ONLY]
         if not (self.window and chosen):  # an open window is not raised first, so the one asked for gets focus
             self.activate()
+        elif self.hidden and 'toggle' not in chosen:
+            self.toggle_captions()  # a window asked for from hidden captions brings them back too
         for name in chosen:
             self.activate_action(name, None)
         return 0
 
     def on_activate(self, app):
         if self.window:
+            if self.hidden:  # starting NowCaption again shows hidden captions
+                return self.toggle_captions()
             return self.window.present()
         self.window = CaptionWindow(self)
         self.window.connect('close-request', self.on_window_close)
@@ -2576,10 +2933,13 @@ class NowCaption(Adw.Application):
         self.window.show_status('Loading speech model…')
         # models load on the worker thread, so the window stays responsive meanwhile
         self.worker = engine.RecognitionWorker(lambda kind, value: GLib.idle_add(self.on_worker, kind, value))
-        engine.prune_history()
+        self.prune_history()
         if self.settings.get('history'):
             self.worker.set_history(self.history_path)
+        if self.word_list:
+            self.worker.set_words(words.WordFixes(self.word_list))
         self.worker.start()
+        self.portals()
         GLib.timeout_add_seconds(60, self.release_memory)
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
         if shot:
@@ -2591,7 +2951,7 @@ class NowCaption(Adw.Application):
         became too old while NowCaption kept running."""
         if self.closing:
             return False
-        engine.prune_history()  # reads only file names and times: about 10 µs per kept session
+        self.prune_history()  # reads only file names and times: about 10 µs per kept session
         engine.release_free_memory()
         return True
 
@@ -2599,6 +2959,8 @@ class NowCaption(Adw.Application):
         self.closing = True
         self.fullscreen_watch.stop(sync=True)
         self.panel_float.stop()
+        if self.shortcuts:
+            self.shortcuts.stop()
         self.cancel_recognition_retry()
         if self.retry_id:
             GLib.source_remove(self.retry_id)
@@ -2713,7 +3075,7 @@ class NowCaption(Adw.Application):
     # --- capture ----------------------------------------------------------------------------
 
     def start_capture(self):
-        if not self.ready or self.closing:
+        if not self.ready or self.closing or self.paused:
             return
         self.cancel_recognition_retry()
         if self.retry_id:

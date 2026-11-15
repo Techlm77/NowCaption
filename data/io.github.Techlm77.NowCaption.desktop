@@ -9,7 +9,7 @@ Terminal=false
 Categories=Utility;Accessibility;
 Keywords=captions;subtitles;transcription;speech;deaf;hard of hearing;accessibility;speech-to-text;
 StartupNotify=true
-Actions=transcript;options;quit;
+Actions=transcript;options;toggle;pause;quit;
 
 [Desktop Action transcript]
 Name=Open transcript
@@ -18,6 +18,14 @@ Exec=nowcaption --transcript
 [Desktop Action options]
 Name=More options
 Exec=nowcaption --options
+
+[Desktop Action toggle]
+Name=Show or hide captions
+Exec=nowcaption --toggle
+
+[Desktop Action pause]
+Name=Pause or resume captions
+Exec=nowcaption --pause
 
 [Desktop Action quit]
 Name=Quit

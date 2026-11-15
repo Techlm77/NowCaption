@@ -16,6 +16,8 @@ from pathlib import Path
 
 import numpy as np
 
+from .words import WordFixes
+
 LOG = logging.getLogger(__name__)
 
 RATE = 16000
@@ -133,7 +135,14 @@ def cache_dir():
     return Path(base) / 'nowcaption'
 
 
-HISTORY_DAYS = 7  # sessions older than this are deleted
+HISTORY_DAYS = 7  # by default, sessions older than this are deleted
+HISTORY_CHOICES = (1, 7, 30, 90, 0)  # what More options offers; 0 keeps sessions until deleted
+
+
+def history_span(days):
+    """How long sessions are kept, as the menu and the transcript say it: "7 days", "1 day", or
+    None when they are kept until deleted."""
+    return None if not days else '1 day' if days == 1 else f'{days} days'
 
 
 def history_dir():
@@ -160,12 +169,17 @@ def history_files(folder=None):
 
 
 def history_cutoff(days=HISTORY_DAYS, now=None):
-    """Sessions that ended (were last written) before this time are no longer kept."""
+    """Sessions that ended (were last written) before this time are no longer kept; with days 0
+    (kept until deleted), none."""
+    if not days:
+        return float('-inf')
     return (now or time.time()) - days * 86400
 
 
 def prune_history(folder=None, days=HISTORY_DAYS, now=None):
-    """Delete sessions that ended (were last written) more than `days` ago."""
+    """Delete sessions that ended (were last written) more than `days` ago (none with days 0)."""
+    if not days:
+        return
     cutoff = history_cutoff(days, now)
     for _, path in history_files(folder):
         try:
@@ -330,8 +344,9 @@ class Captioner:
     LIVE_LINES = 2      # finished lines still re-punctuated with the words being spoken
 
     def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None,
-                 store=None, keep_raw=False):
+                 store=None, keep_raw=False, fixes=None):
         self.rec, self.punct = recognizer, punctuation
+        self.fixes = fixes or WordFixes()  # the user's word list
         self.on_update, self.on_warning = on_update, on_warning
         # settled lines, until cleared
         self.store = store if store is not None else TranscriptStore(on_warning=on_warning)
@@ -357,13 +372,29 @@ class Captioner:
         text = text.strip()
         if self.punct and text and (text.islower() or text.isupper()):
             try:
-                return self.punct.add_punctuation_with_case(text.lower()).rstrip(',;')
+                return self.spell(self.punct.add_punctuation_with_case(text.lower()).rstrip(',;'))
             except Exception as e:  # keep captioning without punctuation rather than stop
                 LOG.exception('Punctuation failed')
                 self.punct = None
                 if self.on_warning:
                     self.on_warning(f'Punctuation turned off after an error: {e}')
-        return tidy(text)
+        return self.spell(tidy(text))
+
+    def spell(self, text):
+        """Punctuated text with the word list's spelling."""
+        return ' '.join(self.fixes.spelled(text.split())) if self.fixes else text
+
+    def heard(self, raw):
+        """The model's words with the word list's fixes for what it mishears."""
+        return self.fixes.heard(raw) if self.fixes else raw
+
+    def set_fixes(self, fixes):
+        """A new word list. Its spelling applies to the lines still live and the words being
+        spoken; what it says the model mishears, to words heard from now on."""
+        self.fixes = fixes
+        self.live_input = None  # punctuate the live passage again, now with the new list
+        if self.on_update and (self.partial.strip() or self.count > self.settled):
+            self.on_update(self.caption_text())
 
     def feed(self, pcm16):
         x = np.frombuffer(pcm16, dtype=np.int16) if isinstance(pcm16, (bytes, bytearray, memoryview)) else pcm16
@@ -417,6 +448,7 @@ class Captioner:
         """Carry a replaced captioner's session over: its lines and frozen punctuation."""
         old.commit_partial()
         self.store, self.punct, self.raw = old.store, old.punct, old.raw
+        self.fixes = old.fixes
         self.recent, self.first, self.settled = old.recent, old.first, old.settled
         self.shown, self.live = old.shown.copy(), old.live.copy()
         self.live_input, self.live_exact = old.live_input, old.live_exact
@@ -428,10 +460,10 @@ class Captioner:
 
     def add_line(self, raw):
         """A finished line, timestamped when it started rather than when it ended."""
-        line = (self.partial_since or time.time(), None, raw)
-        self.recent.append(line)
         if self.raw is not None:
             self.raw.append(raw)
+        line = (self.partial_since or time.time(), None, self.heard(raw))
+        self.recent.append(line)
         if self.count - self.settled > self.DISPLAY_LINES + self.LIVE_LINES:
             self._settle()  # nothing is showing captions: memory stays bounded all the same
 
@@ -506,7 +538,7 @@ class Captioner:
         self._settle()
         context = self.recent[self.settled - 1 - self.first][2].split() if self.settled else []
         live = [r for _, _, r in self.recent[self.settled - self.first:]]
-        partial = self.partial.strip()
+        partial = self.heard(self.partial.strip())
         words = ' '.join(live + ([partial] if partial else [])).split()
         key = (tuple(context), tuple(words))
         if key != self.live_input or not (growing or self.live_exact):
@@ -543,7 +575,8 @@ class Captioner:
             word = after[:1].upper() + after[1:]
         else:
             return None
-        return live[:-1] + [word + shown[len(core):]]
+        out = live[:-1] + [word + shown[len(core):]]
+        return self.fixes.spelled(out) if self.fixes else out  # it may have grown into a listed word
 
     def settle(self, line):
         """The words of a line leaving the live passage, punctuated as they were last shown.
@@ -561,7 +594,7 @@ class Captioner:
         out = self.store.lines()
         pending = [(ts, raw) for ts, _, raw in self.recent[self.settled - self.first:]]
         if self.partial.strip():
-            pending.append((self.partial_since or time.time(), self.partial))
+            pending.append((self.partial_since or time.time(), self.heard(self.partial.strip())))
         offset = 0
         for i, (ts, raw) in enumerate(pending):
             # Preserve the entire visible passage even if a punctuation backend
@@ -617,6 +650,7 @@ class RecognitionWorker(threading.Thread):
         self._event_source_gen = 0  # the command/audio being processed, not a newer queued source
         self.captioner, self.broken = None, False
         self.history = None  # the session's history file, or None while history is off
+        self.fixes = WordFixes()  # the user's word list
         self.confirmed = False
 
     # --- called from any thread -------------------------------------------------------------
@@ -680,6 +714,10 @@ class RecognitionWorker(threading.Thread):
         """Keep finished lines in this file as well (the session's history), or stop if None."""
         self._put('history', path)
 
+    def set_words(self, fixes):
+        """Use this word list (a WordFixes) from now on."""
+        self._put('words', fixes)
+
     def restart(self, recover_only=False, source_gen=None):
         """Manual restart, or a guarded automatic retry for a failed source generation."""
         self._put('recover' if recover_only else 'restart', source_gen)
@@ -720,7 +758,7 @@ class RecognitionWorker(threading.Thread):
                         self.on_event('recognition-ok', gen)
             elif kind == 'clear':
                 self._safely(self._handle, kind, value)  # generations apply even when loading failed
-            elif kind in ('snapshot', 'history'):
+            elif kind in ('snapshot', 'history', 'words'):
                 self._safely(self._handle, kind, value)
             elif loaded:
                 if kind != 'source' or value == self.source_gen:
@@ -748,7 +786,8 @@ class RecognitionWorker(threading.Thread):
         old = self.captioner
         new = Captioner(rec, punct, on_update=self._caption,
                         on_warning=lambda m: self.on_event('warning', m),
-                        store=old.store if old else None, keep_raw=self.on_trace is not None)
+                        store=old.store if old else None, keep_raw=self.on_trace is not None,
+                        fixes=self.fixes)
         if old:  # keep the session transcript when recovering from an error
             new.continue_from(old)
         else:
@@ -760,7 +799,11 @@ class RecognitionWorker(threading.Thread):
             self._caption(new.caption_text())
 
     def _handle(self, kind, value):
-        if kind == 'history':
+        if kind == 'words':
+            self.fixes = value
+            if self.captioner:
+                self.captioner.set_fixes(value)
+        elif kind == 'history':
             self.history = value
             if self.captioner:
                 self.captioner.store.set_history(value)
