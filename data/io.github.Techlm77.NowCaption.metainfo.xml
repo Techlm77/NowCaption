@@ -23,7 +23,8 @@
       <li>Streaming captions that update as people speak</li>
       <li>Light on the processor, and idle while everything is quiet</li>
       <li>Floats above other windows on KDE Plasma, Hyprland and Sway</li>
-      <li>Adjustable text size and background, and a transcript you can copy or save</li>
+      <li>Adjustable text size, font and background, and a transcript you can copy or save</li>
+      <li>Word fixes for names it gets wrong, and keyboard shortcuts to hide or pause the captions</li>
     </ul>
     <p>Right-click the captions for settings. Drag them to move them.</p>
   </description>
@@ -57,6 +58,23 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.2.3" date="2026-11-15">
+      <description>
+        <p>
+          Word fixes, pausing, keyboard shortcuts and more choices under More options.
+        </p>
+        <ul>
+          <li>Word fixes: tell NowCaption what it writes for a name it gets wrong, such as Nvidia
+            written as "in video", and what to show instead, or just how a word is spelled</li>
+          <li>Pause captions from the menu: nothing is listened to until you turn it back on</li>
+          <li>Keyboard shortcuts that work in any app to show or hide the captions and pause them,
+            on desktops that offer them (KDE Plasma 6, GNOME 48 and newer)</li>
+          <li>Keep transcripts for 1, 7, 30 or 90 days, or until you delete them</li>
+          <li>Start NowCaption when you log in</li>
+          <li>Choose the caption font</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2.2" date="2026-10-29">
       <description>
         <p>
