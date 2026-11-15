@@ -11,6 +11,12 @@ from unittest.mock import patch
 import test_window
 from test_window import nc, shared_app
 
+if nc:  # GTK and a display are there
+    import cairo
+    import numpy as np
+    from gi.repository import Gdk, GObject, Graphene, Gsk
+    from nowcaption import caption_text, caption_window, style
+
 
 @unittest.skipIf(nc is None, getattr(test_window, 'SKIP', ''))
 class EffectFixTests(unittest.TestCase):
@@ -26,7 +32,7 @@ class EffectFixTests(unittest.TestCase):
         self.gtk.set_property('gtk-enable-animations', True)
         self.addCleanup(self.gtk.set_property, 'gtk-enable-animations', False)
         self.app.settings.set('size', 30)
-        self.window = nc.CaptionWindow(self.app)
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.window.present()
         self.settle()
@@ -83,13 +89,13 @@ class EffectFixTests(unittest.TestCase):
         w.box.allocate(width, height, -1, None)
         snap = nc.Gtk.Snapshot()
         w.drawer.snapshot_child(w.box, snap)
-        renderer = nc.Gsk.CairoRenderer()
-        renderer.realize_for_display(nc.Gdk.Display.get_default())
+        renderer = Gsk.CairoRenderer()
+        renderer.realize_for_display(Gdk.Display.get_default())
         try:
-            texture = renderer.render_texture(snap.to_node(), nc.Graphene.Rect().init(0, 0, width, height))
+            texture = renderer.render_texture(snap.to_node(), Graphene.Rect().init(0, 0, width, height))
         finally:
             renderer.unrealize()
-        return nc.Gdk.TextureDownloader.new(texture).download_bytes()[0].get_data()
+        return Gdk.TextureDownloader.new(texture).download_bytes()[0].get_data()
 
     # Pieces jumped mid-flight: a word cut again started new random paths
 
@@ -110,7 +116,7 @@ class EffectFixTests(unittest.TestCase):
         self.assertEqual(w.caption.offset, 0)
         self.assertLess(p, q)
         self.assertLess(q, 0.5)  # dissolve still switching pieces on
-        common, mine, theirs = nc.np.intersect1d(after.spot, before.spot, return_indices=True)
+        common, mine, theirs = np.intersect1d(after.spot, before.spot, return_indices=True)
         self.assertGreater(len(common), 0.9 * len(before.spot))
         for name in ('dx', 'dy', 'delay', 'order', 'drop'):
             self.assertTrue((getattr(after, name)[mine] == getattr(before, name)[theirs]).all(), name)
@@ -127,7 +133,7 @@ class EffectFixTests(unittest.TestCase):
         w.show_text('so we took the long road back')
         self.at(60)
         before, p = self.flying('back')
-        blending = nc.Gdk.RGBA()
+        blending = Gdk.RGBA()
         blending.parse('#ffff80')  # part of the way to yellow
         with patch.object(w.label, 'get_color', return_value=blending):
             self.at(80)
@@ -147,7 +153,7 @@ class EffectFixTests(unittest.TestCase):
         w.show_text('so we took the long road')
         self.at(1000)
         w.show_text('so we took the long road back')
-        self.at(nc.PIXEL_MS / 2)
+        self.at(style.PIXEL_MS / 2)
         self.assertTrue(w.caption.drawing)
         self.effect('none')
         self.assertEqual((w.caption.appeared, w.caption.drawing), ({}, []))
@@ -167,13 +173,13 @@ class EffectFixTests(unittest.TestCase):
     def test_listening_stops_breathing_when_animations_are_turned_off(self):
         w = self.window
         w.show_status('Listening to desktop audio…')
-        self.at(nc.BREATH_MS / 2)
+        self.at(style.BREATH_MS / 2)
         self.assertLess(w.label.get_opacity(), 0.6)
         self.assertTrue(w.caption.breath_timer)
         self.gtk.set_property('gtk-enable-animations', False)
         self.assertEqual(w.label.get_opacity(), 1.0)
         self.assertEqual((w.caption.breath_start, w.caption.breath_timer, w.caption.tick), (None, 0, 0))
-        self.at(nc.BREATH_MS / 2)
+        self.at(style.BREATH_MS / 2)
         self.assertEqual(w.label.get_opacity(), 1.0)
 
     def test_words_in_flight_land_when_animations_are_turned_off(self):
@@ -183,7 +189,7 @@ class EffectFixTests(unittest.TestCase):
         w.show_text(text)
         self.at(1000)
         w.show_text(f'{text} {word}')
-        self.at(nc.PIXEL_MS / 3)
+        self.at(style.PIXEL_MS / 3)
         self.assertTrue(w.caption.drawing)
         self.assertGreater(w.caption.offset, 0)
         self.gtk.set_property('gtk-enable-animations', False)
@@ -200,10 +206,10 @@ class EffectFixTests(unittest.TestCase):
         caption = options.preview.caption
         self.assertTrue(caption.get_mapped())
         settings, handler = caption.watching
-        self.assertTrue(nc.GObject.signal_handler_is_connected(settings, handler))
+        self.assertTrue(GObject.signal_handler_is_connected(settings, handler))
         options.close()
         self.settle()
-        self.assertFalse(nc.GObject.signal_handler_is_connected(settings, handler))
+        self.assertFalse(GObject.signal_handler_is_connected(settings, handler))
         self.assertIsNone(caption.watching)
 
     # Less work each frame
@@ -219,7 +225,7 @@ class EffectFixTests(unittest.TestCase):
             self.at(60)
             self.at(120)
             self.assertEqual(set_attributes.call_count, 0)
-            self.at(nc.PIXEL_MS * 1.75 + 50)
+            self.at(style.PIXEL_MS * 1.75 + 50)
             self.assertEqual(set_attributes.call_count, 1)  # landed: the label shows the word again
         self.assertIsNone(w.label.get_attributes())
 
@@ -227,7 +233,7 @@ class EffectFixTests(unittest.TestCase):
         label = self.window.label
         layout = label.create_pango_layout('headlights')
         width, height = layout.get_pixel_size()
-        pieces = nc.Pieces(layout, label.get_color(), (0.3, 0, width, height), 2, 40)
+        pieces = caption_text.Pieces(layout, label.get_color(), (0.3, 0, width, height), 2, 40)
         x, y, w, h = pieces.bounds('dissolve', 0.3, 0, 0)  # dissolve: within the word
         self.assertGreaterEqual(x, pieces.left)
         self.assertGreaterEqual(y, pieces.top)
@@ -237,12 +243,12 @@ class EffectFixTests(unittest.TestCase):
         for effect in ('assemble', 'dissolve', 'rain'):
             for p in (0.02, 0.1, 0.25, 0.5, 0.8):
                 box = pieces.bounds(effect, p, 100, 100)
-                surface = nc.cairo.ImageSurface(nc.cairo.FORMAT_ARGB32, 800, 600)
+                surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 800, 600)
                 surface.set_device_scale(2, 2)
-                pieces.draw(nc.cairo.Context(surface), effect, p, 100, 100)
+                pieces.draw(cairo.Context(surface), effect, p, 100, 100)
                 surface.flush()
-                ink = nc.np.frombuffer(surface.get_data(), nc.np.uint8).reshape(600, -1, 4)[..., 3]
-                rows, cols = nc.np.nonzero(ink)
+                ink = np.frombuffer(surface.get_data(), np.uint8).reshape(600, -1, 4)[..., 3]
+                rows, cols = np.nonzero(ink)
                 if box is None:
                     self.assertEqual(len(rows), 0, (effect, p))
                     continue
@@ -260,10 +266,10 @@ class EffectFixTests(unittest.TestCase):
             w.show_text('so we took the long road')
             self.at(1000)
             w.show_text('so we took the long road back')
-            self.at(nc.PIXEL_MS * 0.8)  # every piece landed, the label still hiding the word
+            self.at(style.PIXEL_MS * 0.8)  # every piece landed, the label still hiding the word
             self.assertTrue(w.caption.drawing, effect)
             landed = self.render()
-            self.at(nc.PIXEL_MS + 50)
+            self.at(style.PIXEL_MS + 50)
             self.assertEqual(w.caption.drawing, [], effect)
             self.assertEqual(landed, self.render(), effect)
             w.show_text('')

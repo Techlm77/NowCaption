@@ -8,6 +8,7 @@ import os
 import tempfile
 import time
 import unittest
+from pathlib import Path
 from types import SimpleNamespace as NS
 
 try:
@@ -18,6 +19,7 @@ try:
     os.environ['XDG_CONFIG_HOME'] = tempfile.mkdtemp()  # never touch the user's settings
     os.environ['XDG_DATA_HOME'] = tempfile.mkdtemp()  # nor their transcript history
     from nowcaption import app as nc
+    from nowcaption import caption_window, plasma, settings, style
     import logging
     logging.getLogger('nowcaption').setLevel(logging.CRITICAL)
 except (ImportError, ValueError) as e:
@@ -94,8 +96,8 @@ class AppTests(unittest.TestCase):
     def test_box_fits_a_smaller_monitor(self):
         small = NS(get_geometry=lambda: NS(width=800, height=600))
         big = NS(get_geometry=lambda: NS(width=3840, height=2160))
-        self.assertEqual(nc.CaptionWindow.width_for(small), 560)
-        self.assertEqual(nc.CaptionWindow.width_for(big), 1000)
+        self.assertEqual(caption_window.CaptionWindow.width_for(small), 560)
+        self.assertEqual(caption_window.CaptionWindow.width_for(big), 1000)
 
     def test_save_failure_is_reported(self):
         a = self.make()
@@ -192,7 +194,7 @@ class MenuTests(unittest.TestCase):
 
     def test_kwin_saying_fullscreen_reaches_the_window(self):
         a = AppTests.make(self)
-        a.on_fullscreen_call(None, ':1.5', nc.FULLSCREEN_PATH, nc.FULLSCREEN_IFACE, 'Changed',
+        a.on_fullscreen_call(None, ':1.5', plasma.FULLSCREEN_PATH, plasma.FULLSCREEN_IFACE, 'Changed',
                              nc.GLib.Variant('(b)', (True,)), NS(return_value=lambda value: None))
         self.assertTrue(a.window.covered)
         a.on_fullscreen(False)
@@ -240,8 +242,8 @@ class MainTests(unittest.TestCase):
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))
 class SettingsTests(unittest.TestCase):
     def setUp(self):
-        self.settings = nc.Settings()
-        self.settings.path = nc.Path(tempfile.mkdtemp()) / 'settings.ini'
+        self.settings = settings.Settings()
+        self.settings.path = Path(tempfile.mkdtemp()) / 'settings.ini'
 
     def test_hand_edited_values_are_brought_back_into_range(self):
         kf = self.settings.kf
@@ -255,10 +257,10 @@ class SettingsTests(unittest.TestCase):
         kf.set_string('main', 'word_speed', 'warp')
         self.assertEqual(self.settings.get('colour'), 'white')
         self.assertEqual((self.settings.get('word_effect'), self.settings.get('word_speed')), ('fade', 'normal'))
-        self.assertEqual(self.settings.get('size'), nc.SIZES[0])
+        self.assertEqual(self.settings.get('size'), style.SIZES[0])
         self.assertEqual(self.settings.get('opacity'), 1.0)
         self.assertEqual(self.settings.get('rows'), 1)
-        self.assertEqual(self.settings.get('width'), nc.MIN_WIDTH)
+        self.assertEqual(self.settings.get('width'), style.MIN_WIDTH)
         self.assertEqual(self.settings.get('source'), 'desktop')
 
     def test_default_width_and_valid_values_are_kept(self):
@@ -269,13 +271,13 @@ class SettingsTests(unittest.TestCase):
 
     def test_the_text_colour_is_remembered_after_a_restart(self):
         self.settings.set('colour', 'lime')
-        again = nc.Settings()  # as NowCaption reads it the next time it starts
+        again = settings.Settings()  # as NowCaption reads it the next time it starts
         again.path = self.settings.path
         again.kf.load_from_file(str(again.path), nc.GLib.KeyFileFlags.NONE)
         self.assertEqual(again.get('colour'), 'lime')
 
     def test_a_settings_file_that_cannot_be_written_does_not_raise(self):
-        blocker = nc.Path(tempfile.mkdtemp()) / 'not-a-folder'
+        blocker = Path(tempfile.mkdtemp()) / 'not-a-folder'
         blocker.write_text('')
         self.settings.path = blocker / 'settings.ini'
         self.settings.set('source', 'mic')  # must not raise

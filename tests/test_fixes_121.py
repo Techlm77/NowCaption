@@ -11,8 +11,8 @@ import shutil
 import subprocess
 import unittest
 
-from nowcaption import app as nc
-from nowcaption.app import GLib
+from nowcaption import plasma
+from nowcaption.plasma import GLib
 
 
 class FakeSettings:
@@ -39,7 +39,7 @@ class FakeBus:
 
 
 def panel_float(unfloated='', reply='[]', error=None):
-    p = nc.PanelFloat(FakeSettings(unfloated))
+    p = plasma.PanelFloat(FakeSettings(unfloated))
     p.bus = FakeBus(reply, error)
     return p
 
@@ -122,7 +122,7 @@ class PanelsScriptTests(unittest.TestCase):
     SCREENS = {'DP-1': 0, 'DP-2': 1}
 
     def run_script(self, panels, ours=(), edge='', output='', plasma5=False):
-        script = nc.PANELS_SCRIPT % tuple(map(json.dumps, (list(ours), edge, output)))
+        script = plasma.PANELS_SCRIPT % tuple(map(json.dumps, (list(ours), edge, output)))
         harness = (
             f'const state = {json.dumps(panels)};\n'
             f'const PLASMA5 = {json.dumps(plasma5)};\n'

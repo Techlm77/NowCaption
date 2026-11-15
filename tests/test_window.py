@@ -9,6 +9,7 @@ import os
 import tempfile
 import time
 import unittest
+from pathlib import Path
 from types import SimpleNamespace as NS
 from unittest.mock import patch
 
@@ -17,8 +18,13 @@ os.environ['XDG_CONFIG_HOME'] = CONFIG.name
 DATA = tempfile.TemporaryDirectory()  # transcript history for these tests only
 os.environ['XDG_DATA_HOME'] = DATA.name
 try:
+    import cairo
+    import numpy as np
     from nowcaption import app as nc
-    if not nc.Gtk.init_check() or nc.Gdk.Display.get_default() is None:
+    from nowcaption import (caption_text, caption_window, options_window, plasma, settings, style,
+                            transcript_window)
+    from gi.repository import Gdk, Pango
+    if not nc.Gtk.init_check() or Gdk.Display.get_default() is None:
         raise RuntimeError('No GTK display available; run with xvfb-run')
 except (ImportError, ValueError, RuntimeError) as e:
     if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
@@ -54,7 +60,7 @@ class WindowTests(unittest.TestCase):
 
     def setUp(self):
         self.app.settings.set('size', 30)
-        self.window = nc.CaptionWindow(self.app)
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
 
     def tearDown(self):
@@ -114,9 +120,9 @@ class WindowTests(unittest.TestCase):
         self.settle()
         swatches = {b.get_action_target_value().get_string(): b for b in self.buttons(w.popover)
                     if b.get_action_name() == 'app.colour'}
-        self.assertEqual(list(swatches), list(nc.COLOURS))
+        self.assertEqual(list(swatches), list(style.COLOURS))
         for name, button in swatches.items():
-            self.assertEqual(button.get_property('tooltip-text'), nc.COLOURS[name][0])
+            self.assertEqual(button.get_property('tooltip-text'), style.COLOURS[name][0])
         swatches['yellow'].emit('clicked')
         self.settle()
         self.assertEqual(self.app.settings.get('colour'), 'yellow')
@@ -135,7 +141,7 @@ class WindowTests(unittest.TestCase):
     def test_a_new_window_uses_the_saved_text_colour(self):
         self.app.settings.set('colour', 'cyan')
         self.addCleanup(self.app.settings.set, 'colour', 'white')
-        window = nc.CaptionWindow(self.app)
+        window = caption_window.CaptionWindow(self.app)
         self.addCleanup(window.destroy)
         self.addCleanup(window.disconnect_monitors)
         rgba = window.label.get_color()
@@ -151,7 +157,7 @@ class WindowTests(unittest.TestCase):
 
     def test_two_row_caption_renders_and_font_size_can_change(self):
         self.window.show_text('hello ' * 100)
-        self.assertLessEqual(len(self.window.label.get_text().splitlines()), nc.ROWS)
+        self.assertLessEqual(len(self.window.label.get_text().splitlines()), style.ROWS)
         self.app.settings.set('size', 50)
         self.window.restyle()
         self.assertGreater(self.window.box_height(), 0)
@@ -160,7 +166,7 @@ class WindowTests(unittest.TestCase):
     def fonts(self):
         w = self.window
         return (w.label.create_pango_layout('Ag').get_pixel_size()[1],
-                w.status_label.create_pango_layout('Ag').get_pixel_size()[1] + nc.PAD_Y)
+                w.status_label.create_pango_layout('Ag').get_pixel_size()[1] + style.PAD_Y)
 
     def new_size(self, step):
         """Change the text size, and wait until GTK has applied it to the labels."""
@@ -182,7 +188,7 @@ class WindowTests(unittest.TestCase):
         for step in (+1, +1, -1):
             self.new_size(step)
             self.assertEqual((w.row_height, w.status_height), self.fonts())
-            self.assertEqual(w.caption_height(), w.rows * self.fonts()[0] + 2 * nc.PAD_Y)
+            self.assertEqual(w.caption_height(), w.rows * self.fonts()[0] + 2 * style.PAD_Y)
 
     def placed_box(self, x, y):
         """The box placed by NowCaption itself (layer shell), at x, y, as if dragged there."""
@@ -190,7 +196,7 @@ class WindowTests(unittest.TestCase):
         if not w.monitor:
             self.skipTest('No monitor advertised by the display')
         for key in ('x', 'y'):
-            self.addCleanup(self.app.settings.set, key, nc.DEFAULTS[key])
+            self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
         w.layer = True
         w.present()
         w.show_text('hello ' * 100)
@@ -260,7 +266,7 @@ class WindowTests(unittest.TestCase):
         self.assertIsNotNone(w._monitors_handler, 'screens plugged in or removed are no longer noticed')
         if w.monitor:
             self.assertTrue(w._monitor_handlers, 'resolution and scale changes are no longer noticed')
-        other = nc.CaptionWindow(self.app)
+        other = caption_window.CaptionWindow(self.app)
         other.present()
         self.settle()
         other.destroy()
@@ -274,12 +280,12 @@ class WindowTests(unittest.TestCase):
         w.resizing = ('se', w.x, w.y, w.x + w.box_width, w.y + w.caption_height())
         w.resize_by(-100, 2 * w.row_height)
         self.assertEqual(w.rows, min(rows + 2, w.max_rows()))
-        self.assertEqual(w.box_width, max(nc.MIN_WIDTH, width - 100))
+        self.assertEqual(w.box_width, max(style.MIN_WIDTH, width - 100))
         self.assertLessEqual(len(w.label.get_text().splitlines()), w.rows)
         w.on_drag_end(None, 0, 0)
         self.assertEqual(self.app.settings.get('rows'), w.rows)
         w.reset_size()
-        self.assertEqual(w.rows, nc.ROWS)
+        self.assertEqual(w.rows, style.ROWS)
         self.assertEqual(self.app.settings.get('width'), -1)
 
     def test_notification_uses_a_separate_row_without_replacing_captions(self):
@@ -323,7 +329,7 @@ class TranscriptWindowTests(unittest.TestCase):
         self.newer = nc.engine.history_file(self.newer_start, folder)
         self.older.write_text('[09:00:01] Good morning everyone.\n[09:00:05] Bright and early today.\n')
         self.newer.write_text('[13:00:00] Welcome back.\n')
-        self.window = nc.TranscriptWindow(self.app)
+        self.window = transcript_window.TranscriptWindow(self.app)
         self.addCleanup(self.window.destroy)
 
     def text(self):
@@ -332,7 +338,8 @@ class TranscriptWindowTests(unittest.TestCase):
     def test_earlier_sessions_are_shown_oldest_first_under_their_headings(self):
         text = self.text()
         self.assertLess(text.index('Good morning'), text.index('Welcome back'))
-        self.assertLess(text.index(nc.session_heading(int(self.older_start))), text.index('Good morning'))
+        self.assertLess(text.index(transcript_window.session_heading(int(self.older_start))),
+                        text.index('Good morning'))
         self.assertEqual(self.window.title.get_subtitle(), 'Last 7 days')
 
     def test_this_session_grows_without_touching_the_earlier_text(self):
@@ -340,7 +347,7 @@ class TranscriptWindowTests(unittest.TestCase):
         before = self.text()
         w.apply('[14:05:20] Hello there.')
         self.assertTrue(self.text().startswith(before))
-        self.assertIn(nc.session_heading(self.app.started), self.text())
+        self.assertIn(transcript_window.session_heading(self.app.started), self.text())
         w.apply('[14:05:20] Hello there, how are you?\n[14:05:26] Fine')  # the newest line changed
         self.assertTrue(self.text().endswith('[14:05:20] Hello there, how are you?\n[14:05:26] Fine\n'))
         self.assertEqual(self.text().count('Hello there'), 1)
@@ -395,7 +402,7 @@ class AnimationTests(unittest.TestCase):
         self.gtk.set_property('gtk-enable-animations', True)
         self.addCleanup(self.gtk.set_property, 'gtk-enable-animations', False)
         self.app.settings.set('size', 30)
-        self.window = nc.CaptionWindow(self.app)
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.window.present()
         self.settle()
@@ -431,7 +438,7 @@ class AnimationTests(unittest.TestCase):
         return ' '.join(words), f'word{len(words)}'
 
     def test_the_caption_box_fades_in_when_it_first_appears(self):
-        window = nc.CaptionWindow(self.app)
+        window = caption_window.CaptionWindow(self.app)
         self.addCleanup(window.destroy)
         self.addCleanup(window.disconnect_monitors)
         window.present()
@@ -455,10 +462,10 @@ class AnimationTests(unittest.TestCase):
         spans = [(a.start_index, a.end_index) for a in w.label.get_attributes().get_attributes()]
         shown = w.label.get_text().encode()
         self.assertEqual([shown[s:e] for s, e in spans], [word.encode()])
-        self.at(nc.GLIDE_MS / 2)
+        self.at(style.GLIDE_MS / 2)
         self.assertGreater(w.caption.offset, 0)
         self.assertLess(w.caption.offset, w.row_height)
-        self.at(nc.GLIDE_MS + 50)
+        self.at(style.GLIDE_MS + 50)
         self.assertEqual(w.label.get_text().splitlines(), rows[1:] + [word])
         self.assertEqual(w.caption.offset, 0)
         self.assertIsNone(w.label.get_attributes())
@@ -469,9 +476,9 @@ class AnimationTests(unittest.TestCase):
         w.show_text(text)
         self.at(500)
         w.show_text(f'{text} {word}')
-        self.at(nc.GLIDE_MS - 1)  # the glide's last moment, a row up
+        self.at(style.GLIDE_MS - 1)  # the glide's last moment, a row up
         layout = w.label.get_layout()
-        first, second = (layout.index_to_pos(line.start_index).y / nc.Pango.SCALE
+        first, second = (layout.index_to_pos(line.start_index).y / Pango.SCALE
                          for line in layout.get_lines_readonly()[:2])
         # moved up by exactly one line of the label, so dropping that line at the end moves nothing
         self.assertAlmostEqual(w.caption.offset, second - first, delta=0.01)
@@ -521,13 +528,13 @@ class AnimationTests(unittest.TestCase):
     def test_listening_breathes_until_captions_start(self):
         w = self.window
         w.show_status('Listening to desktop audio…')
-        self.at(nc.BREATH_MS / 2)
+        self.at(style.BREATH_MS / 2)
         self.assertLess(w.label.get_opacity(), 0.6)
         w.show_text('first words')
         self.assertEqual(w.label.get_opacity(), 1.0)
         w.show_text('')
         w.show_failure('capture', 'Device unavailable. Restarting in 2 s…')
-        self.at(nc.BREATH_MS / 2)
+        self.at(style.BREATH_MS / 2)
         self.assertEqual(w.label.get_opacity(), 1.0, 'a problem breathed like a wait')
 
     def test_a_new_text_colour_blends_in(self):
@@ -567,23 +574,23 @@ class AnimationTests(unittest.TestCase):
         w.show_text('so we took the long road')
         self.at(1000)
         w.show_text('so we took the long road back')
-        self.at(nc.PIXEL_MS / 2)
+        self.at(style.PIXEL_MS / 2)
         self.assertEqual(self.alphas(), [('back', 1)])  # hidden in the label, drawn as pieces
         [(pieces, p)] = w.caption.drawing
         self.assertGreater(len(pieces.x), 20)
         self.assertAlmostEqual(p, 0.5, delta=0.1)
-        self.at(nc.PIXEL_MS + 50)
+        self.at(style.PIXEL_MS + 50)
         self.assertIsNone(w.label.get_attributes())
         self.assertEqual(w.caption.drawing, [])
 
     def test_a_whole_passage_at_once_fades_in_instead_of_flying_in_pieces(self):
         self.effect('rain')
         w = self.window
-        w.show_text(' '.join(f'w{i}' for i in range(nc.PIXEL_WORDS + 1)))
-        self.at(nc.PIXEL_MS / 2)
+        w.show_text(' '.join(f'w{i}' for i in range(style.PIXEL_WORDS + 1)))
+        self.at(style.PIXEL_MS / 2)
         self.assertEqual(w.caption.drawing, [])
         alphas = self.alphas()
-        self.assertEqual(len(alphas), nc.PIXEL_WORDS + 1)
+        self.assertEqual(len(alphas), style.PIXEL_WORDS + 1)
         self.assertTrue(all(1 < alpha < 65535 for _, alpha in alphas))
 
     def test_mosaic_blends_into_the_label_at_the_end(self):
@@ -592,9 +599,9 @@ class AnimationTests(unittest.TestCase):
         w.show_text('so we took the long road')
         self.at(1000)
         w.show_text('so we took the long road back')
-        self.at(nc.PIXEL_MS * 0.4)
+        self.at(style.PIXEL_MS * 0.4)
         self.assertEqual(self.alphas(), [('back', 1)])
-        self.at(nc.PIXEL_MS * 0.9)
+        self.at(style.PIXEL_MS * 0.9)
         [(word, alpha)] = self.alphas()
         self.assertTrue(1 < alpha < 65535)
         self.assertEqual(len(w.caption.drawing), 1)
@@ -611,20 +618,20 @@ class AnimationTests(unittest.TestCase):
 
     def test_the_speed_scales_how_long_new_words_take(self):
         self.effect('dissolve', 'slow')
-        self.assertEqual(self.window.caption.word_us(), nc.PIXEL_MS * 1.75 * 1000)
+        self.assertEqual(self.window.caption.word_us(), style.PIXEL_MS * 1.75 * 1000)
         self.effect('fade', 'fast')
-        self.assertEqual(self.window.caption.word_us(), nc.WORD_MS * 0.6 * 1000)
+        self.assertEqual(self.window.caption.word_us(), style.WORD_MS * 0.6 * 1000)
         self.effect('fade')
-        self.assertEqual(self.window.caption.word_us(), nc.WORD_MS * 1000)  # as before effects
+        self.assertEqual(self.window.caption.word_us(), style.WORD_MS * 1000)  # as before effects
 
     def test_landed_pieces_are_exactly_the_word(self):
         label = self.window.label
         layout = label.create_pango_layout('so we took')
-        pieces = nc.Pieces(layout, label.get_color(), (25.3, 0, 40, 30), 1, 36)
+        pieces = caption_text.Pieces(layout, label.get_color(), (25.3, 0, 40, 30), 1, 36)
 
         def image(effect, p):
-            surface = nc.cairo.ImageSurface(nc.cairo.FORMAT_ARGB32, 200, 140)
-            cr = nc.cairo.Context(surface)
+            surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 140)
+            cr = cairo.Context(surface)
             if effect:
                 pieces.draw(cr, effect, p, 50, 50)
             else:
@@ -643,13 +650,14 @@ class AnimationTests(unittest.TestCase):
         label = self.window.label
         layout = label.create_pango_layout('headlights')
         w, h = layout.get_pixel_size()
-        pieces = nc.Pieces(layout, label.get_color(), (0.3, 0, w, h), 1, 40)
+        pieces = caption_text.Pieces(layout, label.get_color(), (0.3, 0, w, h), 1, 40)
         for effect in ('assemble', 'dissolve', 'rain'):
             shown, ox, oy, alpha = pieces.state(effect, 0.5)  # 90% in place, at least half opaque
-            self.assertGreaterEqual((shown & (nc.np.hypot(ox, oy) <= 1) & (alpha >= 0.5)).mean(), 0.9, effect)
+            self.assertGreaterEqual((shown & (np.hypot(ox, oy) <= 1) & (alpha >= 0.5)).mean(), 0.9, effect)
             shown, ox, oy, alpha = pieces.state(effect, 0.75)  # and all of it well before the label
             self.assertTrue(shown.all() and not ox.any() and not oy.any() and (alpha == 1).all(), effect)
-        self.assertGreaterEqual(nc.MOSAIC[int(0.33 / nc.Pieces.SHARP * len(nc.MOSAIC))], 0.36)  # mosaic: a third
+        self.assertGreaterEqual(style.MOSAIC[int(0.33 / caption_text.Pieces.SHARP * len(style.MOSAIC))],
+                                0.36)  # mosaic: a third
 
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))
 class OptionsWindowTests(unittest.TestCase):
@@ -675,7 +683,7 @@ class OptionsWindowTests(unittest.TestCase):
 
     def test_choices_show_in_the_sample_and_reach_the_captions_only_with_apply(self):
         checks = self.checks()
-        self.assertEqual(set(checks), set(nc.WORD_EFFECTS) | {'desktop', 'mic'} |
+        self.assertEqual(set(checks), set(style.WORD_EFFECTS) | {'desktop', 'mic'} |
                          {str(days) for days in nc.engine.HISTORY_CHOICES})
         self.assertFalse(self.window.apply_button.get_sensitive())
         checks['assemble'].activate()
@@ -726,10 +734,10 @@ class OptionsWindowTests(unittest.TestCase):
         preview.shown = 0
         preview.next_word()
         preview.next_word()
-        self.assertEqual(preview.caption.words, nc.Preview.SAMPLE[:2])
-        preview.shown = len(nc.Preview.SAMPLE)
+        self.assertEqual(preview.caption.words, options_window.Preview.SAMPLE[:2])
+        preview.shown = len(options_window.Preview.SAMPLE)
         preview.next_word()
-        self.assertEqual(preview.caption.words, nc.Preview.SAMPLE[:1])
+        self.assertEqual(preview.caption.words, options_window.Preview.SAMPLE[:1])
 
     def test_closing_forgets_the_window(self):
         self.window.close()
@@ -780,13 +788,13 @@ class DockTests(unittest.TestCase):
 
     def setUp(self):
         self.shell = FakeLayerShell()
-        patcher = patch.object(nc, 'LayerShell', self.shell)
+        patcher = patch.object(caption_window, 'LayerShell', self.shell)
         patcher.start()
         self.addCleanup(patcher.stop)
         for key in ('position', 'dock_rows', 'dock_width', 'size'):
-            self.addCleanup(self.app.settings.set, key, nc.DEFAULTS[key])
+            self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
         self.app.settings.set('size', 30)
-        self.window = nc.CaptionWindow(self.app)
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.addCleanup(self.window.destroy)
         self.addCleanup(self.window.disconnect_monitors)
@@ -819,13 +827,13 @@ class DockTests(unittest.TestCase):
         self.assertEqual((self.shell.zone, self.shell.layer), ('auto', FakeLayerShell.Layer.TOP))
 
     def test_the_kwin_script_watches_the_captions_screen_while_docked(self):
-        watch = nc.FullscreenWatch('io.github.Techlm77.NowCaption')
+        watch = plasma.FullscreenWatch('io.github.Techlm77.NowCaption')
         calls = []
         watch.bus = object()
         watch.call = lambda method, args, done=None, sync=False: (calls.append((method, args)), done and done())
         watch.start('DP-2', (0, 0, 1920, 1080))
         self.assertEqual([m for m, _ in calls], ['unloadScript', 'loadScript', 'start'])
-        script = nc.Path(calls[1][1][1][0]).read_text()
+        script = Path(calls[1][1][1][0]).read_text()
         self.assertIn('var OUTPUT = "DP-2";', script)
         self.assertIn('var AREA = [0, 0, 1920, 1080];', script)  # for KWin 5, which names no screens
         self.assertIn('"io.github.Techlm77.NowCaption"', script)
@@ -853,7 +861,7 @@ class DockTests(unittest.TestCase):
         self.assertEqual(self.shell.zone, 'auto')
         self.assertEqual((w.x, w.y), (0, 0))
         self.assertEqual(w.box_width, self.geo.width)
-        self.assertEqual(w.rows, nc.ROWS)
+        self.assertEqual(w.rows, style.ROWS)
         self.assertTrue(w.has_css_class('docked'))
         w.on_layout(None, self.geo.width - 60, 98)  # a panel down one side leaves less room
         self.assertEqual(w.box_width, self.geo.width - 60)
@@ -862,9 +870,9 @@ class DockTests(unittest.TestCase):
         w = self.window
         self.position('left')
         self.assertEqual(self.shell.anchors, {'top': True, 'bottom': True, 'left': True, 'right': False})
-        self.assertEqual(w.box_width, nc.CaptionWindow.dock_width_for(w.monitor))
+        self.assertEqual(w.box_width, caption_window.CaptionWindow.dock_width_for(w.monitor))
         self.assertEqual(w.box_height(), self.geo.height)
-        self.assertEqual(w.rows, (self.geo.height - 2 * nc.PAD_Y) // w.row_height)
+        self.assertEqual(w.rows, (self.geo.height - 2 * style.PAD_Y) // w.row_height)
         self.position('right')
         self.assertEqual(self.shell.anchors, {'top': True, 'bottom': True, 'left': False, 'right': True})
 
@@ -891,9 +899,9 @@ class DockTests(unittest.TestCase):
         # dragging the top edge one row up adds a row; the strip grows from the screen's edge
         w.resizing = ('n',)
         w.resize_dock(width // 2, -w.row_height)
-        self.assertEqual(w.rows, nc.ROWS + 1)
+        self.assertEqual(w.rows, style.ROWS + 1)
         w.on_drag_end(None, 0, 0)
-        self.assertEqual(self.app.settings.get('dock_rows'), nc.ROWS + 1)
+        self.assertEqual(self.app.settings.get('dock_rows'), style.ROWS + 1)
 
     def test_the_resize_cursor_stays_while_the_strip_is_dragged(self):
         # GTK shows the pressed widget's own cursor once the pointer leaves it, and the strip
@@ -1037,8 +1045,8 @@ class DockTests(unittest.TestCase):
         self.position('top')
         self.app.resize(+1)
         w.on_fonts()  # as GTK would once it applies the new size
-        self.assertEqual(w.rows, nc.ROWS)
-        self.assertEqual(w.caption_height(), nc.ROWS * w.row_height + 2 * nc.PAD_Y)
+        self.assertEqual(w.rows, style.ROWS)
+        self.assertEqual(w.caption_height(), style.ROWS * w.row_height + 2 * style.PAD_Y)
 
 
 if __name__ == '__main__':

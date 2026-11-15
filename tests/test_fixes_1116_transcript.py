@@ -18,6 +18,8 @@ import test_window
 from test_window import shared_app
 
 nc = test_window.nc
+if nc:  # GTK and a display are there
+    from nowcaption import transcript_window
 
 
 def settle():
@@ -45,7 +47,7 @@ class TranscriptFixTests(unittest.TestCase):
         self.newer = nc.engine.history_file(self.newer_start, folder)
         self.older.write_text('[09:00:01] Good morning everyone.\n[09:00:05] Bright and early today.\n')
         self.newer.write_text('[13:00:00] Welcome back.\n')
-        self.window = nc.TranscriptWindow(self.app)
+        self.window = transcript_window.TranscriptWindow(self.app)
         self.addCleanup(self.window.destroy)
 
     def tearDown(self):
@@ -197,7 +199,8 @@ class TranscriptFixTests(unittest.TestCase):
         w.view.emit('move-cursor', nc.Gtk.MovementStep.DISPLAY_LINES, 1, True)  # Shift+Down
         selected = w.buffer.get_selection_bounds()
         self.assertTrue(selected, 'Shift+Down selects instead of scrolling')
-        self.assertEqual(w.buffer.get_text(*selected, False), nc.session_heading(int(self.older_start)) + '\n')
+        self.assertEqual(w.buffer.get_text(*selected, False),
+                         transcript_window.session_heading(int(self.older_start)) + '\n')
 
     def test_find_puts_the_caret_on_the_match_it_goes_to(self):
         w = self.window

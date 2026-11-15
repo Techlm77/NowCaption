@@ -13,6 +13,9 @@ from unittest.mock import patch
 import test_window
 from test_window import FakeLayerShell, nc, shared_app
 
+if nc:  # GTK and a display are there
+    from nowcaption import caption_text, caption_window, settings, style
+
 SKIP = getattr(test_window, 'SKIP', '')
 
 
@@ -28,7 +31,7 @@ class FloatingWidthTests(unittest.TestCase):
     def setUp(self):
         self.app.settings.set('size', 60)
         self.addCleanup(self.app.settings.set, 'size', 30)
-        self.window = nc.CaptionWindow(self.app)
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.addCleanup(setattr, self.app, 'window', None)
         self.addCleanup(self.window.destroy)
@@ -63,7 +66,7 @@ class FloatingWidthTests(unittest.TestCase):
         self.assertGreater(w.label.measure(nc.Gtk.Orientation.HORIZONTAL, -1)[1], 300)
         self.lay_out()
         self.assertEqual(w.box.get_width(), 300)
-        self.assertEqual(w.caption.get_width(), 300 - 2 * nc.PAD_X)
+        self.assertEqual(w.caption.get_width(), 300 - 2 * style.PAD_X)
         self.assertEqual(w.caption.get_overflow(), nc.Gtk.Overflow.HIDDEN)
         self.assertEqual(w.box.get_height(), w.caption_height())
 
@@ -80,8 +83,8 @@ class RestyleTests(unittest.TestCase):
     def setUp(self):
         self.app.settings.set('size', 30)
         for key in ('opacity', 'colour', 'size'):
-            self.addCleanup(self.app.settings.set, key, nc.DEFAULTS[key])
-        self.window = nc.CaptionWindow(self.app)
+            self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.addCleanup(setattr, self.app, 'window', None)
         self.addCleanup(self.window.destroy)
@@ -91,7 +94,7 @@ class RestyleTests(unittest.TestCase):
         w = self.window
 
         def rows(*passages):
-            wrap = nc.Rows(w.layout, w.row_height)
+            wrap = caption_text.Rows(w.layout, w.row_height)
             return [wrap(passage) for passage in passages][-1]
         # The passage drops its oldest words: as many as it takes, in this display's font, for
         # a fresh wrap to differ from the rows kept on screen.
@@ -104,7 +107,7 @@ class RestyleTests(unittest.TestCase):
 
     def test_a_new_background_or_colour_keeps_the_rows(self):
         w, caption = self.window, self.window.caption
-        fresh = nc.Rows(w.layout, w.row_height)(self.words)
+        fresh = caption_text.Rows(w.layout, w.row_height)(self.words)
         self.assertNotEqual(fresh, caption.lines, 'wrapped afresh, the rows would be the same anyway')
         rows, wrapper = list(caption.lines), caption.wrapper
         caption.glide, caption.appeared = 1.0, {len(self.words) - 1: nc.GLib.get_monotonic_time()}
@@ -139,8 +142,8 @@ class ScreenTests(unittest.TestCase):
         cls.app = shared_app()
 
     def setUp(self):
-        self.addCleanup(self.app.settings.set, 'monitor', nc.DEFAULTS['monitor'])
-        self.window = nc.CaptionWindow(self.app)
+        self.addCleanup(self.app.settings.set, 'monitor', settings.DEFAULTS['monitor'])
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.addCleanup(setattr, self.app, 'window', None)
         self.addCleanup(self.window.destroy)
@@ -183,13 +186,13 @@ class DockFixTests(unittest.TestCase):
 
     def setUp(self):
         self.shell = FakeLayerShell()
-        patcher = patch.object(nc, 'LayerShell', self.shell)
+        patcher = patch.object(caption_window, 'LayerShell', self.shell)
         patcher.start()
         self.addCleanup(patcher.stop)
         for key in ('position', 'dock_rows', 'dock_width', 'size'):
-            self.addCleanup(self.app.settings.set, key, nc.DEFAULTS[key])
+            self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
         self.app.settings.set('size', 30)
-        self.window = nc.CaptionWindow(self.app)
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.addCleanup(self.window.destroy)
         self.addCleanup(self.window.disconnect_monitors)
@@ -221,14 +224,14 @@ class DockFixTests(unittest.TestCase):
         self.assertEqual(w.box_width, int(self.geo.width * 0.6))
         self.app.settings.set('dock_width', 10)
         w.restyle()
-        self.assertEqual(w.box_width, nc.MIN_WIDTH)
+        self.assertEqual(w.box_width, style.MIN_WIDTH)
         self.assertGreaterEqual(w.caption.get_size_request()[0], 0)
         self.app.settings.set('dock_width', 300)
         w.restyle()
         self.assertEqual(w.box_width, 300)
         self.app.settings.set('dock_width', -1)
         w.restyle()
-        self.assertEqual(w.box_width, nc.CaptionWindow.dock_width_for(w.monitor))
+        self.assertEqual(w.box_width, caption_window.CaptionWindow.dock_width_for(w.monitor))
 
 
 if __name__ == '__main__':

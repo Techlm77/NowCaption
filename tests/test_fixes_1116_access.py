@@ -21,6 +21,9 @@ from unittest.mock import patch
 import test_window
 from test_window import FakeLayerShell, nc, shared_app
 
+if nc:  # GTK and a display are there
+    from nowcaption import caption_window, settings
+
 ROOT = Path(__file__).resolve().parent.parent
 SKIP = getattr(test_window, 'SKIP', '')
 
@@ -44,13 +47,13 @@ class LongPressTests(unittest.TestCase):
         self.shell = FakeLayerShell()
         self.shell.modes = []
         self.shell.set_keyboard_mode = lambda window, mode: self.shell.modes.append(mode)
-        patcher = patch.object(nc, 'LayerShell', self.shell)
+        patcher = patch.object(caption_window, 'LayerShell', self.shell)
         patcher.start()
         self.addCleanup(patcher.stop)
         for key in ('position', 'x', 'y', 'width', 'rows', 'size'):
-            self.addCleanup(self.app.settings.set, key, nc.DEFAULTS[key])
+            self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
         self.app.settings.set('size', 30)
-        self.window = nc.CaptionWindow(self.app)
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.addCleanup(self.window.destroy)
         self.addCleanup(self.window.disconnect_monitors)
@@ -152,7 +155,7 @@ class LongPressWithoutLayerShellTests(unittest.TestCase):
         cls.app = shared_app()
 
     def setUp(self):
-        self.window = nc.CaptionWindow(self.app)
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.addCleanup(self.window.destroy)
         self.addCleanup(self.window.disconnect_monitors)
@@ -233,7 +236,7 @@ class LaunchTests(unittest.TestCase):
 
     def test_the_desktop_file_offers_the_actions(self):
         desktop = nc.GLib.KeyFile()
-        desktop.load_from_file(str(ROOT / 'data' / f'{nc.APP_ID}.desktop'), nc.GLib.KeyFileFlags.NONE)
+        desktop.load_from_file(str(ROOT / 'data' / f'{settings.APP_ID}.desktop'), nc.GLib.KeyFileFlags.NONE)
         actions = desktop.get_string_list('Desktop Entry', 'Actions')
         self.assertEqual(actions, [name for name, _ in nc.NowCaption.LAUNCH_OPTIONS])
         names = {}

@@ -29,11 +29,11 @@ try:
     gi.require_version('Gtk', '4.0')
     gi.require_version('Adw', '1')
     from nowcaption import app as nc
-    from nowcaption import portal
+    from nowcaption import caption_window, portal
 except (ImportError, ValueError) as e:
     if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
         raise
-    nc = portal = None
+    nc = caption_window = portal = None
     SKIP = f'PyGObject with GTK 4 and libadwaita is not available: {e}'
 
 NVIDIA = [('in video', 'Nvidia'), ('and video', 'Nvidia')]
@@ -164,7 +164,7 @@ class AppTests(unittest.TestCase):
         cls.app = shared_app()
 
     def setUp(self):
-        self.window = nc.CaptionWindow(self.app)
+        self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.calls = []
         self.app.capture = NS(start=lambda device, gen: self.calls.append(('start', gen)),

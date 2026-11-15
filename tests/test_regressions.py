@@ -26,7 +26,6 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_app_methods():
-    tree = ast.parse((ROOT / 'src/nowcaption/app.py').read_text())
     wanted = {'on_source', 'start_capture', 'on_worker', 'clear_transcript', 'on_shutdown',
               'capture_ended', 'capture_started', 'retry_capture', 'width_for', 'watch_monitor', 'use_monitor',
               'on_monitor_geometry', 'disconnect_monitors', 'on_monitors_changed',
@@ -35,20 +34,19 @@ def load_app_methods():
               'full_transcript', 'earlier_sessions', 'history_days',
               'show_text', 'show_status', 'show_failure', 'clear_failure', 'end_status',
               'render', 'show_footer', 'caption_height', 'box_height'}
-    classes = []
-    for node in tree.body:
-        if isinstance(node, ast.ClassDef) and node.name in ('NowCaption', 'CaptionWindow'):
-            node.bases, node.keywords, node.decorator_list = [], [], []
-            node.body = [m for m in node.body if isinstance(m, ast.FunctionDef) and m.name in wanted]
-            classes.append(node)
     context = {'os': __import__('os'), 'audio': audio, 'engine': engine,
                'session_heading': lambda started: 'Thursday 23 October 2026, 14:05',
                'LOG': __import__('logging').getLogger('nowcaption'),
                'GLib': NS(timeout_add_seconds=lambda *a: 1, source_remove=lambda *a: None),
                'LayerShell': NS(set_monitor=lambda *a: None),
                'ROWS': 2, 'PAD_Y': 12, 'STATUS_MS': 150}
-    exec(compile(ast.fix_missing_locations(ast.Module(body=classes, type_ignores=[])),
-                 str(ROOT / 'src/nowcaption/app.py'), 'exec'), context)
+    for name, module in (('NowCaption', 'app.py'), ('CaptionWindow', 'caption_window.py')):
+        path = ROOT / 'src/nowcaption' / module
+        [node] = [n for n in ast.parse(path.read_text()).body if isinstance(n, ast.ClassDef) and n.name == name]
+        node.bases, node.keywords, node.decorator_list = [], [], []
+        node.body = [m for m in node.body if isinstance(m, ast.FunctionDef) and m.name in wanted]
+        exec(compile(ast.fix_missing_locations(ast.Module(body=[node], type_ignores=[])), str(path), 'exec'),
+             context)
     return context
 
 
