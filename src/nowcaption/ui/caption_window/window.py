@@ -1,5 +1,7 @@
-"""The caption box's window, floating where it is dragged or docked along an edge of the screen
-(layer shell), with its menu and resizing. Stage and Drawer (stage.py) place and slide the box."""
+"""The caption box's window: it builds the box, follows the screens, sizes and places the box, and
+shows the captions and status messages in it. Its parts have modules of their own: docking.py
+(floating, or docked along an edge with layer shell), pointer.py (dragging and resizing), menu.py,
+stylesheet.py, and stage.py (Stage and Drawer, which place and slide the box)."""
 import cairo
 import gi
 gi.require_version('Gtk', '4.0')
@@ -26,6 +28,10 @@ class CaptionWindow(Gtk.ApplicationWindow):
     overlay covering one monitor. Only the caption box takes pointer input (everything else clicks
     through), and dragging moves the box inside the overlay, so nothing moves under the pointer.
     Elsewhere it is an undecorated normal window that the window manager moves.
+
+    The window holds the box's widgets and geometry (monitor, edge, x, y, box_width, rows...),
+    which its parts change through it: docking (where the box goes), pointer (dragging and
+    resizing) and menu.
     """
 
     def __init__(self, app):
@@ -108,7 +114,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.connect('realize', self.watch_screens)
         self.connect('unrealize', self.disconnect_monitors)
 
-    # --- geometry -------------------------------------------------------------------------
+    # --- screens --------------------------------------------------------------------------
 
     @staticmethod
     def monitor_count():
@@ -127,51 +133,6 @@ class CaptionWindow(Gtk.ApplicationWindow):
     def width_for(monitor):
         geo = monitor.get_geometry() if monitor else None
         return min(1000, int(geo.width * 0.7)) if geo else 1000
-
-    def set_covered(self, covered):
-        """A fullscreen app on this screen opened or closed: float over it, or dock again."""
-        self.docking.set_covered(covered)
-
-    def reposition(self):
-        """Float or dock as the menu now says (see Docking.reposition)."""
-        self.docking.reposition()
-
-    def touch_panels(self):
-        """Docked, touch the panels on the captions' edge again, as the captions show again."""
-        self.docking.touch_panels()
-
-    def seat_footer(self):
-        """Floating, status messages get a row of their own under the captions. Docked, the strip
-        must keep its size (the windows beside it would resize), so they show over its corner."""
-        footer, docked = self.status_label, bool(self.edge)
-        if docked and footer.get_parent() is self.box:
-            self.box.remove(footer)
-            self.rows_area.add_overlay(footer)
-        elif not docked and footer.get_parent() is self.rows_area:
-            self.rows_area.remove_overlay(footer)
-            self.box.append(footer)
-        footer.set_halign(Gtk.Align.END if docked else Gtk.Align.FILL)
-        footer.set_valign(Gtk.Align.START if docked else Gtk.Align.FILL)
-        footer.set_max_width_chars(48 if docked else -1)
-        (footer.add_css_class if docked else footer.remove_css_class)('corner')
-
-    def dock_span(self):
-        """The docked strip's length along its edge: what the compositor gave it beside any
-        panels, or until it says, the whole screen's."""
-        if self.span:
-            return self.span
-        geo = self.monitor.get_geometry() if self.monitor else None
-        if not geo:
-            return 1000
-        return geo.width if self.edge in ('top', 'bottom') else geo.height
-
-    def on_layout(self, surface, width, height):
-        """The compositor sized the window. Docked, fit the captions to the strip it gave them."""
-        span = (width if self.edge in ('top', 'bottom') else height) if self.edge else None
-        if span and span != self.span and not self.pointer.resizing:
-            self.span = span
-            self.fit()
-        self.update_input()
 
     def use_monitor(self, monitor):
         """Move to monitor, resizing the box and its text wrapping to fit it."""
@@ -197,15 +158,6 @@ class CaptionWindow(Gtk.ApplicationWindow):
         elif self.monitor not in items:
             self.use_monitor(self.pick_monitor(connector))
         self.menu.update_menu(self.layer and len(items) > 1)
-
-    @property
-    def popover(self):
-        """The caption box's menu, which the app closes when it hides the captions."""
-        return self.menu.popover
-
-    def refresh_menu(self):
-        """Build the menu again, for an item whose label changed."""
-        self.menu.refresh_menu()
 
     def watch_screens(self, *args):
         """Follow screens being connected or disconnected, and the current screen's geometry."""
@@ -236,6 +188,52 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if self._monitors_handler is not None:
             self._monitors.disconnect(self._monitors_handler)
             self._monitors_handler = None
+
+    def next_monitor(self):
+        monitors = Gdk.Display.get_default().get_monitors()
+        items = [monitors.get_item(i) for i in range(monitors.get_n_items())]
+        if len(items) < 2 or not self.layer:
+            return
+        monitor = items[(items.index(self.monitor) + 1) % len(items)] if self.monitor in items else items[0]
+        self.settings.set('monitor', monitor.get_connector() or '')
+        self.settings.set('x', -1)
+        self.settings.set('y', -1)
+        self.use_monitor(monitor)
+
+    # --- size and place -------------------------------------------------------------------
+
+    def dock_span(self):
+        """The docked strip's length along its edge: what the compositor gave it beside any
+        panels, or until it says, the whole screen's."""
+        if self.span:
+            return self.span
+        geo = self.monitor.get_geometry() if self.monitor else None
+        if not geo:
+            return 1000
+        return geo.width if self.edge in ('top', 'bottom') else geo.height
+
+    def on_layout(self, surface, width, height):
+        """The compositor sized the window. Docked, fit the captions to the strip it gave them."""
+        span = (width if self.edge in ('top', 'bottom') else height) if self.edge else None
+        if span and span != self.span and not self.pointer.resizing:
+            self.span = span
+            self.fit()
+        self.update_input()
+
+    def seat_footer(self):
+        """Floating, status messages get a row of their own under the captions. Docked, the strip
+        must keep its size (the windows beside it would resize), so they show over its corner."""
+        footer, docked = self.status_label, bool(self.edge)
+        if docked and footer.get_parent() is self.box:
+            self.box.remove(footer)
+            self.rows_area.add_overlay(footer)
+        elif not docked and footer.get_parent() is self.rows_area:
+            self.rows_area.remove_overlay(footer)
+            self.box.append(footer)
+        footer.set_halign(Gtk.Align.END if docked else Gtk.Align.FILL)
+        footer.set_valign(Gtk.Align.START if docked else Gtk.Align.FILL)
+        footer.set_max_width_chars(48 if docked else -1)
+        (footer.add_css_class if docked else footer.remove_css_class)('corner')
 
     def box_height(self):
         if self.edge in ('left', 'right'):  # the column runs the strip's whole height
@@ -274,17 +272,6 @@ class CaptionWindow(Gtk.ApplicationWindow):
             else:
                 x, y, w, h = self.x, self.y, self.box_width, self.box_height()
             surface.set_input_region(cairo.Region(cairo.RectangleInt(int(x), int(y), max(0, int(w)), max(0, int(h)))))
-
-    def next_monitor(self):
-        monitors = Gdk.Display.get_default().get_monitors()
-        items = [monitors.get_item(i) for i in range(monitors.get_n_items())]
-        if len(items) < 2 or not self.layer:
-            return
-        monitor = items[(items.index(self.monitor) + 1) % len(items)] if self.monitor in items else items[0]
-        self.settings.set('monitor', monitor.get_connector() or '')
-        self.settings.set('x', -1)
-        self.settings.set('y', -1)
-        self.use_monitor(monitor)
 
     def reset_position(self):
         self.settings.set('x', -1)
@@ -504,3 +491,26 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if node:
             self.get_renderer().render_texture(node, None).save_to_png(path)
         return False
+
+    # --- docking and the menu, for the app ------------------------------------------------
+
+    def reposition(self):
+        """Float or dock as the menu now says (see Docking.reposition)."""
+        self.docking.reposition()
+
+    def set_covered(self, covered):
+        """A fullscreen app on this screen opened or closed: float over it, or dock again."""
+        self.docking.set_covered(covered)
+
+    def touch_panels(self):
+        """Docked, touch the panels on the captions' edge again, as the captions show again."""
+        self.docking.touch_panels()
+
+    @property
+    def popover(self):
+        """The caption box's menu, which the app closes when it hides the captions."""
+        return self.menu.popover
+
+    def refresh_menu(self):
+        """Build the menu again, for an item whose label changed."""
+        self.menu.refresh_menu()
