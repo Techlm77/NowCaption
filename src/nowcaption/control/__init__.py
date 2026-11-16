@@ -1,7 +1,7 @@
 """What NowCaption does while it runs, one collaborator per job; app.py creates them and wires them to
 the Adw.Application, its windows and the desktop. Each holds the app and uses its window, settings
-and the other collaborators through it. Nothing here imports app.py but to name NowCaption in
-annotations, nor the windows (ui), which never import this package either."""
+and the other collaborators through it.
+Uses engine, words and style only: never ui, nor app but to name NowCaption in annotations (CONTRIBUTING.md)."""
 from . import actions, commands
 from .appearance import Appearance
 from .history import History

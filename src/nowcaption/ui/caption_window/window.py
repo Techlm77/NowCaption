@@ -186,6 +186,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
                 self._monitor_handlers.append((self.monitor, handler))
 
     def on_monitor_geometry(self, monitor, pspec):
+        """The current screen's size or scale changed: fit the box to it again."""
         if monitor == self.monitor:
             self.box_width = self.width_for(monitor)
             self.restyle()

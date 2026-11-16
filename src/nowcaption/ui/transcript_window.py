@@ -17,7 +17,7 @@ from gi.repository import Adw, Gdk, GLib, GObject, Gtk, Pango
 from .. import engine
 from ..engine import history_title, session_heading
 
-LOG = logging.getLogger('nowcaption')
+LOG = logging.getLogger(__name__)
 
 
 def rgba(spec: str) -> Gdk.RGBA:

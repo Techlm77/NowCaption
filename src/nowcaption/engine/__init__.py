@@ -1,8 +1,8 @@
 """The speech pipeline and transcript storage: audio capture, speech recognition (a sherpa-onnx
 streaming transducer plus a punctuation model), caption text and the history files.
 
-No GTK or Adw in this package, and GStreamer only in capture.py, when a Capture is made, so the
-engine imports with NumPy alone. It depends on nowcaption.words only.
+Uses words only, and no gi but capture.py's GStreamer, imported when a Capture is made, so the
+engine imports with NumPy alone (CONTRIBUTING.md).
 """
 from .captioner import MAX_LINE, PAUSE_S, RATE, WARMUP_S, Captioner
 from .capture import DESKTOP, MICROPHONE, Capture

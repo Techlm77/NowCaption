@@ -52,6 +52,7 @@ class Pointer:
         return ns + ew
 
     def on_motion(self, controller, x, y):
+        """The pointer moved: unless a drag is on, show the resize cursor for the edge under it, or the box's own."""
         if not (self.dragging or self.resizing):
             self.window.set_cursor(Gdk.Cursor.new_from_name(CURSORS.get(self.edges_at(x, y), self.cursor()), None))
 
@@ -68,6 +69,8 @@ class Pointer:
             self.held.set_cursor(cursor)
 
     def on_drag_begin(self, gesture, x, y):
+        """A drag starts: resize from an edge, or move the box. Docked, only the inner edge resizes;
+        a finger moves a normal window only once it travels (on_drag_update)."""
         win = self.window
         edges = self.edges_at(x, y)
         if win.edge:  # docked: only the inner edge resizes, and nothing moves
@@ -98,6 +101,8 @@ class Pointer:
                                              gesture.get_current_event_time())
 
     def on_drag_update(self, gesture, dx, dy):
+        """The drag moved by dx, dy: resize, or move the box, or have the window manager move a
+        normal window once a finger travels far enough."""
         if self.move_from:  # a finger moves the window once it travels as far as a drag must
             if math.hypot(dx, dy) >= self.window.get_settings().props.gtk_dnd_drag_threshold:
                 x, y = self.move_from
@@ -159,6 +164,7 @@ class Pointer:
         win.render()
 
     def on_drag_end(self, gesture, dx, dy):
+        """The drag ended: put the cursor back, and save the new size or place."""
         win, settings = self.window, self.window.settings
         self.move_from = None
         win.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))

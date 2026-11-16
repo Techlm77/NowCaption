@@ -16,22 +16,35 @@ src/nowcaption/
   desktop/     # desktop integration: XDG portals, autostart, KDE Plasma/KWin
 ```
 
-Dependencies go one way, with no cycles:
+Dependencies go one way, with no modules importing each other in a circle:
 
 - `app` uses `control`, `ui`, `desktop`, `engine`, `settings` and `words`: it makes the
   collaborators and the windows and wires them together;
 - `control` uses `engine`, `words` and `style`. Each collaborator holds the app and reaches the
   windows, the settings and the other collaborators through it;
-- `ui` uses `engine`, `desktop`, `settings` and `style`, never `control`: the windows ask the app,
-  whose short forwarders (`history_days`, `save_transcript`…) pass the call on;
+- `ui` uses `engine`, `desktop`, `settings` and `style`, never `control` or `app`. A window holds the
+  app and uses only: the methods app.py groups under "what the windows ask of the app"
+  (`history_days()`, `save_transcript()`, `worker`…), short forwarders to a collaborator, and
+  `set_words()`; its start-at-login and shortcut methods (`starts_at_login()`, `set_autostart()`,
+  `set_shortcuts()`); its actions (`app.colour`, `lookup_action()`); and the attributes `settings`,
+  `word_list`, `shortcuts`, `fullscreen_watch`, `panel_float`, `closing` and `started`;
 - `desktop` uses nothing else in NowCaption;
-- `engine` uses `words` only;
-- `settings` uses `style` and `engine` (the history constants);
-- only `launch` imports `app`, once gtk4-layer-shell is loaded.
+- `engine` uses `words` only, and never gi: `engine/capture.py` imports GStreamer inside
+  `Capture.__init__`, when a Capture is made, so the engine imports with NumPy alone;
+- `settings` uses `style` and `engine` (the history constants); `style` and `words` use nothing else
+  in NowCaption. None of the three imports GTK at module level (`settings` keeps its file with
+  GLib's key file);
+- only `launch` imports `app`, inside `main()` once gtk4-layer-shell is loaded, and `__main__` imports
+  only `launch`. The package's own `__init__.py` holds the version and imports nothing.
 
 Imports under `if TYPE_CHECKING:` never run, so they may name a type against these directions:
 `control` names `NowCaption` that way, and `desktop` names `Settings`. The windows leave the app
-unannotated (their tests pass fakes).
+unannotated (their tests pass fakes). Imports inside functions do run, so they follow the rules.
+
+`tests/test_architecture.py` checks these rules. It reads the source with `ast` and imports
+nothing, so it needs only the standard library, and each failure names the file, the line and the
+rule broken. A new top-level module or package goes in the layout above and in the test's `MAY_USE`
+table.
 
 A package's `__init__.py` states its public API (explicit imports and `__all__`), so other
 code can write `engine.RecognitionWorker`. It stays short, with no logic in it.
@@ -39,11 +52,17 @@ code can write `engine.RecognitionWorker`. It stays short, with no logic in it.
 ## Conventions
 
 - One clear responsibility per module and per class. Each module starts with a short
-  docstring saying what it does and what it must not depend on.
+  docstring saying what it does. The dependency rules live here, under "Package layout", where
+  `tests/test_architecture.py` checks them, and each package's `__init__.py` docstring repeats its
+  own rule in a line.
 - No GTK or Adw in `engine/`: it must import with NumPy alone, so its tests run anywhere.
 - Comments explain *why*, not what the next line does. Plain English, British spelling.
-- Public functions and methods have type hints (Python 3.10 syntax, `X | None`) and a
-  docstring. Modules with annotations start with `from __future__ import annotations`, so
+- Public classes, functions and methods have a docstring (a class's covers its `__init__`), GTK
+  signal handlers and virtual methods (`on_*`, `do_*`) included. Most also have type hints
+  (Python 3.10 syntax, `X | None`). Those without are mostly callbacks whose arguments GTK, GLib,
+  D-Bus or GStreamer pass in (the `on_*` and `do_*` methods, timers, D-Bus signals),
+  sherpa-onnx's model objects, and the app the windows take, which their tests replace with
+  fakes. Modules with annotations start with `from __future__ import annotations`, so
   annotations cost nothing at run time. `Callable` and `Iterable` come from `collections.abc`
   (the standard library has loaded it already); anything else needed only for annotations is
   imported under `if TYPE_CHECKING:`.

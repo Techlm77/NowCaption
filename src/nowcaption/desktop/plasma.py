@@ -14,7 +14,7 @@ from gi.repository import Gio, GLib
 if TYPE_CHECKING:  # for annotations only
     from ..settings import Settings
 
-LOG = logging.getLogger('nowcaption')
+LOG = logging.getLogger(__name__)
 
 
 # On KDE Plasma, docked captions float over a fullscreen app on their screen (which hides the
