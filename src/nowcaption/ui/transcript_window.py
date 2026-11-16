@@ -16,6 +16,7 @@ from gi.repository import Adw, Gdk, GLib, GObject, Gtk, Pango
 
 from .. import engine
 from ..engine import history_title, session_heading
+from .screen_fit import fit_height
 
 LOG = logging.getLogger(__name__)
 
@@ -42,7 +43,8 @@ class TranscriptWindow(Adw.Window):
     def __init__(self, app) -> None:
         """app: the NowCaption application: its settings, the kept sessions, the recognition worker,
         and copying, saving and deleting the transcript."""
-        super().__init__(application=app, default_width=680, default_height=720)
+        super().__init__(application=app, default_width=680)
+        fit_height(self, 720)  # the text scrolls, so on a short screen the window can be shorter
         self.app, self.closed = app, False
         self.block, self.current = [], None  # this session's lines as shown (heading first), and its start
         self.matches, self.match, self.refresh_id = [], -1, None

@@ -3,7 +3,8 @@
 (1.1.16) live captions searching only their new lines, a caret for the keyboard, and a closed
 window freed. On the test display; no models or audio pipeline are started.
 
-TranscriptWindowTests come from the first window tests, TranscriptFixTests from 1.1.16.
+TranscriptWindowTests come from the first window tests, TranscriptFixTests from 1.1.16, and
+TranscriptScreenTests from the distro test lab's laptop screens.
 """
 import gc
 import re
@@ -14,7 +15,7 @@ from types import SimpleNamespace as NS
 from unittest.mock import patch
 
 import support.sandbox  # noqa: F401 - private XDG folders and a quiet log for this process
-from support.windows import SKIP, nc, shared_app
+from support.windows import SKIP, nc, screen_size, shared_app
 
 if nc:  # GTK and a display are there
     from nowcaption.ui import transcript_window
@@ -285,6 +286,34 @@ class TranscriptFixTests(unittest.TestCase):
         self.assertEqual(self.caret(), self.offset(w.matches[1][0]))
         w.step(1)
         self.assertEqual(self.caret(), self.offset(w.matches[0][0]))
+
+
+@unittest.skipIf(nc is None, SKIP)
+class TranscriptScreenTests(unittest.TestCase):
+    """The transcript window opened 720 px tall, which is taller than the space a 1280x720 laptop
+    screen leaves under GNOME's top bar, so its bottom ran off the screen. It must fit there, and
+    open as before on a bigger screen."""
+
+    TOP_BAR = 32  # GNOME's top bar, above the windows
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = shared_app()
+
+    def asked_on(self, width, height):
+        """The height the transcript asks the desktop for on a width x height screen, read
+        before GTK fits it to the test display's own screen as it shows it."""
+        with screen_size(width, height):
+            window = transcript_window.TranscriptWindow(self.app)
+            self.addCleanup(window.destroy)
+            window.realize()
+            return window.get_default_size().height
+
+    def test_it_fits_a_laptop_screen(self):
+        self.assertLessEqual(self.asked_on(1280, 720), 720 - self.TOP_BAR)
+
+    def test_on_a_bigger_screen_it_opens_as_before(self):
+        self.assertEqual(self.asked_on(1920, 1080), 720)
 
 
 if __name__ == '__main__':
