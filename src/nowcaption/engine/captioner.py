@@ -8,9 +8,12 @@ split caption lines. Silence is fed briefly to flush words, then recognition wai
 No threads: RecognitionWorker (worker.py) owns the Captioner. Depends on words.py and
 transcript.py only.
 """
+from __future__ import annotations
+
 import logging
 import re
 import time
+from collections.abc import Callable, Iterable
 
 import numpy as np
 
@@ -30,7 +33,7 @@ PAUSE_S = 0.8           # no new words for this long starts a new caption line
 MAX_LINE = 160          # characters before a running line is split anyway
 
 
-def tidy(text):
+def tidy(text: str) -> str:
     """Sentence case for all-lower or all-upper text; mixed case is kept."""
     text = text.strip()
     if not text or (not text.isupper() and not text.islower()):
@@ -46,8 +49,13 @@ class Captioner:
     DISPLAY_LINES = 60  # finished lines kept for the on-screen passage; the box shows its last rows
     LIVE_LINES = 2      # finished lines still re-punctuated with the words being spoken
 
-    def __init__(self, recognizer, punctuation=None, on_update=None, on_warning=None,
-                 store=None, keep_raw=False, fixes=None):
+    def __init__(self, recognizer, punctuation=None, on_update: Callable[[str], None] | None = None,
+                 on_warning: Callable[[str], None] | None = None, store: TranscriptStore | None = None,
+                 keep_raw: bool = False, fixes: WordFixes | None = None) -> None:
+        """recognizer: a sherpa-onnx OnlineRecognizer (see models.load_recognizer); punctuation: an
+        OnlinePunctuation, or None for sentence case only. on_warning(message) says when something
+        degrades; store keeps the finished lines (a new TranscriptStore by default); keep_raw also
+        keeps the raw text, for raw_text()."""
         self.rec, self.punct = recognizer, punctuation
         self.fixes = fixes or WordFixes()  # the user's word list
         self.on_update, self.on_warning = on_update, on_warning
@@ -71,7 +79,9 @@ class Captioner:
         self.silent_for, self.flushed = 0.0, True
         self.decoded = False  # audio buffering alone does not prove native inference works
 
-    def format(self, text):
+    def format(self, text: str) -> str:
+        """The model's words punctuated and cased, then spelled the word list's way. Without the
+        punctuation model (or once it has failed), and for mixed-case text, tidy() does the casing."""
         text = text.strip()
         if self.punct and text and (text.islower() or text.isupper()):
             try:
@@ -83,15 +93,15 @@ class Captioner:
                     self.on_warning(f'Punctuation turned off after an error: {e}')
         return self.spell(tidy(text))
 
-    def spell(self, text):
+    def spell(self, text: str) -> str:
         """Punctuated text with the word list's spelling."""
         return ' '.join(self.fixes.spelled(text.split())) if self.fixes else text
 
-    def heard(self, raw):
+    def heard(self, raw: str) -> str:
         """The model's words with the word list's fixes for what it mishears."""
         return self.fixes.heard(raw) if self.fixes else raw
 
-    def set_fixes(self, fixes):
+    def set_fixes(self, fixes: WordFixes) -> None:
         """A new word list. Its spelling applies to the lines still live and the words being
         spoken; what it says the model mishears, to words heard from now on."""
         self.fixes = fixes
@@ -99,7 +109,9 @@ class Captioner:
         if self.on_update and (self.partial.strip() or self.count > self.settled):
             self.on_update(self.caption_text())
 
-    def feed(self, pcm16):
+    def feed(self, pcm16: bytes | bytearray | memoryview | np.ndarray) -> None:
+        """Recognise a block of 16 kHz mono PCM16 audio (bytes, or an int16 array). Digital silence
+        is decoded for SILENCE_FLUSH_S; then the last words are flushed once and silence is skipped."""
         x = np.frombuffer(pcm16, dtype=np.int16) if isinstance(pcm16, (bytes, bytearray, memoryview)) else pcm16
         if not x.any():
             self.silent_for += len(x) / RATE
@@ -110,12 +122,14 @@ class Captioner:
         self.silent_for, self.flushed = 0.0, False
         self._decode(x.astype(np.float32) / 32768)
 
-    def flush(self):
+    def flush(self) -> None:
+        """End the words being spoken as a line: 0.8 s of silence pushes the model's lookahead
+        through. Only once until new sound arrives."""
         if not self.flushed:
             self.flushed = True
             self._decode(np.zeros(int(0.8 * RATE), np.float32), force=True)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear is an explicit acoustic boundary: buffered old speech must not return."""
         self.store.clear()
         self.recent, self.first, self.settled = [], 0, 0
@@ -133,21 +147,21 @@ class Captioner:
         self.primed = False
         self.result = None
 
-    def finish(self):
+    def finish(self) -> None:
         """NowCaption is quitting: the words still being spoken and the newest lines become
         final, punctuated as they were last shown, so the session's history keeps them."""
         self.commit_partial()
         self.caption_text()
         self._settle(0)
 
-    def commit_partial(self):
+    def commit_partial(self) -> None:
         """Keep the last known visible words, even if the old native stream has failed."""
         raw = self.partial.strip()
         if raw:
             self.add_line(raw)
         self.partial, self.partial_since = '', None
 
-    def continue_from(self, old):
+    def continue_from(self, old: Captioner) -> None:
         """Carry a replaced captioner's session over: its lines and frozen punctuation."""
         old.commit_partial()
         self.store, self.punct, self.raw = old.store, old.punct, old.raw
@@ -157,11 +171,11 @@ class Captioner:
         self.live_input, self.live_exact = old.live_input, old.live_exact
 
     @property
-    def count(self):
+    def count(self) -> int:
         """Finished lines since start or the last clear."""
         return self.first + len(self.recent)
 
-    def add_line(self, raw):
+    def add_line(self, raw: str) -> None:
         """A finished line, timestamped when it started rather than when it ended."""
         if self.raw is not None:
             self.raw.append(raw)
@@ -226,7 +240,7 @@ class Captioner:
             if self.on_update:
                 self.on_update(self.caption_text(growing=not committed))
 
-    def caption_text(self, growing=False):
+    def caption_text(self, growing: bool = False) -> str:
         """The last few lines and the words still coming, punctuated together as one passage,
         so that phrases split at pauses still read as sentences. Only the newest LIVE_LINES are
         re-punctuated; older lines keep the punctuation they were last shown with, otherwise a
@@ -253,7 +267,7 @@ class Captioner:
         shown = [s for s in self.shown[max(0, oldest - (self.settled - len(self.shown))):] if s]
         return ' '.join(shown + out)
 
-    def punctuated(self, context, words):
+    def punctuated(self, context: Iterable[str], words: Iterable[str]) -> list[str]:
         """The words punctuated as they read after the context words."""
         context, words = list(context), list(words)
         out = self.format(' '.join(context + words)).split() if words else []
@@ -261,7 +275,7 @@ class Captioner:
             return out[len(context):]
         return self.format(' '.join(words)).split()
 
-    def grown(self, key):
+    def grown(self, key: tuple[tuple[str, ...], tuple[str, ...]]) -> list[str] | None:
         """The passage as last shown, with its last word grown into key's last word and cased
         and punctuated like it ("Annie." becomes "Annie's."), or None if anything else changed."""
         old, live = self.live_input, self.live
@@ -281,7 +295,7 @@ class Captioner:
         out = live[:-1] + [word + shown[len(core):]]
         return self.fixes.spelled(out) if self.fixes else out  # it may have grown into a listed word
 
-    def settle(self, line):
+    def settle(self, line: tuple[float, None, str]) -> str:
         """The words of a line leaving the live passage, punctuated as they were last shown.
         A line that was never shown (nothing displays captions) is punctuated on its own."""
         n = len(line[2].split())
@@ -291,7 +305,7 @@ class Captioner:
         self.live = []
         return self.format(line[2])
 
-    def transcript(self):
+    def transcript(self) -> str:
         """Every finished line since start or the last clear, plus the words still being spoken."""
         self.caption_text()  # also formats the live lines when there is no on-screen consumer
         out = self.store.lines()
@@ -307,7 +321,7 @@ class Captioner:
             offset = end
         return '\n'.join(out)
 
-    def raw_text(self):
+    def raw_text(self) -> str:
         """Complete recognised text for optional benchmark tracing, without timestamps.
 
         Reading this does not run punctuation again. The normal caption update has

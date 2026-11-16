@@ -1,10 +1,12 @@
 """Giving memory the C allocator has freed back to the system, once a minute while captioning.
 Depends on nothing else in NowCaption.
 """
+from __future__ import annotations
+
 import ctypes
 
 
-def release_free_memory():
+def release_free_memory() -> bool:
     """Give memory the C allocator has freed back to the system (glibc's malloc_trim).
 
     After a long session glibc holds about 45 MB of freed memory that the models and

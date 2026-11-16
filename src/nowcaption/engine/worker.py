@@ -2,18 +2,27 @@
 audio and commands; it answers through on_event, on its own thread (the app hands events on to
 GTK). Depends on captioner.py, models.py and words.py.
 """
+from __future__ import annotations
+
 import logging
 import threading
 from collections import deque
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from ..words import WordFixes
 from .captioner import RATE, Captioner
 from .models import load_models
 
+if TYPE_CHECKING:  # for annotations only
+    from pathlib import Path
+
+    import numpy as np
+
 LOG = logging.getLogger(__name__)
 
 
-def duration(pcm):
+def duration(pcm: bytes | bytearray | memoryview | np.ndarray) -> float:
     """Seconds of 16 kHz mono audio, given PCM16 bytes or an array of samples."""
     samples = len(pcm) // 2 if isinstance(pcm, (bytes, bytearray, memoryview)) else len(pcm)
     return samples / RATE
@@ -40,7 +49,10 @@ class RecognitionWorker(threading.Thread):
 
     MAX_BACKLOG = 50  # at most 2 s of pending 40 ms capture blocks, excluding one in-flight call
 
-    def __init__(self, on_event, load=None, on_trace=None):
+    def __init__(self, on_event: Callable[[str, object], None], load: Callable[[], tuple] | None = None,
+                 on_trace: Callable[[str], None] | None = None) -> None:
+        """load() returns (recognizer, punctuation or None); by default models.load_models.
+        on_trace(text), for benchmarks only, receives the complete raw text after each caption."""
         super().__init__(name='nowcaption-recognition', daemon=True)
         self.on_event = on_event
         self.on_trace = on_trace  # optional complete-text trace, used only by benchmarks
@@ -59,7 +71,8 @@ class RecognitionWorker(threading.Thread):
 
     # --- called from any thread -------------------------------------------------------------
 
-    def feed(self, gen, pcm):
+    def feed(self, gen: int, pcm: bytes | bytearray | memoryview | np.ndarray) -> None:
+        """Queue a block of audio from capture generation gen; older generations are ignored."""
         dropped = 0
         with self.lock:
             if self.stopping or gen != self.source_gen:
@@ -89,7 +102,7 @@ class RecognitionWorker(threading.Thread):
                 self.inbox.append((kind, value))
                 self.lock.notify()
 
-    def set_source(self, gen):
+    def set_source(self, gen: int) -> None:
         """A new capture with this generation is starting; finish the old words first."""
         with self.lock:
             if self.stopping:
@@ -99,7 +112,9 @@ class RecognitionWorker(threading.Thread):
             self.inbox.append(('source', gen))
             self.lock.notify()
 
-    def clear(self, ui_gen):
+    def clear(self, ui_gen: int) -> None:
+        """Clear the captions and the session's lines (queued audio too); captions sent after this
+        carry ui_gen."""
         with self.lock:
             if self.stopping:
                 return
@@ -107,26 +122,30 @@ class RecognitionWorker(threading.Thread):
             self.inbox.append(('clear', ui_gen))
             self.lock.notify()
 
-    def snapshot(self, fn, on_error=None):
+    def snapshot(self, fn: Callable[[str], None], on_error: Callable[[str], None] | None = None) -> None:
+        """Ask for the session's transcript. The answer is the 'snapshot' event, or 'snapshot-error'
+        if it could not be prepared. Raises RuntimeError if the worker is not running."""
         with self.lock:
             if self.stopping or not self.is_alive():
                 raise RuntimeError('The recognition worker is not running')
             self.inbox.append(('snapshot', (fn, on_error)))
             self.lock.notify()
 
-    def set_history(self, path):
+    def set_history(self, path: str | Path | None) -> None:
         """Keep finished lines in this file as well (the session's history), or stop if None."""
         self._put('history', path)
 
-    def set_words(self, fixes):
+    def set_words(self, fixes: WordFixes) -> None:
         """Use this word list (a WordFixes) from now on."""
         self._put('words', fixes)
 
-    def restart(self, recover_only=False, source_gen=None):
+    def restart(self, recover_only: bool = False, source_gen: int | None = None) -> None:
         """Manual restart, or a guarded automatic retry for a failed source generation."""
         self._put('recover' if recover_only else 'restart', source_gen)
 
-    def stop(self):
+    def stop(self) -> None:
+        """End the thread without waiting: queued audio and commands are dropped, and the words
+        still being spoken are kept in the session's history before it exits."""
         with self.lock:
             self.stopping = True
             self.inbox.clear()
@@ -135,7 +154,8 @@ class RecognitionWorker(threading.Thread):
 
     # --- the worker thread ------------------------------------------------------------------
 
-    def run(self):
+    def run(self) -> None:
+        """The thread: load the models, then handle commands and audio in order until stop()."""
         loaded = self._load()
         while True:
             item = self._next()

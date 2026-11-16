@@ -3,8 +3,11 @@
 The only engine module that uses GStreamer, and it imports gi only when a Capture is made, so
 the engine imports without it. Depends on nothing else in NowCaption.
 """
+from __future__ import annotations
+
 import logging
 import threading
+from collections.abc import Callable
 
 LOG = logging.getLogger(__name__)
 
@@ -26,7 +29,9 @@ class Capture:
     on_audio(gen, pcm), on_started(gen), on_ended(gen, reason). Requested stops are quiet.
     """
 
-    def __init__(self, on_audio, on_started=None, on_ended=None, gst=None):
+    def __init__(self, on_audio: Callable[[int, bytes], None], on_started: Callable[[int], None] | None = None,
+                 on_ended: Callable[[int, str], None] | None = None, gst=None) -> None:
+        """gst: the Gst module (tests pass a fake). By default it is imported here, not with the module."""
         self.on_audio, self.on_started, self.on_ended = on_audio, on_started, on_ended
         if gst is None:
             import gi
@@ -41,7 +46,9 @@ class Capture:
         self._desired = self._stop = self._thread = None
         self._stranded = None  # retain a pipeline whose shutdown failed; retry before replacing it
 
-    def start(self, device, gen):
+    def start(self, device: str, gen: int) -> None:
+        """Capture from this PulseAudio device (DESKTOP, MICROPHONE or a source name) as generation
+        gen, in place of any capture running now."""
         with self._lock:
             if self._stop:
                 self._stop.set()
@@ -50,13 +57,14 @@ class Capture:
                 self._thread = threading.Thread(target=self._run, name='nowcaption-capture', daemon=True)
                 self._thread.start()
 
-    def stop(self):
+    def stop(self) -> None:
+        """Stop capturing, without waiting (see wait_stopped)."""
         with self._lock:
             self._desired = None
             if self._stop:
                 self._stop.set()
 
-    def wait_stopped(self, timeout=2):
+    def wait_stopped(self, timeout: float = 2) -> bool:
         """At exit and in CLI tests; window actions never wait for native capture shutdown."""
         with self._lock:
             thread = self._thread

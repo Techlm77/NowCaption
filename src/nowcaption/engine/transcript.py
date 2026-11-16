@@ -1,20 +1,24 @@
 """The session's finished lines (TranscriptStore): an unnamed temporary file that Copy and Save
 read, and the session's history file while history is on. Depends on nothing else in NowCaption.
 """
+from __future__ import annotations
+
 import logging
 import os
 import tempfile
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 LOG = logging.getLogger(__name__)
 
 
-def stamp(ts):
+def stamp(ts: float) -> str:
+    """The '[HH:MM:SS] ' in front of a transcript line, in local time."""
     return time.strftime('[%H:%M:%S] ', time.localtime(ts))
 
 
-def cache_dir():
+def cache_dir() -> Path:
     """$XDG_CACHE_HOME/nowcaption (in the Flatpak, ~/.var/app/<app id>/cache/nowcaption)."""
     base = os.environ.get('XDG_CACHE_HOME') or os.path.join(os.path.expanduser('~'), '.cache')
     return Path(base) / 'nowcaption'
@@ -33,7 +37,8 @@ class TranscriptStore:
     be written, on_warning(message) says so and the next line tries the file again.
     """
 
-    def __init__(self, folder=None, on_warning=None):
+    def __init__(self, folder: str | Path | None = None, on_warning: Callable[[str], None] | None = None) -> None:
+        """folder: where the unnamed file is made (by default the cache folder, see cache_dir)."""
         self.count = self.size = 0
         self.file, self.memory = None, None
         self.on_warning = on_warning
@@ -49,7 +54,8 @@ class TranscriptStore:
             LOG.warning('Keeping the transcript in memory: %s', e)
             self.memory = []
 
-    def append(self, ts, text):
+    def append(self, ts: float, text: str) -> None:
+        """A finished line that started at ts (seconds since the epoch)."""
         line = stamp(ts) + text
         if self.file is not None:
             data = (line + '\n').encode()
@@ -67,18 +73,20 @@ class TranscriptStore:
         if self.history is not None:
             self._write_history((line + '\n').encode())
 
-    def set_history(self, path):
+    def set_history(self, path: str | Path | None) -> None:
         """Also keep finished lines in this file from now on, or stop when path is None."""
         self._close_history()
         self.history = Path(path) if path else None
         self.history_failed = False  # turned on again: say so if it still cannot be written
 
-    def lines(self):
+    def lines(self) -> list[str]:
+        """Every line kept so far, oldest first, each with its time in front."""
         if self.file is None:
             return list(self.memory)
         return self._read().splitlines()
 
-    def clear(self):
+    def clear(self) -> None:
+        """Forget every line, and empty the history file this session wrote to (Clear)."""
         self.count = self.size = 0
         if self.file is not None:
             try:

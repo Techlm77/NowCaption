@@ -4,10 +4,13 @@ Kept apart from the speech engine: it only changes text. engine.Captioner applie
 model's words before punctuation (WordFixes.heard) and to the punctuated words (WordFixes.spelled);
 the More options window edits the saved list (load_words, save_words).
 """
+from __future__ import annotations
+
 import json
 import logging
 import os
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 LOG = logging.getLogger(__name__)
@@ -26,7 +29,7 @@ class WordFixes:
     shows as "Nvidia's.".
     """
 
-    def __init__(self, fixes=()):
+    def __init__(self, fixes: Iterable[tuple[str, str]] = ()) -> None:
         self.fixes = []
         swaps, spell = [], {}
         for heard, write in fixes:
@@ -44,18 +47,18 @@ class WordFixes:
         self.spell = sorted(spell.items(), key=lambda s: -len(s[0]))  # longest phrase first
         self.longest = max((len(k) for k in spell), default=0)
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return bool(self.fixes)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, WordFixes) and self.fixes == other.fixes
 
     @staticmethod
-    def phrase(text):
+    def phrase(text: str) -> re.Pattern[str]:
         """A pattern for these words as whole words, with any spaces between them."""
         return re.compile(r"(?<![\w'])" + r'\s+'.join(map(re.escape, text.split())) + r"(?![\w'])")
 
-    def heard(self, raw):
+    def heard(self, raw: str) -> str:
         """The model's raw words with each misheard phrase replaced (still lower case). A phrase
         that is part of the right words already ("studio" in "visual studio" for a fix that writes
         "Visual Studio") is left alone."""
@@ -67,7 +70,7 @@ class WordFixes:
                                 else write, raw)  # noqa: B023
         return raw
 
-    def spelled(self, words):
+    def spelled(self, words: list[str]) -> list[str]:
         """Punctuated words (a list) with the user's spelling; the same number of words."""
         if not self.spell:
             return words
@@ -88,7 +91,7 @@ class WordFixes:
         return out
 
     @staticmethod
-    def core(word):
+    def core(word: str) -> tuple[str, str, str]:
         """(marks before, the word, marks and 's after) of a punctuated word."""
         start, end = 0, len(word)
         while start < end and word[start] in EDGE_MARKS:
@@ -102,13 +105,13 @@ class WordFixes:
         return word[:start], core, word[end:]
 
 
-def words_file():
+def words_file() -> Path:
     """The word list's file: $XDG_CONFIG_HOME/nowcaption/words.json (next to settings.ini)."""
     base = os.environ.get('XDG_CONFIG_HOME') or os.path.join(os.path.expanduser('~'), '.config')
     return Path(base) / 'nowcaption' / 'words.json'
 
 
-def load_words(path=None):
+def load_words(path: str | Path | None = None) -> list[tuple[str, str]]:
     """The saved word list as [(heard, write)]; empty if there is none or it cannot be read."""
     path = Path(path or words_file())
     try:
@@ -122,7 +125,7 @@ def load_words(path=None):
         return []
 
 
-def save_words(fixes, path=None):
+def save_words(fixes: Iterable[tuple[str, str]], path: str | Path | None = None) -> None:
     """Save the word list, replacing the file in one step so it is never half written."""
     path = Path(path or words_file())
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -3,8 +3,11 @@
 sherpa-onnx is imported only when a model loads, so tests and tools can import the engine
 without it. Depends on nothing else in NowCaption.
 """
+from __future__ import annotations
+
 import logging
 import os
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 LOG = logging.getLogger(__name__)
@@ -15,12 +18,12 @@ PUNCT_DIR = 'sherpa-onnx-online-punct-en-2024-08-06'
 PUNCT_FILES = ('model.int8.onnx', 'bpe.vocab')
 
 
-def complete(folder, names):
+def complete(folder: Path, names: Iterable[str]) -> bool:
     """All named files exist in folder and are not empty (a cut-off download leaves empty or missing files)."""
     return all((folder / n).is_file() and (folder / n).stat().st_size > 0 for n in names)
 
 
-def models_dir():
+def models_dir() -> Path:
     """$NOWCAPTION_MODELS, the Flatpak/system install, or ./models in a checkout."""
     explicit = os.environ.get('NOWCAPTION_MODELS')
     if explicit:
@@ -35,7 +38,9 @@ def models_dir():
                             'or set NOWCAPTION_MODELS.')
 
 
-def load_recognizer(threads=1):
+def load_recognizer(threads: int = 1):
+    """NowCaption's streaming transducer as a sherpa-onnx OnlineRecognizer, decoding greedily on
+    this many threads. Raises FileNotFoundError if the model is missing (see models_dir)."""
     import sherpa_onnx as so  # imported here so that tests and tools can import this module without it
 
     class Recognizer(so.OnlineRecognizer):
@@ -63,7 +68,7 @@ def load_punctuation():
         cnn_bilstm=str(p / 'model.int8.onnx'), bpe_vocab=str(p / 'bpe.vocab'), num_threads=1)))
 
 
-def load_models(on_warning=None):
+def load_models(on_warning: Callable[[str], None] | None = None):
     """The recognizer (required) and the punctuation model (optional: without it, captions are
     sentence-cased but not punctuated, and on_warning says why)."""
     rec = load_recognizer()
