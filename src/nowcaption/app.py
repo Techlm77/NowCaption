@@ -94,6 +94,11 @@ class NowCaption(Adw.Application):
             self.shortcuts.stop()
         self.listening.stop()
 
+    def quit(self):
+        """Every quit fades the caption box out first (see Quitting.quit), including PyGObject's
+        Ctrl+C fallback, which calls app.quit()."""
+        return self.quitting.quit()
+
     def threads_finished(self, timeout):
         """After the main loop: whether the worker and the capture left native code in time (see
         Listening.threads_finished)."""
