@@ -19,7 +19,7 @@ from test_window import shared_app
 
 nc = test_window.nc
 if nc:  # GTK and a display are there
-    from nowcaption import transcript_window
+    from nowcaption.ui import transcript_window
 
 
 def settle():

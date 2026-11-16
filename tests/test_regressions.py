@@ -40,7 +40,7 @@ def load_app_methods():
                'GLib': NS(timeout_add_seconds=lambda *a: 1, source_remove=lambda *a: None),
                'LayerShell': NS(set_monitor=lambda *a: None),
                'ROWS': 2, 'PAD_Y': 12, 'STATUS_MS': 150}
-    for name, module in (('NowCaption', 'app.py'), ('CaptionWindow', 'caption_window.py')):
+    for name, module in (('NowCaption', 'app.py'), ('CaptionWindow', 'ui/caption_window.py')):
         path = ROOT / 'src/nowcaption' / module
         [node] = [n for n in ast.parse(path.read_text()).body if isinstance(n, ast.ClassDef) and n.name == name]
         node.bases, node.keywords, node.decorator_list = [], [], []

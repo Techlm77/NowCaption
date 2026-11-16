@@ -29,7 +29,8 @@ try:
     gi.require_version('Gtk', '4.0')
     gi.require_version('Adw', '1')
     from nowcaption import app as nc
-    from nowcaption import caption_window, options_window, portal
+    from nowcaption import portal
+    from nowcaption.ui import caption_window, options_window
 except (ImportError, ValueError) as e:
     if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
         raise

@@ -15,7 +15,8 @@ if nc:  # GTK and a display are there
     import cairo
     import numpy as np
     from gi.repository import Gdk, GObject, Graphene, Gsk
-    from nowcaption import caption_text, caption_window, style
+    from nowcaption import style
+    from nowcaption.ui import caption_text, caption_window
 
 
 @unittest.skipIf(nc is None, getattr(test_window, 'SKIP', ''))

@@ -16,7 +16,7 @@ gi.require_version('Gsk', '4.0')
 gi.require_version('Graphene', '1.0')
 from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
-from .style import (BREATH_MS, BREATH_STEP_MS, GLIDE_MS, MOSAIC, PIXEL_MS, PIXEL_WORDS, ROWS,  # noqa: E402
+from ..style import (BREATH_MS, BREATH_STEP_MS, GLIDE_MS, MOSAIC, PIXEL_MS, PIXEL_WORDS, ROWS,  # noqa: E402
                     STATUS_MS, WORD_MS)
 
 LOG = logging.getLogger('nowcaption')

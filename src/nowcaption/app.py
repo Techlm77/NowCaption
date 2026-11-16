@@ -11,12 +11,10 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from . import __version__, audio, engine, portal, words  # noqa: E402
-from .caption_window import CaptionWindow  # noqa: E402
-from .options_window import OptionsWindow  # noqa: E402
 from .plasma import FULLSCREEN_PATH, FULLSCREEN_XML, FullscreenWatch, PanelFloat  # noqa: E402
 from .settings import APP_ID, Settings  # noqa: E402
 from .style import COLOURS, FADE_OUT_MS, POSITIONS, SIZES, STEPPERS, WORD_EFFECTS, WORD_SPEEDS  # noqa: E402
-from .transcript_window import TranscriptWindow, session_heading  # noqa: E402
+from .ui import CaptionWindow, OptionsWindow, TranscriptWindow, session_heading  # noqa: E402
 
 LOG = logging.getLogger('nowcaption')
 

@@ -14,7 +14,8 @@ import test_window
 from test_window import FakeLayerShell, nc, shared_app
 
 if nc:  # GTK and a display are there
-    from nowcaption import caption_text, caption_window, settings, style
+    from nowcaption import settings, style
+    from nowcaption.ui import caption_text, caption_window
 
 SKIP = getattr(test_window, 'SKIP', '')
 

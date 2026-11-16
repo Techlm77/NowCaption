@@ -20,7 +20,7 @@ except (ValueError, ImportError):
 
 from .caption_text import CaptionText, StyledLabel  # noqa: E402
 from .options_window import Preview  # noqa: E402
-from .style import (ALONG, BOTTOM_GAP, CHANGE_MS, COLOURS, CURSORS, DOCK_MS, EDGE, FADE_IN_MS,  # noqa: E402
+from ..style import (ALONG, BOTTOM_GAP, CHANGE_MS, COLOURS, CURSORS, DOCK_MS, EDGE, FADE_IN_MS,  # noqa: E402
                     FADE_OUT_MS, INNER, MENU_INDENT, MIN_WIDTH, PAD_X, PAD_Y, POSITIONS, ROWS, STATUS_MS,
                     STEPPERS, UNDOCK_MS, css_font)
 
