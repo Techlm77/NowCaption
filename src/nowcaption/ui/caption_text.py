@@ -24,7 +24,7 @@ from ..style import BREATH_MS, BREATH_STEP_MS, GLIDE_MS, PIXEL_MS, PIXEL_WORDS, 
 from .pieces import Pieces
 from .rows import Rows, bare
 
-LOG = logging.getLogger('nowcaption')
+LOG = logging.getLogger(__name__)
 
 
 def ease_out(p: float) -> float:

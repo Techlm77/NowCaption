@@ -32,7 +32,7 @@ from .desktop import (
 from .settings import APP_ID, Settings
 from .ui import CaptionWindow, OptionsWindow, TranscriptWindow
 
-LOG = logging.getLogger('nowcaption')
+LOG = logging.getLogger(__name__)
 
 
 class NowCaption(Adw.Application):

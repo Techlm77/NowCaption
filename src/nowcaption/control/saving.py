@@ -15,7 +15,7 @@ from gi.repository import Gio, GLib, Gtk
 if TYPE_CHECKING:  # for annotations only
     from ..app import NowCaption
 
-LOG = logging.getLogger('nowcaption')
+LOG = logging.getLogger(__name__)
 
 
 class Saving:
