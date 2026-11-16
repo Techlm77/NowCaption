@@ -1,12 +1,14 @@
 """Launcher. Loads gtk4-layer-shell before GTK when it is available, so nothing here imports GTK, or
 app.py, before preload_layer_shell() has run."""
+from __future__ import annotations
+
 import ctypes.util
 import os
 import sys
 from pathlib import Path
 
 
-def preload_layer_shell():
+def preload_layer_shell() -> None:
     """gtk4-layer-shell must load before libwayland-client, so re-exec with LD_PRELOAD once."""
     if os.environ.pop('NOWCAPTION_REEXEC', None):  # restarted below, or by the AppImage
         # Loaded now: programs started from NowCaption (a browser opened from About) get the
@@ -31,7 +33,8 @@ def preload_layer_shell():
         os.execve(sys.executable, [sys.executable, '-m', 'nowcaption'] + sys.argv[1:], env)
 
 
-def main():
+def main() -> int:
+    """Start NowCaption (see preload_layer_shell); returns its exit status."""
     preload_layer_shell()
     from .app import main as run
     return run()

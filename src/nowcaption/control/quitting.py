@@ -1,29 +1,40 @@
 """Quitting: Quit waits for the transcript saves already accepted (each holds the app), then fades the
 caption box out and ends the app; SIGTERM and SIGHUP quit the same way. Uses the app's window and
-its hold(), release() and Adw.Application.quit; never imports the windows (ui) or app.py."""
+its hold(), release() and Adw.Application.quit; never imports the windows (ui), and app.py only for
+annotations."""
+from __future__ import annotations
+
 import signal
+from typing import TYPE_CHECKING
 
 import gi
-gi.require_version('Adw', '1')
-from gi.repository import Adw, GLib  # noqa: E402
 
-from ..style import FADE_OUT_MS  # noqa: E402
+gi.require_version('Adw', '1')
+from gi.repository import Adw, GLib
+
+from ..style import FADE_OUT_MS
+
+if TYPE_CHECKING:  # for annotations only
+    from ..app import NowCaption
 
 
 class Quitting:
     """Quit, the close button and signals all come here; so do the saves Quit must wait for."""
 
-    def __init__(self, app):
+    def __init__(self, app: NowCaption) -> None:
         self.app = app
         self.pending_saves = 0
         self.quit_requested = False
         self.fading_out = False
 
-    def begin_save(self):
+    def begin_save(self) -> None:
+        """A save was accepted: the app stays (held) until it finishes, and Quit waits for it."""
         self.pending_saves += 1
         self.app.hold()
 
-    def finish_save(self, success):
+    def finish_save(self, success: bool) -> None:
+        """A save finished. Once none is left, a Quit that waited for them goes ahead, unless this
+        one failed."""
         self.pending_saves -= 1
         if not success:
             # A failed save needs a visible error and an opportunity to retry.
@@ -33,7 +44,7 @@ class Quitting:
         if should_quit:
             self.quit()
 
-    def request_quit(self):
+    def request_quit(self) -> None:
         """Keep accepted saves alive until their snapshot and async write finish."""
         if self.pending_saves:
             self.quit_requested = True
@@ -42,7 +53,7 @@ class Quitting:
             return
         self.quit()
 
-    def quit(self):
+    def quit(self) -> bool:
         """Fade the caption box out, then quit. A second request, or a fade that stalls
         because the screen stopped drawing, quits at once."""
         if self.app.window and not self.fading_out:
@@ -54,11 +65,12 @@ class Quitting:
         return False
 
     def on_window_close(self, window):
+        """The caption box's close button: quit as Quit does (the window is not closed here)."""
         self.request_quit()
         return True
 
 
-def quit_on_signals(app):
+def quit_on_signals(app: NowCaption) -> list[int]:
     """Quit the way Quit does on SIGTERM and SIGHUP (kill, logging out, shutting down), so the
     newest lines still reach the history. A second signal quits without waiting for a save to
     finish. Returns the GLib sources."""

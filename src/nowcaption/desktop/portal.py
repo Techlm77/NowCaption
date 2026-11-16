@@ -3,9 +3,12 @@ calls that answer through a Request object's Response signal. Everything here is
 runs on the GTK thread; when a portal is missing (an older desktop, or none running) the callbacks
 say so and NowCaption works as before. Knows nothing of the app beyond its ID.
 """
+from __future__ import annotations
+
 import itertools
 import logging
 import os
+from collections.abc import Callable
 
 from gi.repository import Gio, GLib
 
@@ -19,11 +22,12 @@ CANCELLED = 1  # a Response code: the user dismissed the portal's dialog
 _tokens = itertools.count(1)
 
 
-def in_flatpak():
+def in_flatpak() -> bool:
+    """Whether NowCaption runs in the Flatpak's sandbox."""
     return os.path.exists('/.flatpak-info')
 
 
-def unpack(results):
+def unpack(results: GLib.Variant | dict | None) -> dict:
     """A Response's a{sv} as plain Python values."""
     return results.unpack() if isinstance(results, GLib.Variant) else dict(results or {})
 
@@ -31,11 +35,11 @@ def unpack(results):
 class Portal:
     """Calls to the portal that answer later through a Request object."""
 
-    def __init__(self, connection, app_id):
+    def __init__(self, connection: Gio.DBusConnection, app_id: str) -> None:
         self.bus, self.app_id = connection, app_id
         self.registered = in_flatpak()  # the sandbox tells the portal who we are
 
-    def register(self):
+    def register(self) -> None:
         """Outside a sandbox the portal learns the app id only if told first (xdg-desktop-portal
         1.19 and newer); older portals do not have this and guess from the process."""
         if self.registered:
@@ -47,7 +51,8 @@ class Portal:
         except GLib.Error as e:
             LOG.info('The portal has no app registry: %s', e.message)
 
-    def request(self, interface, method, make_args, on_response):
+    def request(self, interface: str, method: str, make_args: Callable[[dict[str, GLib.Variant]], GLib.Variant],
+                on_response: Callable[[int, dict], None]) -> None:
         """Call method with make_args(options), where options already holds a handle_token, and
         pass on_response(code, results) the Response: 0 done, 1 cancelled, 2 failed (also when the
         call itself fails, with results {'error': message})."""
@@ -89,7 +94,7 @@ class Portal:
         self.bus.call(BUS, PATH, interface, method, make_args(options), GLib.VariantType('(o)'),
                       Gio.DBusCallFlags.NONE, -1, None, called)
 
-    def version(self, interface, done):
+    def version(self, interface: str, done: Callable[[int], None]) -> None:
         """done(version), 0 when the portal does not have this interface."""
         def got(bus, result):
             try:
@@ -101,7 +106,7 @@ class Portal:
                       Gio.DBusCallFlags.NONE, 3000, None, got)
 
 
-def portal_for(app):
+def portal_for(app: Gio.Application | None) -> Portal | None:
     """A Portal on the app's session bus connection, or None without one (tests, no D-Bus)."""
     bus = app.get_dbus_connection() if app else None
     return Portal(bus, app.get_application_id()) if bus else None

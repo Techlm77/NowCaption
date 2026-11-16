@@ -1,6 +1,8 @@
 """The app's ID and its settings: what each one may be, its default, and the key file that keeps them.
 Imports GLib, whose key file is the settings file's format and whose config folder is the
 Flatpak's own, but never GTK, the windows or app.py."""
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 
@@ -25,7 +27,7 @@ CHOICES = {'source': ('desktop', 'mic'), 'colour': tuple(COLOURS), 'position': t
 class Settings:
     """Small key file in the user's config directory."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.path = Path(GLib.get_user_config_dir()) / 'nowcaption' / 'settings.ini'
         self.kf = GLib.KeyFile()
         try:
@@ -33,7 +35,7 @@ class Settings:
         except GLib.Error:
             pass
 
-    def get(self, key):
+    def get(self, key: str) -> bool | int | float | str:
         """The stored value, brought back into range if the file was edited by hand."""
         default = DEFAULTS[key]
         try:
@@ -56,7 +58,7 @@ class Settings:
             value = default
         return value
 
-    def set(self, key, value):
+    def set(self, key: str, value: bool | int | float | str) -> None:
         """Remember value; if the file cannot be written it still applies until the app quits."""
         {bool: self.kf.set_boolean, int: self.kf.set_integer,
          float: self.kf.set_double}.get(type(DEFAULTS[key]), self.kf.set_string)('main', key, value)
