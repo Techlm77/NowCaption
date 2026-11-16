@@ -111,7 +111,7 @@ class RestyleTests(unittest.TestCase):
         self.assertNotEqual(fresh, caption.lines, 'wrapped afresh, the rows would be the same anyway')
         rows, wrapper = list(caption.lines), caption.wrapper
         caption.glide, caption.appeared = 1.0, {len(self.words) - 1: nc.GLib.get_monotonic_time()}
-        self.app.opacity(+0.05)
+        self.app.appearance.opacity(+0.05)
         self.app.activate_action('colour', nc.GLib.Variant('s', 'yellow'))
         self.assertIs(caption.wrapper, wrapper)
         self.assertEqual(caption.lines, rows)
@@ -122,7 +122,7 @@ class RestyleTests(unittest.TestCase):
 
     def test_a_new_text_size_still_fits_the_box_again(self):
         wrapper = self.window.caption.wrapper
-        self.app.resize(+1)
+        self.app.appearance.resize(+1)
         self.assertIsNot(self.window.caption.wrapper, wrapper)
         self.assertEqual(self.window.values['text-size'].get_label(), '36 px')
 

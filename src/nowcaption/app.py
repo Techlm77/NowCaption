@@ -1,4 +1,7 @@
-"""NowCaption: on-device live captions for anything your computer plays, or your microphone."""
+"""NowCaption: on-device live captions for anything your computer plays, or your microphone.
+
+The Adw.Application: its lifecycle, its windows and the wiring between them, the desktop (desktop/)
+and the collaborators that do the work (control/). Nothing imports this module but the launcher."""
 import logging
 import os
 import sys
@@ -11,31 +14,26 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from . import __version__, engine, words  # noqa: E402
 from .caption_window import CaptionWindow  # noqa: E402
-from .control import History, Listening, Quitting, Saving, quit_on_signals  # noqa: E402
-from .options_window import OptionsWindow  # noqa: E402
+from .control import (Appearance, History, Listening, Quitting, Saving, actions, commands,  # noqa: E402
+                      quit_on_signals)
 from .desktop import (FULLSCREEN_PATH, FULLSCREEN_XML, Autostart, FullscreenWatch, GlobalShortcuts,  # noqa: E402
                       PanelFloat, in_flatpak, portal_for)
+from .options_window import OptionsWindow  # noqa: E402
 from .settings import APP_ID, Settings  # noqa: E402
-from .style import COLOURS, POSITIONS, SIZES, STEPPERS, WORD_EFFECTS, WORD_SPEEDS  # noqa: E402
 from .transcript_window import TranscriptWindow  # noqa: E402
 
 LOG = logging.getLogger('nowcaption')
 
 
 class NowCaption(Adw.Application):
-    """Owns the window, the capture and the recognition worker. All methods run on the GTK
-    thread; worker and capture callbacks are passed here with GLib.idle_add."""
-
-    # the desktop file's actions run `nowcaption --transcript` and so on: see on_command_line
-    LAUNCH_OPTIONS = (('transcript', 'Open the transcript'), ('options', 'Open More options'),
-                      ('toggle', 'Show or hide the captions'), ('pause', 'Pause or resume the captions'),
-                      ('quit', 'Quit NowCaption if it is running'))
-    RUNNING_ONLY = ('toggle', 'pause')  # for a NowCaption already running; starting one just starts it
+    """Owns the windows, the desktop integration and the collaborators in control/, and wires
+    them together: listening (the recognition worker and the capture), history and saving (the
+    transcript), appearance, quitting, and the actions and launch options that reach them. All
+    methods run on the GTK thread."""
 
     def __init__(self):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
-        for name, description in self.LAUNCH_OPTIONS:
-            self.add_main_option(name, 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, description, None)
+        commands.add_launch_options(self)
         self.settings = Settings()
         self.window = None
         self.closing = False
@@ -47,156 +45,82 @@ class NowCaption(Adw.Application):
         self.hidden = False  # the captions were hidden (toggle_captions); they keep captioning
         self.word_list = words.load_words()  # [(heard, write)], edited under More options
         self.shortcuts = self.autostart = None  # see portals(), once on the session bus
+        # the collaborators reach the window, the settings and each other through the app
         self.quitting = Quitting(self)
         self.history = History(self)
         self.listening = Listening(self)
         self.saving = Saving(self)
-        self.connect('command-line', self.on_command_line)
+        self.appearance = Appearance(self)
+        self.connect('command-line', commands.on_command_line)
         self.connect('activate', self.on_activate)
         self.connect('shutdown', self.on_shutdown)
-        self.add_actions()
+        self.accels = actions.add_actions(self)  # registered once we know the window can take keyboard focus
 
-    def build_menu(self, several_screens=False, layer=False):
-        """The caption box's menu, in sections: how captions look, the box's place, the
-        transcript, then More options (a window for the rest) and the app. CaptionWindow.update_menu
-        fills the 'custom' items with rows of buttons that keep the menu open."""
-        def section(label, *items):
-            m = Gio.Menu()
-            for item in items:
-                m.append_item(item)
-            return Gio.MenuItem.new_section(label, m)
+    # --- lifecycle --------------------------------------------------------------------------
 
-        def custom(name):
-            item = Gio.MenuItem.new(None, None)
-            item.set_attribute_value('custom', GLib.Variant('s', name))
-            return item
-
-        item = Gio.MenuItem.new
-        menu = Gio.Menu()
-        menu.append_item(section('Appearance', *(custom(name) for name in (*STEPPERS, 'text-colour'))))
-        place = [item('Reset position and size', 'app.reset')]
-        if layer:  # elsewhere the window manager places the window
-            place.insert(0, custom('position'))
-        if several_screens:
-            place.append(item('Move to next screen', 'app.next-screen'))
-        menu.append_item(section(None, *place))
-        span = engine.history_span(self.history_days())
-        menu.append_item(section('Transcript', item('Open transcript', 'app.transcript'),
-                                 item(f'Keep {span} of history' if span else 'Keep history', 'app.history'),
-                                 item('Clear this session', 'app.clear')))
-        menu.append_item(section(None, item('Pause captions', 'app.pause'), item('More options…', 'app.options'),
-                                 item('About NowCaption', 'app.about'), item('Quit', 'app.quit')))
-        return menu
-
-    def add_actions(self):
-        def act(name, fn, accels=()):
-            a = Gio.SimpleAction.new(name, None)
-            a.connect('activate', lambda *_: fn())
-            self.add_action(a)
-            if accels:
-                self.accels['app.' + name] = list(accels)
-        self.accels = {}  # registered once we know the window can take keyboard focus
-        source = Gio.SimpleAction.new_stateful('source', GLib.VariantType.new('s'),
-                                               GLib.Variant('s', self.settings.get('source')))
-        source.connect('activate', self.listening.on_source)
-        self.add_action(source)
-        colour = Gio.SimpleAction.new_stateful('colour', GLib.VariantType.new('s'),
-                                               GLib.Variant('s', self.settings.get('colour')))
-        colour.connect('activate', self.on_colour)
-        self.add_action(colour)
-        act('larger', lambda: self.resize(+1), ['<Control>plus', '<Control>equal'])
-        act('smaller', lambda: self.resize(-1), ['<Control>minus'])
-        act('lighter', lambda: self.opacity(-0.15))
-        act('darker', lambda: self.opacity(+0.15))
-        position = Gio.SimpleAction.new_stateful('position', GLib.VariantType.new('s'),
-                                                 GLib.Variant('s', self.settings.get('position')))
-        position.connect('activate', self.on_position)
-        self.add_action(position)
-        for name, key, handler in (('word-effect', 'word_effect', self.on_word_effect),
-                                   ('word-speed', 'word_speed', self.on_word_speed),
-                                   ('history-days', 'history_days', self.history.on_history_days),
-                                   ('font', 'font', self.on_font)):
-            action = Gio.SimpleAction.new_stateful(name, GLib.VariantType.new('s'),
-                                                   GLib.Variant('s', str(self.settings.get(key))))
-            action.connect('activate', handler)
-            self.add_action(action)
-        history = Gio.SimpleAction.new_stateful('history', None, GLib.Variant('b', self.settings.get('history')))
-        history.connect('activate', self.history.on_history)
-        self.add_action(history)
-        pause = Gio.SimpleAction.new_stateful('pause', None, GLib.Variant('b', False))
-        pause.connect('activate', lambda action, value: self.listening.set_paused(not self.listening.paused))
-        self.add_action(pause)
-        act('toggle', self.toggle_captions)
-        act('transcript', self.open_transcript, ['<Control>t'])
-        act('options', self.open_options, ['<Control>comma'])
-        act('restart-listening', self.listening.restart_listening)
-        act('reset', lambda: (self.window.reset_position(), self.window.reset_size()))
-        act('reset-position', lambda: self.window.reset_position())
-        act('reset-size', lambda: self.window.reset_size())
-        act('next-screen', lambda: self.window.next_monitor())
-        act('copy', self.saving.copy_transcript)
-        act('save', self.saving.save_transcript, ['<Control>s'])
-        act('clear', self.listening.clear_transcript)
-        act('about', self.about)
-        act('quit', self.quitting.request_quit, ['<Control>q'])
-
-    def on_position(self, action, value):
-        if value.get_string() not in POSITIONS:
-            return
-        action.set_state(value)
-        self.settings.set('position', value.get_string())
+    def on_activate(self, app):
         if self.window:
-            self.window.reposition()
+            if self.hidden:  # starting NowCaption again shows hidden captions
+                return self.toggle_captions()
+            return self.window.present()
+        self.window = CaptionWindow(self)
+        self.window.connect('close-request', self.quitting.on_window_close)
+        if not self.window.layer:  # an overlay never has keyboard focus, so shortcuts would never fire
+            for action, keys in self.accels.items():
+                self.set_accels_for_action(action, keys)
+        self.window.present()
+        self.window.show_status('Loading speech model…')
+        self.prune_history()
+        self.listening.start(self.history.history_path if self.settings.get('history') else None, self.word_list)
+        self.portals()
+        GLib.timeout_add_seconds(60, self.release_memory)
+        shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
+        if shot:
+            path, _, after = shot.partition(':')
+            GLib.timeout_add_seconds(int(after or 20), self.window.save_png, path)
 
-    def on_word_effect(self, action, value):
-        if value.get_string() in WORD_EFFECTS:
-            action.set_state(value)
-            self.settings.set('word_effect', value.get_string())
-            self.show_word_effect()
+    def release_memory(self):
+        """Runs once a minute: gives freed memory back to the system, and deletes sessions that
+        became too old while NowCaption kept running."""
+        if self.closing:
+            return False
+        self.prune_history()  # reads only file names and times: about 10 µs per kept session
+        engine.release_free_memory()
+        return True
 
-    def on_word_speed(self, action, value):
-        if value.get_string() in WORD_SPEEDS:
-            action.set_state(value)
-            self.settings.set('word_speed', value.get_string())
-            self.show_word_effect()
+    def on_shutdown(self, app):
+        self.closing = True
+        self.fullscreen_watch.stop(sync=True)
+        self.panel_float.stop()
+        if self.shortcuts:
+            self.shortcuts.stop()
+        self.listening.stop()
 
-    def word_effect(self):
-        """How new words arrive, and the factor of its speed, as CaptionText.set_effect takes them."""
-        return self.settings.get('word_effect'), WORD_SPEEDS[self.settings.get('word_speed')][1]
+    def threads_finished(self, timeout):
+        """After the main loop: whether the worker and the capture left native code in time (see
+        Listening.threads_finished)."""
+        return self.listening.threads_finished(timeout)
 
-    def show_word_effect(self):
-        if self.window:
-            self.window.caption.set_effect(*self.word_effect())
-
-    def open_options(self):
-        if self.options is None:
-            self.options = OptionsWindow(self)
-            self.options.connect('close-request', self.on_options_closed)
-        self.options.present()
-
-    def on_options_closed(self, window):
-        self.options = None
-        return False
-
-    def on_font(self, action, value):
-        action.set_state(value)
-        self.settings.set('font', ' '.join(value.get_string().split()))
-        if self.window:
-            self.window.restyle()
-
-    def set_words(self, fixes):
-        """Use and save a new word list ([(heard, write)]). Returns an error message, or ''."""
-        self.word_list = [(heard, write) for heard, write in fixes if write.strip()]
-        if self.listening.worker:
-            self.listening.worker.set_words(words.WordFixes(self.word_list))
+    def do_dbus_register(self, connection, object_path):
+        """Also take the KWin script's word on fullscreen apps (see FULLSCREEN_PATH)."""
+        Adw.Application.do_dbus_register(self, connection, object_path)
         try:
-            words.save_words(self.word_list)
-        except OSError as e:
-            LOG.warning('Could not save the word list: %s', e)
-            return f'Could not save the word list: {e.strerror or e}'
-        return ''
+            info = Gio.DBusNodeInfo.new_for_xml(FULLSCREEN_XML).interfaces[0]
+            connection.register_object(FULLSCREEN_PATH, info, self.on_fullscreen_call, None, None)
+        except GLib.Error as e:  # captions still work, just without floating over fullscreen apps
+            LOG.warning('Could not listen for fullscreen apps: %s', e)
+        return True
 
-    # --- show/hide --------------------------------------------------------------------------
+    def on_fullscreen_call(self, connection, sender, path, iface, method, params, invocation):
+        invocation.return_value(None)
+        if method == 'Changed':
+            self.on_fullscreen(params.unpack()[0])
+
+    def on_fullscreen(self, fullscreen):
+        if self.window:
+            self.window.set_covered(bool(fullscreen))
+
+    # --- windows ----------------------------------------------------------------------------
 
     def toggle_captions(self):
         """Hide the captions, or show them again (they keep captioning while hidden, so the
@@ -212,6 +136,44 @@ class NowCaption(Adw.Application):
         else:
             window.present()
             window.touch_panels()
+
+    def open_options(self):
+        if self.options is None:
+            self.options = OptionsWindow(self)
+            self.options.connect('close-request', self.on_options_closed)
+        self.options.present()
+
+    def on_options_closed(self, window):
+        self.options = None
+        return False
+
+    def open_transcript(self):
+        if self.transcript is None:
+            self.transcript = TranscriptWindow(self)
+            self.transcript.connect('close-request', self.on_transcript_closed)
+        self.transcript.present()
+
+    def on_transcript_closed(self, window):
+        self.transcript = None  # the window lets go of the rest itself (TranscriptWindow.on_close)
+        return False
+
+    def about(self):
+        about = Adw.AboutDialog(
+            application_name='NowCaption', application_icon=APP_ID, version=__version__,
+            developer_name='Techlm77', license_type=Gtk.License.MIT_X11,
+            website='https://github.com/Techlm77/NowCaption',
+            issue_url='https://github.com/Techlm77/NowCaption/issues',
+            comments='Live captions for anything your computer plays, or your microphone. '
+                     'Speech is recognised on this computer; audio never leaves it.')
+        about.add_legal_section('Speech model', '© NVIDIA (stt_en_fastconformer_hybrid_large_streaming_multi); '
+                                'fine-tuned by NowCaption',
+                                Gtk.License.CUSTOM, 'Creative Commons Attribution 4.0 International (CC-BY-4.0). '
+                                'Fine-tuned by NowCaption on CC-BY and CC0 English speech with text from NVIDIA '
+                                'Parakeet TDT 0.6B v2 (CC-BY-4.0), then exported to ONNX and quantized to int8. '
+                                'https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi')
+        about.add_legal_section('Punctuation model', 'Edge-Punct-Casing by frankyoujian', Gtk.License.APACHE_2_0, None)
+        about.add_legal_section('sherpa-onnx', '© k2-fsa', Gtk.License.APACHE_2_0, None)
+        about.present(None)  # its own window, not squeezed into the caption box
 
     # --- desktop portals --------------------------------------------------------------------
 
@@ -257,122 +219,18 @@ class NowCaption(Adw.Application):
             done(now, message)
         self.autostart.set(on, answered)
 
-    def open_transcript(self):
-        if self.transcript is None:
-            self.transcript = TranscriptWindow(self)
-            self.transcript.connect('close-request', self.on_transcript_closed)
-        self.transcript.present()
-
-    def on_transcript_closed(self, window):
-        self.transcript = None  # the window lets go of the rest itself (TranscriptWindow.on_close)
-        return False
-
-    def on_colour(self, action, value):
-        if value.get_string() not in COLOURS:
-            return
-        action.set_state(value)
-        self.settings.set('colour', value.get_string())
-        if self.window:
-            self.window.restyle()
-
-    def resize(self, step):
-        size = self.settings.get('size')
-        i = min(range(len(SIZES)), key=lambda k: abs(SIZES[k] - size))
-        self.settings.set('size', SIZES[max(0, min(len(SIZES) - 1, i + step))])
-        self.window.restyle()
-
-    def opacity(self, step):
-        self.settings.set('opacity', round(max(0.2, min(1.0, self.settings.get('opacity') + step)), 2))
-        self.window.restyle()
-
-    def do_dbus_register(self, connection, object_path):
-        """Also take the KWin script's word on fullscreen apps (see FULLSCREEN_PATH)."""
-        Adw.Application.do_dbus_register(self, connection, object_path)
-        try:
-            info = Gio.DBusNodeInfo.new_for_xml(FULLSCREEN_XML).interfaces[0]
-            connection.register_object(FULLSCREEN_PATH, info, self.on_fullscreen_call, None, None)
-        except GLib.Error as e:  # captions still work, just without floating over fullscreen apps
-            LOG.warning('Could not listen for fullscreen apps: %s', e)
-        return True
-
-    def on_fullscreen_call(self, connection, sender, path, iface, method, params, invocation):
-        invocation.return_value(None)
-        if method == 'Changed':
-            self.on_fullscreen(params.unpack()[0])
-
-    def on_fullscreen(self, fullscreen):
-        if self.window:
-            self.window.set_covered(bool(fullscreen))
-
-    def on_command_line(self, app, command_line):
-        """Each launch, this one or a later one that GLib hands to this running NowCaption:
-        start the captions, or show them, then open what a launcher action asked for. --quit
-        quits a running NowCaption and never starts one."""
-        options = command_line.get_options_dict()
-        chosen = [name for name, _ in self.LAUNCH_OPTIONS if options.contains(name)]
-        if 'quit' in chosen:
-            if self.window:
-                self.activate_action('quit', None)
-            return 0
-        if not self.window:  # starting NowCaption shows its captions and listens
-            chosen = [name for name in chosen if name not in self.RUNNING_ONLY]
-        if not (self.window and chosen):  # an open window is not raised first, so the one asked for gets focus
-            self.activate()
-        elif self.hidden and 'toggle' not in chosen:
-            self.toggle_captions()  # a window asked for from hidden captions brings them back too
-        for name in chosen:
-            self.activate_action(name, None)
-        return 0
-
-    def on_activate(self, app):
-        if self.window:
-            if self.hidden:  # starting NowCaption again shows hidden captions
-                return self.toggle_captions()
-            return self.window.present()
-        self.window = CaptionWindow(self)
-        self.window.connect('close-request', self.quitting.on_window_close)
-        if not self.window.layer:  # an overlay never has keyboard focus, so shortcuts would never fire
-            for action, keys in self.accels.items():
-                self.set_accels_for_action(action, keys)
-        self.window.present()
-        self.window.show_status('Loading speech model…')
-        self.prune_history()
-        self.listening.start(self.history.history_path if self.settings.get('history') else None, self.word_list)
-        self.portals()
-        GLib.timeout_add_seconds(60, self.release_memory)
-        shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
-        if shot:
-            path, _, after = shot.partition(':')
-            GLib.timeout_add_seconds(int(after or 20), self.window.save_png, path)
-
-    def release_memory(self):
-        """Runs once a minute: gives freed memory back to the system, and deletes sessions that
-        became too old while NowCaption kept running."""
-        if self.closing:
-            return False
-        self.prune_history()  # reads only file names and times: about 10 µs per kept session
-        engine.release_free_memory()
-        return True
-
-    def on_shutdown(self, app):
-        self.closing = True
-        self.fullscreen_watch.stop(sync=True)
-        self.panel_float.stop()
-        if self.shortcuts:
-            self.shortcuts.stop()
-        self.listening.stop()
+    # --- what the windows ask of the app ----------------------------------------------------
 
     @property
     def worker(self):
         """The recognition worker, once started (the transcript window asks it for snapshots)."""
         return self.listening.worker
 
-    def threads_finished(self, timeout):
-        """After the main loop: whether the worker and the capture left native code in time (see
-        Listening.threads_finished)."""
-        return self.listening.threads_finished(timeout)
+    def build_menu(self, several_screens=False, layer=False):
+        return actions.build_menu(self.history_days(), several_screens, layer)
 
-    # --- what the windows ask of the app ----------------------------------------------------
+    def word_effect(self):
+        return self.appearance.word_effect()
 
     def history_days(self):
         return self.history.history_days()
@@ -392,23 +250,17 @@ class NowCaption(Adw.Application):
     def save_transcript(self):
         self.saving.save_transcript()
 
-    def about(self):
-        about = Adw.AboutDialog(
-            application_name='NowCaption', application_icon=APP_ID, version=__version__,
-            developer_name='Techlm77', license_type=Gtk.License.MIT_X11,
-            website='https://github.com/Techlm77/NowCaption',
-            issue_url='https://github.com/Techlm77/NowCaption/issues',
-            comments='Live captions for anything your computer plays, or your microphone. '
-                     'Speech is recognised on this computer; audio never leaves it.')
-        about.add_legal_section('Speech model', '© NVIDIA (stt_en_fastconformer_hybrid_large_streaming_multi); '
-                                'fine-tuned by NowCaption',
-                                Gtk.License.CUSTOM, 'Creative Commons Attribution 4.0 International (CC-BY-4.0). '
-                                'Fine-tuned by NowCaption on CC-BY and CC0 English speech with text from NVIDIA '
-                                'Parakeet TDT 0.6B v2 (CC-BY-4.0), then exported to ONNX and quantized to int8. '
-                                'https://huggingface.co/nvidia/stt_en_fastconformer_hybrid_large_streaming_multi')
-        about.add_legal_section('Punctuation model', 'Edge-Punct-Casing by frankyoujian', Gtk.License.APACHE_2_0, None)
-        about.add_legal_section('sherpa-onnx', '© k2-fsa', Gtk.License.APACHE_2_0, None)
-        about.present(None)  # its own window, not squeezed into the caption box
+    def set_words(self, fixes):
+        """Use and save a new word list ([(heard, write)]). Returns an error message, or ''."""
+        self.word_list = [(heard, write) for heard, write in fixes if write.strip()]
+        if self.listening.worker:
+            self.listening.worker.set_words(words.WordFixes(self.word_list))
+        try:
+            words.save_words(self.word_list)
+        except OSError as e:
+            LOG.warning('Could not save the word list: %s', e)
+            return f'Could not save the word list: {e.strerror or e}'
+        return ''
 
 
 def main():

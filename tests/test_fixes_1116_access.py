@@ -23,6 +23,7 @@ from test_window import FakeLayerShell, nc, shared_app
 
 if nc:  # GTK and a display are there
     from nowcaption import caption_window, settings
+    from nowcaption.control import commands
 
 ROOT = Path(__file__).resolve().parent.parent
 SKIP = getattr(test_window, 'SKIP', '')
@@ -215,7 +216,7 @@ class LaunchTests(unittest.TestCase):
         activate = patch.object(self.app, 'activate', lambda: done.append('activate'))
         action = patch.object(self.app, 'activate_action', lambda name, value: done.append(name))
         with activate, action:
-            self.assertEqual(self.app.on_command_line(self.app, NS(get_options_dict=lambda: options)), 0)
+            self.assertEqual(commands.on_command_line(self.app, NS(get_options_dict=lambda: options)), 0)
         return done
 
     def test_a_plain_launch_starts_or_shows_the_captions_as_before(self):
@@ -238,7 +239,7 @@ class LaunchTests(unittest.TestCase):
         desktop = nc.GLib.KeyFile()
         desktop.load_from_file(str(ROOT / 'data' / f'{settings.APP_ID}.desktop'), nc.GLib.KeyFileFlags.NONE)
         actions = desktop.get_string_list('Desktop Entry', 'Actions')
-        self.assertEqual(actions, [name for name, _ in nc.NowCaption.LAUNCH_OPTIONS])
+        self.assertEqual(actions, [name for name, _ in commands.LAUNCH_OPTIONS])
         names = {}
         for action in actions:
             group = f'Desktop Action {action}'

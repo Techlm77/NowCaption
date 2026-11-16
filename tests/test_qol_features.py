@@ -30,11 +30,12 @@ try:
     gi.require_version('Adw', '1')
     from nowcaption import app as nc
     from nowcaption import caption_window, options_window
+    from nowcaption.control import commands
     from nowcaption.desktop import autostart, portal
 except (ImportError, ValueError) as e:
     if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
         raise
-    nc = caption_window = options_window = autostart = portal = None
+    nc = caption_window = options_window = autostart = commands = portal = None
     SKIP = f'PyGObject with GTK 4 and libadwaita is not available: {e}'
 
 NVIDIA = [('in video', 'Nvidia'), ('and video', 'Nvidia')]
@@ -220,7 +221,7 @@ class AppTests(unittest.TestCase):
         self.app.window = None
         with patch.object(self.app, 'activate', lambda: done.append('activate')), \
                 patch.object(self.app, 'activate_action', lambda name, value: done.append(name)):
-            self.app.on_command_line(self.app, line)
+            commands.on_command_line(self.app, line)
         self.assertEqual(done, ['activate'])  # starting it shows the captions; it does not hide them
 
     def test_history_days_apply_with_apply_and_change_the_menu(self):

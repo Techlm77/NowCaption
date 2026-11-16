@@ -153,7 +153,7 @@ class WindowTests(unittest.TestCase):
         self.window.restyle()
         self.assertEqual(self.window.values['text-size'].get_label(), '30 px')
         self.assertEqual(self.window.values['background'].get_label(), '78%')
-        self.app.resize(+1)
+        self.app.appearance.resize(+1)
         self.assertEqual(self.window.values['text-size'].get_label(), '36 px')
 
     def test_two_row_caption_renders_and_font_size_can_change(self):
@@ -172,7 +172,7 @@ class WindowTests(unittest.TestCase):
     def new_size(self, step):
         """Change the text size, and wait until GTK has applied it to the labels."""
         before = self.fonts()
-        self.app.resize(step)
+        self.app.appearance.resize(step)
         end = time.monotonic() + 5
         while self.fonts() == before and time.monotonic() < end:
             nc.GLib.MainContext.default().iteration(False)
@@ -1044,7 +1044,7 @@ class DockTests(unittest.TestCase):
     def test_a_new_text_size_keeps_a_top_strip_at_its_rows(self):
         w = self.window
         self.position('top')
-        self.app.resize(+1)
+        self.app.appearance.resize(+1)
         w.on_fonts()  # as GTK would once it applies the new size
         self.assertEqual(w.rows, style.ROWS)
         self.assertEqual(w.caption_height(), style.ROWS * w.row_height + 2 * style.PAD_Y)
