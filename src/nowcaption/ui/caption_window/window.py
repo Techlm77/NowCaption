@@ -10,13 +10,13 @@ gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
 from gi.repository import Adw, Gdk, GLib, Gtk, Pango  # noqa: E402
 
-from ...style import (ALONG, BOTTOM_GAP, CHANGE_MS, COLOURS, CURSORS, DOCK_MS, EDGE, FADE_IN_MS,  # noqa: E402
-                      FADE_OUT_MS, INNER, MENU_INDENT, MIN_WIDTH, PAD_X, PAD_Y, POSITIONS, ROWS, STATUS_MS,
-                      STEPPERS, UNDOCK_MS, css_font)
+from ...style import (ALONG, BOTTOM_GAP, COLOURS, CURSORS, DOCK_MS, EDGE, FADE_IN_MS, FADE_OUT_MS,  # noqa: E402
+                      INNER, MENU_INDENT, MIN_WIDTH, PAD_X, PAD_Y, POSITIONS, ROWS, STATUS_MS, STEPPERS,
+                      UNDOCK_MS)
 from ..caption_text import CaptionText, StyledLabel  # noqa: E402
-from ..preview import Preview  # noqa: E402
 from . import layer_shell  # noqa: E402
 from .stage import Drawer, Stage  # noqa: E402
+from .stylesheet import caption_css  # noqa: E402
 
 
 class CaptionWindow(Gtk.ApplicationWindow):
@@ -521,42 +521,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
         px, alpha = self.settings.get('size'), self.settings.get('opacity')
         colour = COLOURS[self.settings.get('colour')][1]
         font = self.settings.get('font')
-        family = f'font-family: {css_font(font)};' if font.strip() else ''
         before, self.look = getattr(self, 'look', None), (px, font, alpha, colour)
         recoloured = before is not None and before[:2] == self.look[:2] and before != self.look
-        swatches = ''.join(f'window.nowcaption .colour-{name} {{ background: {rgb}; }}\n'
-                           for name, (_, rgb) in COLOURS.items())
-        self.css.load_from_string(f"""
-            window.nowcaption {{ background: transparent; }}
-            window.nowcaption .caption-box {{ background: rgba(0, 0, 0, {alpha}); border-radius: 14px;
-                                             transition: background-color {CHANGE_MS}ms ease-out; }}
-            window.nowcaption .caption-text {{ color: {colour}; font-size: {px}px; font-weight: 500; {family}
-                                              transition: color {CHANGE_MS}ms ease-out; }}
-            .caption-preview {{ background: rgba(0, 0, 0, {alpha}); border-radius: 14px; }}
-            .caption-preview .caption-text {{ color: {colour}; font-size: {min(px, Preview.MAX_SIZE)}px;
-                                             font-weight: 500; {family} transition: color {CHANGE_MS}ms ease-out; }}
-            window.nowcaption .caption-status {{ color: #cccccc; font-size: {max(14, round(px * 0.55))}px;
-                                                padding: 0 {PAD_X}px {PAD_Y}px; }}
-            window.nowcaption.docked .caption-box {{ border-radius: 0; }}
-            window.nowcaption .caption-status.corner {{ background: rgba(0, 0, 0, 0.85); border-radius: 8px;
-                                                       padding: 2px 10px; margin: 6px; }}
-            window.nowcaption .screen {{ min-width: 22px; min-height: 15px; border-radius: 3px;
-                                        border: 1.5px solid alpha(currentColor, 0.7); }}
-            window.nowcaption .screen .strip {{ background: currentColor; border-radius: 1px; }}
-            window.nowcaption .screen .strip.across {{ min-height: 4px; }}
-            window.nowcaption .screen .strip.down {{ min-width: 5px; }}
-            window.nowcaption .screen .strip.floating {{ min-width: 11px; min-height: 4px; margin-bottom: 2px; }}
-            window.nowcaption button.position {{ padding: 5px 7px; min-height: 0; min-width: 0; }}
-            window.nowcaption button.position:checked {{ background: alpha(@accent_bg_color, 0.25); }}
-            window.nowcaption button.position:checked .screen {{ color: @accent_color; }}
-            window.nowcaption .colour-swatch {{ min-width: 18px; min-height: 18px; border-radius: 99px;
-                                               border: 1px solid rgba(0, 0, 0, 0.4); }}
-            window.nowcaption button.colour-dot {{ padding: 3px; min-width: 0; min-height: 0;
-                                                  border-radius: 99px; }}
-            window.nowcaption button.colour-dot:checked {{ background: none; }}
-            window.nowcaption button.colour-dot:checked .colour-swatch {{
-                box-shadow: 0 0 0 2px @popover_bg_color, 0 0 0 3px currentColor; }}
-            {swatches}""")
+        self.css.load_from_string(caption_css(px, font, alpha, colour))
         self.show_values()
         if not recoloured:
             self.fit()
