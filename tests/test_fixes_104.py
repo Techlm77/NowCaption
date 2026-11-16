@@ -305,7 +305,7 @@ class SaveTests(unittest.TestCase):
         self.app.holds = self.app.quits = 0
         self.app.hold = lambda: setattr(self.app, 'holds', self.app.holds + 1)
         self.app.release = lambda: setattr(self.app, 'holds', self.app.holds - 1)
-        self.app.quit = lambda: setattr(self.app, 'quits', self.app.quits + 1)
+        self.app.quitting.quit = lambda: setattr(self.app, 'quits', self.app.quits + 1)
         self.glib = NS(
             Error=type('FileError', (Exception,), {'message': 'disk full'}),
             Bytes=NS(new=lambda content: content),
@@ -343,9 +343,9 @@ class SaveTests(unittest.TestCase):
         callbacks = []
         self.app.worker = NS(snapshot=lambda callback, on_error=None: callbacks.append(callback))
         self.accept_destination(file)
-        self.assertEqual(self.app.pending_saves, 1)
+        self.assertEqual(self.app.quitting.pending_saves, 1)
         self.assertEqual(self.app.holds, 1)
-        self.app.request_quit()
+        self.app.quitting.request_quit()
         self.assertEqual(self.app.quits, 0)
         self.app.on_worker('snapshot', (callbacks.pop(), 'requested transcript'))
         # Saved transcripts start with the session's heading (fixed in the test fakes) since 1.1.9.
@@ -353,12 +353,12 @@ class SaveTests(unittest.TestCase):
         self.assertEqual(self.app.quits, 0)
         file.callback(file, None)
         self.assertEqual(self.app.quits, 1)
-        self.assertEqual(self.app.pending_saves, 0)
+        self.assertEqual(self.app.quitting.pending_saves, 0)
 
     def test_close_button_uses_the_same_save_completion_rule(self):
         file = self.delayed_file()
         self.app.write_transcript(file, 'close requested')
-        self.assertTrue(self.app.on_window_close(None))
+        self.assertTrue(self.app.quitting.on_window_close(None))
         self.assertEqual(self.app.quits, 0)
         file.callback(file, None)
         self.assertEqual(self.app.quits, 1)
@@ -367,23 +367,23 @@ class SaveTests(unittest.TestCase):
         first, second = self.delayed_file(), self.delayed_file()
         self.app.write_transcript(first, 'first')
         self.app.write_transcript(second, 'second')
-        self.app.request_quit()
+        self.app.quitting.request_quit()
         first.callback(first, None)
         self.assertEqual(self.app.quits, 0)
-        self.assertEqual(self.app.pending_saves, 1)
+        self.assertEqual(self.app.quitting.pending_saves, 1)
         second.callback(second, None)
         self.assertEqual(self.app.quits, 1)
 
     def test_failed_save_cancels_deferred_quit_and_keeps_error_visible(self):
         file = self.delayed_file(fail=True)
         self.app.write_transcript(file, 'must not disappear')
-        self.app.request_quit()
+        self.app.quitting.request_quit()
         file.callback(file, None)
         self.assertEqual(self.app.quits, 0)
-        self.assertFalse(self.app.quit_requested)
-        self.assertEqual(self.app.pending_saves, 0)
+        self.assertFalse(self.app.quitting.quit_requested)
+        self.assertEqual(self.app.quitting.pending_saves, 0)
         self.assertIn('disk full', self.app.window.statuses[-1])
-        self.app.request_quit()
+        self.app.quitting.request_quit()
         self.assertEqual(self.app.quits, 1)
 
     def test_capture_retries_continue_while_quit_waits_for_a_save(self):
@@ -391,18 +391,18 @@ class SaveTests(unittest.TestCase):
         file = self.delayed_file(fail=True)
         self.app.worker = NS(set_source=lambda gen: None)
         self.app.write_transcript(file, 'words')
-        self.app.request_quit()
+        self.app.quitting.request_quit()
         with patch.dict(APP, GLib=timers):
             self.app.capture_ended(self.app.source_gen, 'device went away')
             self.assertIsNotNone(self.app.retry_id)
             timers.fire(self.app.retry_id)
         self.assertEqual(len(self.app.capture.starts), 1)
         file.callback(file, None)
-        self.assertFalse(self.app.quit_requested)
+        self.assertFalse(self.app.quitting.quit_requested)
 
     def test_write_setup_failure_releases_its_hold(self):
         self.app.write_transcript(self.delayed_file(immediate_error=True), 'words')
-        self.assertEqual(self.app.pending_saves, 0)
+        self.assertEqual(self.app.quitting.pending_saves, 0)
         self.assertIn('cannot start writing', self.app.window.statuses[-1])
 
     def test_snapshot_request_failure_releases_its_hold(self):
@@ -410,11 +410,11 @@ class SaveTests(unittest.TestCase):
             raise RuntimeError('snapshot failed')
         self.app.worker = NS(snapshot=fail)
         self.accept_destination(self.delayed_file())
-        self.assertEqual(self.app.pending_saves, 0)
+        self.assertEqual(self.app.quitting.pending_saves, 0)
         self.assertIn('snapshot failed', self.app.window.statuses[-1])
 
     def test_quit_without_pending_saves_is_immediate(self):
-        self.app.request_quit()
+        self.app.quitting.request_quit()
         self.assertEqual(self.app.quits, 1)
 
 

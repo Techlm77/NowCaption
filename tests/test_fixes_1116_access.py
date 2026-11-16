@@ -257,6 +257,7 @@ class LaunchTests(unittest.TestCase):
 RUNNING = """
 import subprocess, sys, threading
 from nowcaption import app as nc
+from nowcaption.control import quitting
 
 AGAIN = 'import sys; from nowcaption import app as nc; sys.exit(nc.NowCaption().run(sys.argv))'
 codes = []
@@ -278,12 +279,12 @@ def started(self, app):
 
 def quit(self):
     print('quit', flush=True)
-    nc.Adw.Application.quit(self)
+    nc.Adw.Application.quit(self.app)
 
 nc.NowCaption.on_activate = started
 nc.NowCaption.open_transcript = lambda self: print('transcript', flush=True)
 nc.NowCaption.open_options = lambda self: print('options', flush=True)
-nc.NowCaption.request_quit = quit
+quitting.Quitting.request_quit = quit
 app = nc.NowCaption()
 app.fullscreen_watch.bus = None
 app.panel_float.bus = None  # nor change the panels of the desktop running the tests

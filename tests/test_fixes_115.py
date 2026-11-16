@@ -284,9 +284,9 @@ class OrderedSaveTests(unittest.TestCase):
         uri = 'file:///captions.txt'
         self.app.write_transcript(self.file(uri), 'earlier')
         self.app.write_transcript(self.file(uri), 'earlier plus newer words')
-        self.app.request_quit()
+        self.app.quitting.request_quit()
         self.assertEqual(len(self.operations), 1)
-        self.assertEqual(self.app.pending_saves, 2)
+        self.assertEqual(self.app.quitting.pending_saves, 2)
         self.complete(0)
         self.assertEqual(len(self.operations), 2)
         self.assertEqual(self.app.quits, 0)
@@ -303,15 +303,15 @@ class OrderedSaveTests(unittest.TestCase):
         self.complete(1)
         self.complete(0)
         self.assertEqual(self.disk, {first: b'first\n', second: b'second\n'})
-        self.assertEqual(self.app.pending_saves, 0)
+        self.assertEqual(self.app.quitting.pending_saves, 0)
 
     def test_a_failed_write_releases_its_hold_and_the_next_snapshot_can_still_save(self):
         uri = 'file:///captions.txt'
         self.app.write_transcript(self.file(uri), 'earlier')
         self.app.write_transcript(self.file(uri), 'newer')
-        self.app.request_quit()
+        self.app.quitting.request_quit()
         self.complete(0, fail=True)
-        self.assertFalse(self.app.quit_requested)
+        self.assertFalse(self.app.quitting.quit_requested)
         self.assertEqual(len(self.operations), 2)
         self.complete(1)
         self.assertEqual(self.disk[uri], b'newer\n')
@@ -323,7 +323,7 @@ class OrderedSaveTests(unittest.TestCase):
         self.app.write_transcript(self.file(uri), 'earlier')
         self.app.write_transcript(self.file(uri, immediate_error=True), 'newer')
         self.complete(0)
-        self.assertEqual(self.app.pending_saves, 0)
+        self.assertEqual(self.app.quitting.pending_saves, 0)
         self.assertEqual(self.app.save_queues, {})
         self.assertIn('destination unavailable', self.app.window.statuses[-1])
 
@@ -333,14 +333,14 @@ class OrderedSaveTests(unittest.TestCase):
         uri = 'file:///captions.txt'
         self.holder.accept_destination(self.file(uri))
         self.holder.accept_destination(self.file(uri))
-        self.assertEqual(self.app.pending_saves, 2)
+        self.assertEqual(self.app.quitting.pending_saves, 2)
         for callback, text in zip(callbacks, ('earlier', 'newer')):
             self.app.on_worker('snapshot', (callback, text))
         self.assertEqual(len(self.operations), 1)
         self.complete(0)
         self.complete(1)
         self.assertEqual(self.disk[uri], b'Thursday 23 October 2026, 14:05\nnewer\n')  # with its heading since 1.1.9
-        self.assertEqual(self.app.pending_saves, 0)
+        self.assertEqual(self.app.quitting.pending_saves, 0)
 
 
 if __name__ == '__main__':

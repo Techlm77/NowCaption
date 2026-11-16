@@ -49,7 +49,7 @@ class RestartListeningTests(unittest.TestCase):
     def test_restart_does_nothing_while_quitting(self):
         a = self.make()
         a.on_worker('ready', None)
-        a.quit_requested = True  # waiting for a save to finish
+        a.quitting.quit_requested = True  # waiting for a save to finish
         a.lookup_action('restart-listening').activate(None)
         self.assertEqual(a.capture.starts, [1])
 

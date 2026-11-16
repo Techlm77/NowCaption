@@ -1,7 +1,6 @@
 """NowCaption: on-device live captions for anything your computer plays, or your microphone."""
 import logging
 import os
-import signal
 import sys
 import time
 
@@ -12,11 +11,12 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from . import __version__, audio, engine, words  # noqa: E402
 from .caption_window import CaptionWindow  # noqa: E402
+from .control import Quitting, quit_on_signals  # noqa: E402
 from .options_window import OptionsWindow  # noqa: E402
 from .desktop import (FULLSCREEN_PATH, FULLSCREEN_XML, Autostart, FullscreenWatch, GlobalShortcuts,  # noqa: E402
                       PanelFloat, in_flatpak, portal_for)
 from .settings import APP_ID, Settings  # noqa: E402
-from .style import COLOURS, FADE_OUT_MS, POSITIONS, SIZES, STEPPERS, WORD_EFFECTS, WORD_SPEEDS  # noqa: E402
+from .style import COLOURS, POSITIONS, SIZES, STEPPERS, WORD_EFFECTS, WORD_SPEEDS  # noqa: E402
 from .transcript_window import TranscriptWindow, session_heading  # noqa: E402
 
 LOG = logging.getLogger('nowcaption')
@@ -44,14 +44,11 @@ class NowCaption(Adw.Application):
         self.retry_id = None
         self.recognition_retry_id = None
         self.recognition_retry_token = 0
-        self.pending_saves = 0
         self.started = time.time()
         self.history_path = engine.history_file(self.started)  # created once something is said
         self.transcript = None  # the transcript window, while it is open
         self.options = None  # the More options window, while it is open
         self.save_queues = {}  # destination URI -> accepted writes, in snapshot order
-        self.quit_requested = False
-        self.fading_out = False
         self.fullscreen_watch = FullscreenWatch(APP_ID)
         self.panel_float = PanelFloat(self.settings)
         self.paused = False  # Pause captions: nothing is captured until it is turned off
@@ -62,6 +59,7 @@ class NowCaption(Adw.Application):
             on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
             on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
             on_ended=lambda gen, reason: GLib.idle_add(self.capture_ended, gen, reason))
+        self.quitting = Quitting(self)
         self.connect('command-line', self.on_command_line)
         self.connect('activate', self.on_activate)
         self.connect('shutdown', self.on_shutdown)
@@ -149,10 +147,10 @@ class NowCaption(Adw.Application):
         act('save', self.save_transcript, ['<Control>s'])
         act('clear', self.clear_transcript)
         act('about', self.about)
-        act('quit', self.request_quit, ['<Control>q'])
+        act('quit', self.quitting.request_quit, ['<Control>q'])
 
     def on_source(self, action, value):
-        if self.closing or self.quit_requested:
+        if self.closing or self.quitting.quit_requested:
             return
         self.cancel_recognition_retry(reset=True)
         action.set_state(value)
@@ -255,7 +253,7 @@ class NowCaption(Adw.Application):
     def set_paused(self, paused):
         """Pause captions: capture stops, so nothing is heard or kept, and the words already
         heard become a finished line. Resuming listens again from the chosen source."""
-        if paused == self.paused or self.closing or self.quit_requested:
+        if paused == self.paused or self.closing or self.quitting.quit_requested:
             return
         self.paused = paused
         self.lookup_action('pause').set_state(GLib.Variant('b', paused))
@@ -455,7 +453,7 @@ class NowCaption(Adw.Application):
                 return self.toggle_captions()
             return self.window.present()
         self.window = CaptionWindow(self)
-        self.window.connect('close-request', self.on_window_close)
+        self.window.connect('close-request', self.quitting.on_window_close)
         if not self.window.layer:  # an overlay never has keyboard focus, so shortcuts would never fire
             for action, keys in self.accels.items():
                 self.set_accels_for_action(action, keys)
@@ -507,30 +505,6 @@ class NowCaption(Adw.Application):
         if self.worker and self.worker.is_alive():
             self.worker.join(timeout)
         return self.capture.wait_stopped(timeout) and not (self.worker and self.worker.is_alive())
-
-    def request_quit(self):
-        """Keep accepted saves alive until their snapshot and async write finish."""
-        if self.pending_saves:
-            self.quit_requested = True
-            if self.window:
-                self.window.show_status('Finishing transcript save before quitting…', sticky=True)
-            return
-        self.quit()
-
-    def quit(self):
-        """Fade the caption box out, then quit. A second request, or a fade that stalls
-        because the screen stopped drawing, quits at once."""
-        if self.window and not self.fading_out:
-            self.fading_out = True
-            GLib.timeout_add(FADE_OUT_MS + 350, self.quit)
-            self.window.fade(self.window.box, None, 0.0, FADE_OUT_MS, self.quit)
-            return False
-        Adw.Application.quit(self)
-        return False
-
-    def on_window_close(self, window):
-        self.request_quit()
-        return True
 
     def cancel_recognition_retry(self, reset=False):
         self.recognition_retry_token += 1
@@ -660,7 +634,7 @@ class NowCaption(Adw.Application):
                 self.window.show_status(f'Could not copy the transcript: {e}', seconds=8)
 
     def clear_transcript(self):
-        if self.worker and not self.closing and not self.quit_requested:
+        if self.worker and not self.closing and not self.quitting.quit_requested:
             self.cancel_recognition_retry(reset=True)
             self.ui_gen += 1  # captions already on their way from before the clear are dropped
             self.worker.clear(self.ui_gen)
@@ -670,7 +644,7 @@ class NowCaption(Adw.Application):
                 self.start_capture()
 
     def save_transcript(self):
-        if not self.worker or self.closing or self.quit_requested:
+        if not self.worker or self.closing or self.quitting.quit_requested:
             return
         dialog = Gtk.FileDialog(title='Save transcript', initial_name=GLib.DateTime.new_now_local().format(
             'Captions %Y-%m-%d %H.%M.txt'))
@@ -682,13 +656,13 @@ class NowCaption(Adw.Application):
                 if not e.matches(Gtk.DialogError.quark(), Gtk.DialogError.DISMISSED):
                     self.window.show_status(f'Could not save the transcript: {e.message}', seconds=8)
                 return
-            if self.closing or self.quit_requested:
+            if self.closing or self.quitting.quit_requested:
                 return
-            self.begin_save()
+            self.quitting.begin_save()
 
             def failed_snapshot(error):
                 self.window.show_status(f'Could not save the transcript: {error}', seconds=8)
-                self.finish_save(False)
+                self.quitting.finish_save(False)
 
             try:
                 self.worker.snapshot(lambda text: self.write_transcript(f, self.full_transcript(text), tracked=True),
@@ -698,24 +672,10 @@ class NowCaption(Adw.Application):
 
         dialog.save(None, None, chosen)  # its own window: the caption overlay is too small to host it
 
-    def begin_save(self):
-        self.pending_saves += 1
-        self.hold()
-
-    def finish_save(self, success):
-        self.pending_saves -= 1
-        if not success:
-            # A failed save needs a visible error and an opportunity to retry.
-            self.quit_requested = False
-        should_quit = self.quit_requested and not self.pending_saves
-        self.release()
-        if should_quit:
-            self.quit()
-
     def write_transcript(self, f, text, tracked=False):
         """Queue saves to each destination so an older write cannot replace newer text."""
         if not tracked:
-            self.begin_save()
+            self.quitting.begin_save()
         key = f.get_uri()
         queue = self.save_queues.setdefault(key, [])
         queue.append((f, text))
@@ -731,7 +691,7 @@ class NowCaption(Adw.Application):
             queue.pop(0)
             if not queue:
                 del self.save_queues[key]
-            self.finish_save(success)
+            self.quitting.finish_save(success)
             if queue:
                 self.start_save(key)
 
@@ -771,27 +731,6 @@ class NowCaption(Adw.Application):
         about.add_legal_section('Punctuation model', 'Edge-Punct-Casing by frankyoujian', Gtk.License.APACHE_2_0, None)
         about.add_legal_section('sherpa-onnx', '© k2-fsa', Gtk.License.APACHE_2_0, None)
         about.present(None)  # its own window, not squeezed into the caption box
-
-
-def quit_on_signals(app):
-    """Quit the way Quit does on SIGTERM and SIGHUP (kill, logging out, shutting down), so the
-    newest lines still reach the history. A second signal quits without waiting for a save to
-    finish. Returns the GLib sources."""
-    try:
-        gi.require_version('GLibUnix', '2.0')
-        from gi.repository import GLibUnix
-    except (ValueError, ImportError):  # GLib before 2.80
-        GLibUnix = None
-    # GLib 2.80's GLibUnix (Ubuntu 24.04, and so the AppImage) has only signal_add_full
-    add = getattr(GLibUnix, 'signal_add', None) or GLib.unix_signal_add
-
-    def on_signal(*_):
-        if app.quit_requested or app.fading_out:
-            app.quit()
-        else:
-            app.request_quit()
-        return GLib.SOURCE_CONTINUE
-    return [add(GLib.PRIORITY_DEFAULT, signum, on_signal) for signum in (signal.SIGTERM, signal.SIGHUP)]
 
 
 def main():

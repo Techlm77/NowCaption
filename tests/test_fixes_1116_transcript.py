@@ -157,7 +157,7 @@ class TranscriptFixTests(unittest.TestCase):
                              snapshot=lambda fn, on_error=None: None)
         self.app.window = NS(show_text=lambda text: None)
         self.app.transcript = w
-        self.app.ready = self.app.closing = self.app.quit_requested = False
+        self.app.ready = self.app.closing = self.app.quitting.quit_requested = False
         for name in ('worker', 'window', 'transcript'):
             self.addCleanup(setattr, self.app, name, None)
         w.apply('[14:05:20] Bright')

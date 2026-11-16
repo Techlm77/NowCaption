@@ -212,13 +212,13 @@ class AppTests(unittest.TestCase):
 
     def test_kill_logout_and_shutdown_quit_the_way_quit_does(self):
         a, called = self.app, []
-        a.request_quit = lambda: called.append('request_quit')
-        a.quit = lambda: called.append('quit')
+        a.quitting.request_quit = lambda: called.append('request_quit')
+        a.quitting.quit = lambda: called.append('quit')
         sources = nc.quit_on_signals(a)
         try:
             self.deliver(signal.SIGTERM, called)
             self.assertEqual(called, ['request_quit'])
-            a.quit_requested = True  # still finishing a save: a second signal does not wait for it
+            a.quitting.quit_requested = True  # still finishing a save: a second signal does not wait for it
             self.deliver(signal.SIGHUP, called)
             self.assertEqual(called, ['request_quit', 'quit'])
         finally:

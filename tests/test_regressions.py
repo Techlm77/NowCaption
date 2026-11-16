@@ -40,7 +40,8 @@ def load_app_methods():
                'GLib': NS(timeout_add_seconds=lambda *a: 1, source_remove=lambda *a: None),
                'LayerShell': NS(set_monitor=lambda *a: None),
                'ROWS': 2, 'PAD_Y': 12, 'STATUS_MS': 150}
-    for name, module in (('NowCaption', 'app.py'), ('CaptionWindow', 'caption_window.py')):
+    for name, module in (('NowCaption', 'app.py'), ('CaptionWindow', 'caption_window.py'),
+                         ('Quitting', 'control/quitting.py')):
         path = ROOT / 'src/nowcaption' / module
         [node] = [n for n in ast.parse(path.read_text()).body if isinstance(n, ast.ClassDef) and n.name == name]
         node.bases, node.keywords, node.decorator_list = [], [], []
@@ -51,6 +52,14 @@ def load_app_methods():
 
 
 APP = load_app_methods()
+
+
+def collaborator(name, app, **state):
+    """One of the app's collaborators (control/), holding the app and this state."""
+    part = APP[name]()
+    part.app = app
+    part.__dict__.update(state)
+    return part
 
 
 def app_with_fakes():
@@ -67,9 +76,8 @@ def app_with_fakes():
     a.retry_id = None
     a.recognition_retry_id = None
     a.recognition_retry_token = 0
-    a.pending_saves = 0
     a.save_queues = {}
-    a.quit_requested = False
+    a.quitting = collaborator('Quitting', a, pending_saves=0, quit_requested=False, fading_out=False)
     a.paused = a.hidden = False
     a.shortcuts = None
     a.transcript = None

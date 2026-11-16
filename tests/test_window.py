@@ -378,7 +378,7 @@ class TranscriptWindowTests(unittest.TestCase):
         self.app.worker = NS(clear=cleared.append, set_history=sent.append, snapshot=lambda fn, on_error=None: None)
         self.app.window = NS(show_text=lambda text: None)
         self.app.transcript = self.window
-        self.app.ready = self.app.closing = self.app.quit_requested = False
+        self.app.ready = self.app.closing = self.app.quitting.quit_requested = False
         for name in ('worker', 'window', 'transcript'):
             self.addCleanup(setattr, self.app, name, None)
         self.app.delete_history()
@@ -548,14 +548,14 @@ class AnimationTests(unittest.TestCase):
         self.assertGreater(self.window.label.get_color().blue, 0.0, 'the colour changed at once')
 
     def test_quitting_fades_the_box_out_first(self):
-        self.addCleanup(setattr, self.app, 'fading_out', False)
+        self.addCleanup(setattr, self.app.quitting, 'fading_out', False)
         with patch.object(nc.Adw.Application, 'quit') as quit:
-            self.app.quit()
+            self.app.quitting.quit()
             self.assertEqual(quit.call_count, 0)
             self.finish(self.window.box)
             self.assertEqual(self.window.box.get_opacity(), 0.0)
             self.assertEqual(quit.call_count, 1)
-            self.app.quit()  # the safety timer, or a second Quit, while the box is gone
+            self.app.quitting.quit()  # the safety timer, or a second Quit, while the box is gone
             self.assertEqual(quit.call_count, 2)
 
     def effect(self, effect, speed='normal'):
