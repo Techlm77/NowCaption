@@ -163,8 +163,8 @@ sudo dnf install python3-gobject python3-cairo gtk4 libadwaita gstreamer1-plugin
 ./tools/build-flatpak.sh  # or build the Flatpak
 ```
 
-Tests: `PYTHONPATH=src .venv/bin/python tests/test_reliability.py` (fast, no models);
-the other files in [`tests/`](tests/) say what they cover.
+Tests: `python3 tests/run.py` (fast, no models; `--gui` for the GTK tests under Xvfb);
+[CONTRIBUTING.md](CONTRIBUTING.md#running-the-tests) says what is where in [`tests/`](tests/).
 
 ## Models
 

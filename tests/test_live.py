@@ -4,12 +4,17 @@ through the same GStreamer capture and engine the app uses. Nothing is played al
 
     PYTHONPATH=src .venv/bin/python tests/test_live.py
 """
-import json, os, queue, subprocess, sys, time
+import json
+import os
+import queue
+import subprocess
+import sys
+import time
 from pathlib import Path
 
-from nowcaption import engine
 from capture_print import wait_for
-from transcript_check import transcript_words, words, wer
+from nowcaption import engine
+from transcript_check import transcript_words, wer, words
 
 HERE = Path(__file__).parent / 'fixtures'
 SINK = f'nowcaption_test_{os.getpid()}'
