@@ -1,6 +1,7 @@
 """Drawing the caption passage: the caption text widget that glides the rows up and brings new
 words in, and the label that says when GTK has restyled it. The rows' wrapping is in rows.py,
-the pixel effects' pieces in pieces.py."""
+the pixel effects' pieces in pieces.py. Nothing here knows about windows or settings: the caption
+window and the sample caption configure it."""
 import difflib
 import logging
 import math
@@ -15,7 +16,8 @@ gi.require_version('Gsk', '4.0')
 gi.require_version('Graphene', '1.0')
 from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
-from ..style import BREATH_MS, BREATH_STEP_MS, GLIDE_MS, PIXEL_MS, PIXEL_WORDS, ROWS, STATUS_MS, WORD_MS  # noqa: E402
+from ..style import (BREATH_MS, BREATH_STEP_MS, GLIDE_MS, PIXEL_MS, PIXEL_WORDS, ROWS,  # noqa: E402
+                     STATUS_MS, WORD_MS)
 from .pieces import Pieces  # noqa: E402
 from .rows import Rows, bare  # noqa: E402
 

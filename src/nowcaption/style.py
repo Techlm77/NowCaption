@@ -1,5 +1,6 @@
 """The captions' shared look and motion: text sizes, rows and padding, colours, animation
-timings, how new words arrive, and the docked positions."""
+timings, how new words arrive, and the docked positions. Plain data with no GTK, since
+settings.py reads it too; the widgets that use it are in ui/."""
 
 SIZES = [18, 22, 26, 30, 36, 42, 50, 60]
 ROWS = 2              # default caption rows, like broadcast subtitles; drag an edge for more

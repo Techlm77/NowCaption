@@ -55,7 +55,7 @@ class Drawer(Gtk.Widget):
     `shown` px of its height (top or bottom) or width (left or right), the rest slid away into
     that edge. The drawer keeps the box's whole size, so the window does not resize while the
     captions slide (each resize waits for the compositor, which halved the frame rate);
-    CaptionWindow shrinks and grows only the space it reserves. shown None: all of it."""
+    Docking shrinks and grows only the space it reserves. shown None: all of it."""
 
     def __init__(self, child):
         super().__init__(overflow=Gtk.Overflow.HIDDEN)
