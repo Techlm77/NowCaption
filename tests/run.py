@@ -77,6 +77,10 @@ def run(path, gui):
     command = [sys.executable, str(path)]
     if gui:
         env['NOWCAPTION_REQUIRE_GUI_TESTS'] = '1'
+        # GTK prefers Wayland when WAYLAND_DISPLAY is set, which would put the test windows on the
+        # desktop of whoever runs the tests instead of on xvfb-run's display.
+        env.pop('WAYLAND_DISPLAY', None)
+        env['GDK_BACKEND'] = 'x11'
         command = ['xvfb-run', '-a'] + command
     try:
         done = subprocess.run(command, cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
