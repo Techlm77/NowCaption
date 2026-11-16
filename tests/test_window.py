@@ -21,8 +21,8 @@ try:
     import cairo
     import numpy as np
     from nowcaption import app as nc
-    from nowcaption import (caption_text, caption_window, options_window, plasma, settings, style,
-                            transcript_window)
+    from nowcaption import plasma, settings, style
+    from nowcaption.ui import caption_text, caption_window, options_window, transcript_window
     from gi.repository import Gdk, Pango
     if not nc.Gtk.init_check() or Gdk.Display.get_default() is None:
         raise RuntimeError('No GTK display available; run with xvfb-run')
@@ -72,7 +72,7 @@ class WindowTests(unittest.TestCase):
         self.assertEqual(self.window.label.get_accessible_role(), nc.Gtk.AccessibleRole.STATUS)
         other = nc.Gtk.Label(label='Ordinary label')
         self.assertEqual(other.get_accessible_role(), nc.Gtk.AccessibleRole.LABEL)
-        self.assertIsNotNone(self.window.popover)
+        self.assertIsNotNone(self.window.menu.popover)
 
     def settle(self):
         context = nc.GLib.MainContext.default()
@@ -91,9 +91,9 @@ class WindowTests(unittest.TestCase):
     def test_text_size_and_background_buttons_keep_the_menu_open(self):
         w = self.window
         w.present()
-        w.popover.popup()
+        w.menu.popover.popup()
         self.settle()
-        found = {b.get_action_name(): b for b in self.buttons(w.popover)}
+        found = {b.get_action_name(): b for b in self.buttons(w.menu.popover)}
         for action in ('app.smaller', 'app.larger', 'app.lighter', 'app.darker'):
             self.assertIn(action, found)
         before = self.app.settings.get('size')
@@ -101,24 +101,24 @@ class WindowTests(unittest.TestCase):
             found['app.larger'].emit('clicked')
             self.settle()
         self.assertGreater(self.app.settings.get('size'), before)
-        self.assertTrue(w.popover.get_visible(), 'the menu closed after pressing a + button')
+        self.assertTrue(w.menu.popover.get_visible(), 'the menu closed after pressing a + button')
         found['app.darker'].emit('clicked')
         self.settle()
-        self.assertTrue(w.popover.get_visible())
-        w.popover.popdown()
+        self.assertTrue(w.menu.popover.get_visible())
+        w.menu.popover.popdown()
 
     def test_menu_rows_survive_a_menu_rebuild(self):
-        self.window.update_menu(True)
-        actions = {b.get_action_name() for b in self.buttons(self.window.popover)}
+        self.window.menu.update_menu(True)
+        actions = {b.get_action_name() for b in self.buttons(self.window.menu.popover)}
         self.assertTrue({'app.smaller', 'app.larger', 'app.lighter', 'app.darker', 'app.colour'} <= actions)
 
     def test_text_colour_swatches_colour_the_captions_and_keep_the_menu_open(self):
         w = self.window
         self.addCleanup(self.app.activate_action, 'colour', nc.GLib.Variant('s', 'white'))
         w.present()
-        w.popover.popup()
+        w.menu.popover.popup()
         self.settle()
-        swatches = {b.get_action_target_value().get_string(): b for b in self.buttons(w.popover)
+        swatches = {b.get_action_target_value().get_string(): b for b in self.buttons(w.menu.popover)
                     if b.get_action_name() == 'app.colour'}
         self.assertEqual(list(swatches), list(style.COLOURS))
         for name, button in swatches.items():
@@ -126,17 +126,17 @@ class WindowTests(unittest.TestCase):
         swatches['yellow'].emit('clicked')
         self.settle()
         self.assertEqual(self.app.settings.get('colour'), 'yellow')
-        self.assertTrue(w.popover.get_visible(), 'the menu closed after choosing a colour')
+        self.assertTrue(w.menu.popover.get_visible(), 'the menu closed after choosing a colour')
         self.assertTrue(swatches['yellow'].get_active())
         self.assertFalse(swatches['white'].get_active())
-        self.assertEqual(w.values['text-colour'].get_label(), 'Yellow')
+        self.assertEqual(w.menu.values['text-colour'].get_label(), 'Yellow')
         rgba = w.label.get_color()
         self.assertEqual((rgba.red, rgba.green, rgba.blue), (1.0, 1.0, 0.0))
         swatches['yellow'].emit('clicked')  # choosing the current colour again keeps it chosen
         self.settle()
         self.assertTrue(swatches['yellow'].get_active())
         self.assertEqual(self.app.settings.get('colour'), 'yellow')
-        w.popover.popdown()
+        w.menu.popover.popdown()
 
     def test_a_new_window_uses_the_saved_text_colour(self):
         self.app.settings.set('colour', 'cyan')
@@ -150,10 +150,10 @@ class WindowTests(unittest.TestCase):
     def test_the_size_and_background_rows_show_their_values(self):
         self.app.settings.set('opacity', 0.78)
         self.window.restyle()
-        self.assertEqual(self.window.values['text-size'].get_label(), '30 px')
-        self.assertEqual(self.window.values['background'].get_label(), '78%')
+        self.assertEqual(self.window.menu.values['text-size'].get_label(), '30 px')
+        self.assertEqual(self.window.menu.values['background'].get_label(), '78%')
         self.app.resize(+1)
-        self.assertEqual(self.window.values['text-size'].get_label(), '36 px')
+        self.assertEqual(self.window.menu.values['text-size'].get_label(), '36 px')
 
     def test_two_row_caption_renders_and_font_size_can_change(self):
         self.window.show_text('hello ' * 100)
@@ -277,12 +277,12 @@ class WindowTests(unittest.TestCase):
         w = self.window
         w.show_text('hello ' * 100)
         rows, width = w.rows, w.box_width
-        w.resizing = ('se', w.x, w.y, w.x + w.box_width, w.y + w.caption_height())
-        w.resize_by(-100, 2 * w.row_height)
+        w.pointer.resizing = ('se', w.x, w.y, w.x + w.box_width, w.y + w.caption_height())
+        w.pointer.resize_by(-100, 2 * w.row_height)
         self.assertEqual(w.rows, min(rows + 2, w.max_rows()))
         self.assertEqual(w.box_width, max(style.MIN_WIDTH, width - 100))
         self.assertLessEqual(len(w.label.get_text().splitlines()), w.rows)
-        w.on_drag_end(None, 0, 0)
+        w.pointer.on_drag_end(None, 0, 0)
         self.assertEqual(self.app.settings.get('rows'), w.rows)
         w.reset_size()
         self.assertEqual(w.rows, style.ROWS)
@@ -788,7 +788,7 @@ class DockTests(unittest.TestCase):
 
     def setUp(self):
         self.shell = FakeLayerShell()
-        patcher = patch.object(caption_window, 'LayerShell', self.shell)
+        patcher = patch.object(caption_window.layer_shell, 'LayerShell', self.shell)
         patcher.start()
         self.addCleanup(patcher.stop)
         for key in ('position', 'dock_rows', 'dock_width', 'size'):
@@ -893,14 +893,14 @@ class DockTests(unittest.TestCase):
         for _ in range(200):
             nc.GLib.MainContext.default().iteration(False)
         width, height = w.get_width(), w.get_height()
-        self.assertEqual(w.edges_at(width // 2, 2), 'n')
-        self.assertEqual(w.edges_at(width // 2, height - 2), '')
-        self.assertEqual(w.edges_at(2, height // 2), '')
+        self.assertEqual(w.pointer.edges_at(width // 2, 2), 'n')
+        self.assertEqual(w.pointer.edges_at(width // 2, height - 2), '')
+        self.assertEqual(w.pointer.edges_at(2, height // 2), '')
         # dragging the top edge one row up adds a row; the strip grows from the screen's edge
-        w.resizing = ('n',)
-        w.resize_dock(width // 2, -w.row_height)
+        w.pointer.resizing = ('n',)
+        w.pointer.resize_dock(width // 2, -w.row_height)
         self.assertEqual(w.rows, style.ROWS + 1)
-        w.on_drag_end(None, 0, 0)
+        w.pointer.on_drag_end(None, 0, 0)
         self.assertEqual(self.app.settings.get('dock_rows'), style.ROWS + 1)
 
     def test_the_resize_cursor_stays_while_the_strip_is_dragged(self):
@@ -913,11 +913,11 @@ class DockTests(unittest.TestCase):
             nc.GLib.MainContext.default().iteration(False)
         press = (w.get_width() // 2, 2)
         pressed = w.pick(*press, nc.Gtk.PickFlags.DEFAULT)
-        w.on_drag_begin(NS(set_state=lambda state: None), *press)
+        w.pointer.on_drag_begin(NS(set_state=lambda state: None), *press)
         self.assertEqual(w.get_cursor().get_name(), 'n-resize')
         self.assertIsNot(pressed, w)
         self.assertEqual(pressed.get_cursor().get_name(), 'n-resize')
-        w.on_drag_end(None, 0, 0)
+        w.pointer.on_drag_end(None, 0, 0)
         self.assertIsNone(pressed.get_cursor())
         self.assertEqual(w.get_cursor().get_name(), 'default')
 
@@ -927,10 +927,10 @@ class DockTests(unittest.TestCase):
         self.position('right')
         for _ in range(200):
             nc.GLib.MainContext.default().iteration(False)
-        w.resizing = ('w',)
-        w.resize_dock(-100, 10)  # 100 px left of the strip's left edge
+        w.pointer.resizing = ('w',)
+        w.pointer.resize_dock(-100, 10)  # 100 px left of the strip's left edge
         self.assertEqual(w.box_width, w.get_width() + 100)
-        w.on_drag_end(None, 0, 0)
+        w.pointer.on_drag_end(None, 0, 0)
         self.assertEqual(self.app.settings.get('dock_width'), w.box_width)
 
     def test_docked_status_messages_show_in_a_corner_without_resizing_the_strip(self):
@@ -953,9 +953,9 @@ class DockTests(unittest.TestCase):
         w.layer = True
 
         def menu_at(x, y):
-            w.point_menu(x, y)
-            ok, rect = w.popover.get_pointing_to()
-            return w.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
+            w.menu.point_menu(x, y)
+            ok, rect = w.menu.popover.get_pointing_to()
+            return w.menu.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
 
         self.position('bottom')
         self.assertEqual(menu_at(900, 40), (up, (900, 0, 1, 1)))  # from the strip's top edge
@@ -980,8 +980,8 @@ class DockTests(unittest.TestCase):
             nc.GLib.MainContext.default().iteration(False)
 
     def finish_moves(self):
-        while self.window.moves:
-            moves, self.window.moves = self.window.moves, []
+        while self.window.docking.moves:
+            moves, self.window.docking.moves = self.window.docking.moves, []
             for animation in moves:
                 animation.skip()
 
@@ -992,8 +992,8 @@ class DockTests(unittest.TestCase):
         full = w.box.measure(nc.Gtk.Orientation.VERTICAL, -1)[1]  # the strip's whole height
         self.position('bottom')
         self.assertEqual(w.edge, 'top', 'moved before sliding away')
-        self.assertEqual(len(w.moves), 1)
-        w.moves[0].skip()  # slid into the top edge: now anchored at the bottom, slid away
+        self.assertEqual(len(w.docking.moves), 1)
+        w.docking.moves[0].skip()  # slid into the top edge: now anchored at the bottom, slid away
         self.assertEqual(w.edge, 'bottom')
         self.assertEqual(self.shell.anchors, {'top': False, 'bottom': True, 'left': True, 'right': True})
         self.assertEqual(w.drawer.shown, 0)
@@ -1010,12 +1010,12 @@ class DockTests(unittest.TestCase):
         full = w.box.measure(nc.Gtk.Orientation.VERTICAL, -1)[1]  # the strip's whole height
         w.drawer.show_part('top', 40)
         self.assertEqual(w.drawer.hidden(), full - 40)
-        self.assertEqual(w.docked_part(1920, full), (0, 0, 1920, 40))
+        self.assertEqual(w.docking.docked_part(1920, full), (0, 0, 1920, 40))
         self.position('bottom')
         w.drawer.show_part('bottom', 40)
-        self.assertEqual(w.docked_part(1920, full), (0, full - 40, 1920, 40))
+        self.assertEqual(w.docking.docked_part(1920, full), (0, full - 40, 1920, 40))
         w.drawer.show_part(None, None)
-        self.assertEqual(w.docked_part(1920, full), (0, 0, 1920, full))
+        self.assertEqual(w.docking.docked_part(1920, full), (0, 0, 1920, full))
 
     def test_a_new_position_during_a_move_ends_there(self):
         w = self.window

@@ -14,7 +14,8 @@ import test_window
 from test_window import FakeLayerShell, nc, shared_app
 
 if nc:  # GTK and a display are there
-    from nowcaption import caption_text, caption_window, settings, style
+    from nowcaption import settings, style
+    from nowcaption.ui import caption_text, caption_window
 
 SKIP = getattr(test_window, 'SKIP', '')
 
@@ -117,14 +118,14 @@ class RestyleTests(unittest.TestCase):
         self.assertEqual(caption.lines, rows)
         self.assertEqual(caption.glide, 1.0)
         self.assertIn(len(self.words) - 1, caption.appeared)
-        self.assertEqual(w.values['background'].get_label(), f"{round(self.app.settings.get('opacity') * 100)}%")
-        self.assertEqual(w.values['text-colour'].get_label(), 'Yellow')
+        self.assertEqual(w.menu.values['background'].get_label(), f"{round(self.app.settings.get('opacity') * 100)}%")
+        self.assertEqual(w.menu.values['text-colour'].get_label(), 'Yellow')
 
     def test_a_new_text_size_still_fits_the_box_again(self):
         wrapper = self.window.caption.wrapper
         self.app.resize(+1)
         self.assertIsNot(self.window.caption.wrapper, wrapper)
-        self.assertEqual(self.window.values['text-size'].get_label(), '36 px')
+        self.assertEqual(self.window.menu.values['text-size'].get_label(), '36 px')
 
     def test_a_layout_change_with_the_same_look_still_fits(self):
         wrapper = self.window.caption.wrapper
@@ -186,7 +187,7 @@ class DockFixTests(unittest.TestCase):
 
     def setUp(self):
         self.shell = FakeLayerShell()
-        patcher = patch.object(caption_window, 'LayerShell', self.shell)
+        patcher = patch.object(caption_window.layer_shell, 'LayerShell', self.shell)
         patcher.start()
         self.addCleanup(patcher.stop)
         for key in ('position', 'dock_rows', 'dock_width', 'size'):
@@ -212,7 +213,7 @@ class DockFixTests(unittest.TestCase):
         w.set_covered(True)
         self.assertIsNone(w.edge)
         self.position('floating')
-        self.assertFalse(w.covered)
+        self.assertFalse(w.docking.covered)
         self.position('top')
         self.assertEqual(w.edge, 'top')
         self.assertEqual((self.shell.zone, self.shell.layer), ('auto', FakeLayerShell.Layer.TOP))

@@ -1,6 +1,7 @@
-"""Drawing the caption passage: rows that keep their breaks, the pieces of the pixel effects, and
-the caption text widget that glides the rows up and brings new words in."""
-import bisect
+"""Drawing the caption passage: the caption text widget that glides the rows up and brings new
+words in, and the label that says when GTK has restyled it. The rows' wrapping is in rows.py,
+the pixel effects' pieces in pieces.py. Nothing here knows about windows or settings: the caption
+window and the sample caption configure it."""
 import difflib
 import logging
 import math
@@ -8,7 +9,6 @@ import re
 
 import cairo
 import gi
-import numpy as np
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
@@ -16,235 +16,16 @@ gi.require_version('Gsk', '4.0')
 gi.require_version('Graphene', '1.0')
 from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
-from .style import (BREATH_MS, BREATH_STEP_MS, GLIDE_MS, MOSAIC, PIXEL_MS, PIXEL_WORDS, ROWS,  # noqa: E402
-                    STATUS_MS, WORD_MS)
+from ..style import (BREATH_MS, BREATH_STEP_MS, GLIDE_MS, PIXEL_MS, PIXEL_WORDS, ROWS,  # noqa: E402
+                     STATUS_MS, WORD_MS)
+from .pieces import Pieces  # noqa: E402
+from .rows import Rows, bare  # noqa: E402
 
 LOG = logging.getLogger('nowcaption')
 
 
-def bare(word):
-    """A word without the punctuation and capital the punctuation model may still change."""
-    return word.strip('.,?!;:"\'').lower()
-
-
-class Rows:
-    """Wraps the caption passage into rows that stay put. Rows already shown keep their breaks
-    while their words stay the same, even when the passage drops its oldest line (it holds the
-    last Captioner.DISPLAY_LINES lines) or the punctuation model changes a comma or capital.
-    Wrapping the whole passage afresh moved words between rows on screen at every finished
-    line, once a long conversation filled the passage. New rows wrap a little short of the
-    width, so that a comma or capital added later still fits."""
-
-    def __init__(self, layout, row_height):
-        self.width = layout.get_width()  # Pango units
-        self.wrap = layout.copy()
-        self.wrap.set_width(self.width - max(4, row_height // 2) * Pango.SCALE)
-        self.wrap.set_wrap(Pango.WrapMode.WORD_CHAR)
-        self.fit = layout.copy()
-        self.fit.set_width(-1)
-        self.words, self.spans = [], []  # the passage's words and each row's [start, end) in them
-
-    def __call__(self, words):
-        """The rows for the passage's words, as text."""
-        old, new = [bare(w) for w in self.words], [bare(w) for w in words]
-        d = self.dropped(old, new)
-        spans = []
-        if d is not None and self.spans:
-            same = d  # old words up to here are still the passage's, maybe punctuated anew
-            while same < len(old) and same - d < len(new) and old[same] == new[same - d]:
-                same += 1
-            first = next((i for i, (start, _) in enumerate(self.spans) if start >= d), None)
-            if first is not None:
-                pos = self.spans[first][0] - d
-                spans = self.greedy(words, 0, pos)  # what is left of a row cut by the drop
-                for start, end in self.spans[first:-1]:  # the last row is still being written
-                    row = words[start - d:end - d]
-                    if end > same or (row != self.words[start:end] and not self.fits(row)):
-                        break
-                    spans.append((start - d, end - d))
-                    pos = end - d
-                spans += self.greedy(words, pos, len(words))
-        if not spans:
-            spans = self.greedy(words, 0, len(words))
-        self.words, self.spans = list(words), spans
-        return [' '.join(words[start:end]) for start, end in spans]
-
-    @staticmethod
-    def dropped(old, new):
-        """How many words the passage lost at its start, or None if the new passage does not
-        continue the old one."""
-        key = new[:min(8, len(old))]
-        if not key:
-            return None
-        for d in range(len(old) - len(key) + 1):
-            if old[d:d + len(key)] == key:
-                return d
-        return None
-
-    def greedy(self, words, a, b):
-        """Rows for words[a:b], as Pango wraps them."""
-        if a >= b:
-            return []
-        text, starts, pos = ' '.join(words[a:b]), [], 0
-        for w in words[a:b]:
-            starts.append(pos)
-            pos += len(w.encode()) + 1
-        self.wrap.set_text(text, -1)
-        firsts = [bisect.bisect_left(starts, line.start_index) for line in self.wrap.get_lines_readonly()]
-        bounds = sorted(set(firsts + [b - a]))
-        return [(a + s, a + e) for s, e in zip(bounds, bounds[1:]) if s < e]
-
-    def fits(self, row):
-        self.fit.set_text(' '.join(row), -1)
-        return self.fit.get_size()[0] <= self.width
-
-
 def ease_out(p):
     return 1 - (1 - p) ** 3
-
-
-class Pieces:
-    """A new word cut into small square pieces, for the pixel effects. The word is drawn once,
-    as the label draws it, and each piece keeps the text's own smooth edges, so once every
-    piece has landed they show exactly the word. Pieces with no ink are left out. Each frame
-    puts all the pieces into one image, with numpy, rather than drawing them one by one."""
-
-    def __init__(self, layout, colour, box, scale, row_height):
-        """layout: the label's layout without the fading; box: the word's (x, y, width, height)
-        in it, px; scale: the screen's pixels per px."""
-        x, y, w, h = box
-        self.left, self.top = math.floor(x) - 1, math.floor(y)  # whole px, so landed pieces sit on pixels
-        self.width, self.height = math.ceil(x + w) + 1 - self.left, math.ceil(y + h) - self.top
-        snap = Gtk.Snapshot()
-        snap.scale(scale, scale)
-        snap.translate(Graphene.Point().init(-self.left, -self.top))
-        snap.push_clip(Graphene.Rect().init(self.left, self.top, self.width, self.height))
-        snap.append_layout(layout, colour)
-        snap.pop()
-        width, height = max(1, math.ceil(self.width * scale)), max(1, math.ceil(self.height * scale))
-        self.surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
-        node = snap.to_node()
-        if node:
-            node.draw(cairo.Context(self.surface))
-        self.surface.flush()
-        self.surface.set_device_scale(scale, scale)
-        # pieces about 1/17 of a row across: the same look, and about as many, at any text size
-        self.scale, self.cell = scale, max(1, round(max(2, round(row_height / 17)) * scale))  # screen pixels
-        cell, self.size = self.cell, self.cell / scale
-        rows, cols = -(-height // cell), -(-width // cell)
-        word = np.zeros((rows * cell, cols * cell, 4), np.uint8)
-        pixels = np.frombuffer(self.surface.get_data(), np.uint8).reshape(height, -1)[:, :width * 4]
-        word[:height, :width] = pixels.reshape(height, width, 4)
-        cells = word.reshape(rows, cell, cols, cell, 4).transpose(0, 2, 1, 3, 4)
-        r, c = np.nonzero(cells[..., 3].max(axis=(2, 3)))
-        self.cells, n = cells[r, c], len(r)  # each piece's pixels, as cairo keeps them
-        self.x, self.y = c * self.size, r * self.size  # each piece's place in the word, px
-        self.spot = r * 65536 + c  # each piece's cell in the word, as one number
-        self.across = self.x / self.width  # 0 at the word's left edge, nearly 1 at its right
-        rng = np.random.default_rng()
-        angle, reach = rng.uniform(0, 2 * math.pi, n), rng.uniform(0.4, 1.5, n) * row_height
-        self.dx, self.dy = np.cos(angle) * reach, np.sin(angle) * reach * 0.7  # where assemble starts
-        self.delay = rng.uniform(0, 0.06, n)  # so assemble's left-to-right front is not a hard edge
-        self.order = rng.random(n)  # when dissolve switches each piece on
-        self.drop = rng.uniform(0.5, 1.4, n) * row_height  # how far rain drops from
-        self.mosaics, self.key, self.placed = {}, None, (None, None)
-
-    def keep(self, old):
-        """Give the pieces the paths they had in old, the same word cut earlier, so a word cut
-        again in flight (moved up a row when the rows glide, or in a colour that is changing)
-        flies on instead of starting new paths. Pieces in cells old had no ink in keep their own."""
-        if old.size != self.size:
-            return
-        _, mine, theirs = np.intersect1d(self.spot, old.spot, assume_unique=True, return_indices=True)
-        for name in ('dx', 'dy', 'delay', 'order', 'drop'):
-            getattr(self, name)[mine] = getattr(old, name)[theirs]
-
-    SHARP = 0.55  # the mosaic has its full detail by here, then blends into the label
-
-    @classmethod
-    def blend(cls, p):
-        """How far the mosaic has blended into the label, p of the way through."""
-        return max(0.0, (p - cls.SHARP) / (1 - cls.SHARP))
-
-    def bounds(self, effect, p, x, y):
-        """Where the pieces are p of the way through effect while the word lands at (x, y), as
-        x, y, width, height; None when none shows."""
-        if effect == 'mosaic':
-            return x + self.left, y + self.top, self.width, self.height
-        k, px, py, _ = self.place(effect, p)
-        if not len(k):
-            return None
-        left, top, s = px.min(), py.min(), self.scale
-        return (x + self.left + left / s, y + self.top + top / s, (px.max() + self.cell - left) / s,
-                (py.max() + self.cell - top) / s)
-
-    def place(self, effect, p):
-        """The pieces that show p of the way through a pixel effect: their numbers, where they
-        are in screen pixels from the word's top left, whole ones (landed, exactly where the
-        word's are), and their opacity. Kept for the frame, which asks bounds() before draw()."""
-        if self.placed[0] != (effect, p):
-            shown, ox, oy, alpha = self.state(effect, p)
-            k = np.nonzero(shown)[0]
-            px = np.rint((self.x[k] + ox[k]) * self.scale).astype(np.intp)
-            py = np.rint((self.y[k] + oy[k]) * self.scale).astype(np.intp)
-            self.placed = (effect, p), (k, px, py, alpha[k])
-        return self.placed[1]
-
-    def state(self, effect, p):
-        """Each piece p of the way (0 to 1) through a pixel effect: whether it shows, how far
-        it is from its place (px), and its opacity. The pieces rush in and then settle, so most
-        of the word can be read before half the time is up; all have landed by 0.75."""
-        zero = np.zeros(len(self.x))
-        if effect == 'assemble':
-            t = p - (self.across * 0.25 + self.delay)
-            q = 1 - (1 - np.clip(t / 0.4, 0, 1)) ** 5
-            return t > 0, self.dx * (1 - q), self.dy * (1 - q), np.clip(t / 0.1, 0, 1)
-        if effect == 'rain':
-            t = (p - self.across * 0.25) / 0.45
-            q = 1 - (1 - np.clip(t, 0, 1)) ** 5
-            return t > 0, zero, -self.drop * (1 - q), q
-        return p >= self.order * 0.5, zero, zero, zero + 1  # dissolve
-
-    def draw(self, cr, effect, p, x, y):
-        """Draw the word p of the way (0 to 1) through its effect, landing at (x, y)."""
-        x, y = x + self.left, y + self.top
-        if effect == 'mosaic':
-            step = MOSAIC[min(len(MOSAIC) - 1, int(p / self.SHARP * len(MOSAIC)))]
-            small = self.mosaics.get(step)
-            if small is None:
-                w = max(1, round(self.surface.get_width() * step))
-                h = max(1, round(self.surface.get_height() * step))
-                small = self.mosaics[step] = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
-                c = cairo.Context(small)
-                c.scale(w / self.width, h / self.height)
-                c.set_source_surface(self.surface, 0, 0)
-                c.paint()
-            cr.save()
-            cr.translate(x, y)
-            cr.scale(self.width / small.get_width(), self.height / small.get_height())
-            cr.set_source_surface(small, 0, 0)
-            cr.get_source().set_filter(cairo.FILTER_NEAREST)
-            cr.paint_with_alpha(min(1.0, p * 6) * (1 - self.blend(p)))
-            cr.restore()
-            return
-        k, px, py, alpha = self.place(effect, p)
-        if not len(k):
-            return
-        # Put the pieces in one image, just big enough for them, on whole screen pixels
-        cell, left, top = self.cell, px.min(), py.min()
-        width, height = int(px.max() + cell - left), int(py.max() + cell - top)
-        px, py = px - left, py - top
-        pixels = self.cells[k]
-        if (alpha < 1).any():
-            pixels = (pixels * alpha[:, None, None, None]).astype(np.uint8)  # premultiplied: all four
-        span = np.arange(cell)
-        frame = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
-        image = np.ndarray((height, frame.get_stride() // 4, 4), np.uint8, frame.get_data())
-        image[py[:, None, None] + span[None, :, None], px[:, None, None] + span[None, None, :]] = pixels
-        frame.mark_dirty()
-        frame.set_device_scale(self.scale, self.scale)
-        cr.set_source_surface(frame, x + left / self.scale, y + top / self.scale)
-        cr.paint()
 
 
 class StyledLabel(Gtk.Label):

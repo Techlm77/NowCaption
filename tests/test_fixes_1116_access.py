@@ -22,7 +22,8 @@ import test_window
 from test_window import FakeLayerShell, nc, shared_app
 
 if nc:  # GTK and a display are there
-    from nowcaption import caption_window, settings
+    from nowcaption import settings
+    from nowcaption.ui import caption_window
 
 ROOT = Path(__file__).resolve().parent.parent
 SKIP = getattr(test_window, 'SKIP', '')
@@ -47,7 +48,7 @@ class LongPressTests(unittest.TestCase):
         self.shell = FakeLayerShell()
         self.shell.modes = []
         self.shell.set_keyboard_mode = lambda window, mode: self.shell.modes.append(mode)
-        patcher = patch.object(caption_window, 'LayerShell', self.shell)
+        patcher = patch.object(caption_window.layer_shell, 'LayerShell', self.shell)
         patcher.start()
         self.addCleanup(patcher.stop)
         for key in ('position', 'x', 'y', 'width', 'rows', 'size'):
@@ -75,8 +76,8 @@ class LongPressTests(unittest.TestCase):
             time.sleep(0.01)
 
     def menu(self):
-        ok, rect = self.window.popover.get_pointing_to()
-        return self.window.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
+        ok, rect = self.window.menu.popover.get_pointing_to()
+        return self.window.menu.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
 
     def test_the_long_press_is_for_touch_and_apart_from_the_drag(self):
         controllers = self.window.observe_controllers()
@@ -94,21 +95,21 @@ class LongPressTests(unittest.TestCase):
         w = self.window
         w.place(100, 50)
         x, y = w.x + 50, w.y + 20
-        w.point_menu(x, y)
+        w.menu.point_menu(x, y)
         right_click = self.menu()
-        w.point_menu(w.x + 30, w.y + 30)  # elsewhere, so the long press must point it again
-        w.on_drag_begin(press(), x, y)  # the finger going down starts a move
-        self.assertTrue(w.dragging)
+        w.menu.point_menu(w.x + 30, w.y + 30)  # elsewhere, so the long press must point it again
+        w.pointer.on_drag_begin(press(), x, y)  # the finger going down starts a move
+        self.assertTrue(w.pointer.dragging)
         hold = press()
-        w.on_long_press(hold, x, y)
+        w.pointer.on_long_press(hold, x, y)
         self.assertEqual(hold.states, [nc.Gtk.EventSequenceState.CLAIMED])
         self.assertEqual(self.menu(), right_click)
         self.assertEqual(self.shell.modes, [FakeLayerShell.KeyboardMode.ON_DEMAND])  # its items take keys
         self.settle(0.3)
-        self.assertTrue(w.popover.get_visible())
-        w.popover.popdown()
+        self.assertTrue(w.menu.popover.get_visible())
+        w.menu.popover.popdown()
         self.assertEqual(self.shell.modes[-1], FakeLayerShell.KeyboardMode.NONE)
-        w.on_drag_end(None, 0, 0)  # as GTK ends the denied drag
+        w.pointer.on_drag_end(None, 0, 0)  # as GTK ends the denied drag
         self.assertEqual((self.app.settings.get('x'), self.app.settings.get('y')), (100, 50))
 
     def test_a_long_press_on_a_docked_strip_opens_the_menu_away_from_its_edge(self):
@@ -116,32 +117,32 @@ class LongPressTests(unittest.TestCase):
         self.app.activate_action('position', nc.GLib.Variant('s', 'bottom'))
         self.settle()
         x, y = w.get_width() // 2, w.get_height() - 5  # inside, away from the edge that resizes
-        w.on_drag_begin(press(), x, y)
-        self.assertFalse(w.resizing)
+        w.pointer.on_drag_begin(press(), x, y)
+        self.assertFalse(w.pointer.resizing)
         hold = press()
-        w.on_long_press(hold, x, y)
+        w.pointer.on_long_press(hold, x, y)
         self.assertEqual(hold.states, [nc.Gtk.EventSequenceState.CLAIMED])
         self.assertEqual(self.menu(), (nc.Gtk.PositionType.TOP, (x, 0, 1, 1)))
         self.settle(0.3)
-        w.popover.popdown()
+        w.menu.popover.popdown()
 
     def test_holding_still_on_an_edge_keeps_resizing_and_opens_no_menu(self):
         w = self.window
         w.place(100, 50)
         x, y = w.x + 50, w.y + 2  # on the top edge
         edge = press()
-        w.on_drag_begin(edge, x, y)
+        w.pointer.on_drag_begin(edge, x, y)
         self.assertEqual(edge.states, [nc.Gtk.EventSequenceState.CLAIMED])
-        self.assertEqual(w.resizing[0], 'n')
-        w.point_menu(w.x + 30, w.y + 30)
+        self.assertEqual(w.pointer.resizing[0], 'n')
+        w.menu.point_menu(w.x + 30, w.y + 30)
         before = self.menu()
         hold = press()
-        w.on_long_press(hold, x, y)
+        w.pointer.on_long_press(hold, x, y)
         self.assertEqual(hold.states, [])
         self.assertEqual(self.menu(), before)
         self.assertEqual(self.shell.modes, [])
-        self.assertEqual(w.resizing[0], 'n')
-        w.on_drag_end(None, 0, 0)
+        self.assertEqual(w.pointer.resizing[0], 'n')
+        w.pointer.on_drag_end(None, 0, 0)
 
 
 
@@ -163,7 +164,7 @@ class LongPressWithoutLayerShellTests(unittest.TestCase):
         if self.window.layer:
             self.skipTest('This display has layer shell')
         self.moves = []
-        self.window.begin_move = lambda gesture, x, y: self.moves.append((round(x), round(y)))
+        self.window.pointer.begin_move = lambda gesture, x, y: self.moves.append((round(x), round(y)))
         self.window.present()
 
     def finger(self, touch=True):
@@ -173,27 +174,27 @@ class LongPressWithoutLayerShellTests(unittest.TestCase):
 
     def test_a_finger_held_still_opens_the_menu_and_never_moves_the_window(self):
         w, gesture = self.window, self.finger()
-        w.on_drag_begin(gesture, 100, 30)
-        w.on_drag_update(gesture, 2, 1)  # a finger never holds perfectly still
+        w.pointer.on_drag_begin(gesture, 100, 30)
+        w.pointer.on_drag_update(gesture, 2, 1)  # a finger never holds perfectly still
         self.assertEqual(self.moves, [])
-        with patch.object(w, 'on_menu') as menu:
-            w.on_long_press(press(), 100, 30)
+        with patch.object(w.menu, 'on_menu') as menu:
+            w.pointer.on_long_press(press(), 100, 30)
         menu.assert_called_once()
-        w.on_drag_end(gesture, 2, 1)  # GTK ends the drag once the long press takes the press
-        self.assertIsNone(w.move_from)
+        w.pointer.on_drag_end(gesture, 2, 1)  # GTK ends the drag once the long press takes the press
+        self.assertIsNone(w.pointer.move_from)
         self.assertEqual(self.moves, [])
 
     def test_a_finger_that_travels_moves_the_window_from_where_it_is(self):
         w, gesture = self.window, self.finger()
-        w.on_drag_begin(gesture, 100, 30)
+        w.pointer.on_drag_begin(gesture, 100, 30)
         far = w.get_settings().props.gtk_dnd_drag_threshold
-        w.on_drag_update(gesture, far, 0)
+        w.pointer.on_drag_update(gesture, far, 0)
         self.assertEqual(self.moves, [(100 + far, 30)])
-        w.on_drag_update(gesture, far + 5, 0)  # the window manager has it now
+        w.pointer.on_drag_update(gesture, far + 5, 0)  # the window manager has it now
         self.assertEqual(len(self.moves), 1)
 
     def test_the_mouse_still_moves_the_window_at_once(self):
-        self.window.on_drag_begin(self.finger(touch=False), 100, 30)
+        self.window.pointer.on_drag_begin(self.finger(touch=False), 100, 30)
         self.assertEqual(self.moves, [(100, 30)])
 
 @unittest.skipIf(nc is None, SKIP)

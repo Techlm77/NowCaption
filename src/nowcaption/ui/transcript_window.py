@@ -11,7 +11,7 @@ gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
 from gi.repository import Adw, Gdk, GLib, GObject, Gtk, Pango  # noqa: E402
 
-from . import engine  # noqa: E402
+from .. import engine  # noqa: E402
 
 LOG = logging.getLogger('nowcaption')
 
