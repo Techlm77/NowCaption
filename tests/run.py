@@ -81,7 +81,9 @@ def run(path, gui):
         # desktop of whoever runs the tests instead of on xvfb-run's display.
         env.pop('WAYLAND_DISPLAY', None)
         env['GDK_BACKEND'] = 'x11'
-        command = ['xvfb-run', '-a'] + command
+        # A real screen's size and colour depth: xvfb-run's default (640x480, 8 bits) squeezes the
+        # caption box until text wraps where it wouldn't on any desktop.
+        command = ['xvfb-run', '-a', '-s', '-screen 0 1920x1080x24'] + command
     try:
         done = subprocess.run(command, cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True, timeout=TIMEOUT)
