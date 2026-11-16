@@ -29,12 +29,13 @@ try:
     gi.require_version('Gtk', '4.0')
     gi.require_version('Adw', '1')
     from nowcaption import app as nc
-    from nowcaption import portal
+    from nowcaption.control import commands
+    from nowcaption.desktop import autostart, portal
     from nowcaption.ui import caption_window, options_window
 except (ImportError, ValueError) as e:
     if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
         raise
-    nc = caption_window = options_window = portal = None
+    nc = caption_window = options_window = autostart = commands = portal = None
     SKIP = f'PyGObject with GTK 4 and libadwaita is not available: {e}'
 
 NVIDIA = [('in video', 'Nvidia'), ('and video', 'Nvidia')]
@@ -136,18 +137,18 @@ class HistoryDaysTests(unittest.TestCase):
                          ['1 day', '7 days', '30 days', '90 days', None])
 
 
-@unittest.skipIf(portal is None, globals().get('SKIP', ''))
+@unittest.skipIf(autostart is None, globals().get('SKIP', ''))
 class AutostartTests(unittest.TestCase):
     def test_exec_quotes_paths_with_spaces(self):
-        self.assertEqual(portal.desktop_exec(['/home/me/My Apps/NowCaption.AppImage']),
+        self.assertEqual(autostart.desktop_exec(['/home/me/My Apps/NowCaption.AppImage']),
                          '"/home/me/My Apps/NowCaption.AppImage"')
-        self.assertEqual(portal.desktop_exec(['nowcaption']), 'nowcaption')
-        self.assertEqual(portal.desktop_exec(['a$b']), '"a\\$b"')
+        self.assertEqual(autostart.desktop_exec(['nowcaption']), 'nowcaption')
+        self.assertEqual(autostart.desktop_exec(['a$b']), '"a\\$b"')
 
     def test_outside_the_flatpak_a_file_is_written_and_removed(self):
         with patch.dict(os.environ, XDG_CONFIG_HOME=tempfile.mkdtemp(), APPIMAGE='/opt/Now Caption.AppImage'), \
-                patch.object(portal, 'in_flatpak', lambda: False):
-            auto = portal.Autostart(None, 'io.github.Techlm77.NowCaption')
+                patch.object(autostart, 'in_flatpak', lambda: False):
+            auto = autostart.Autostart(None, 'io.github.Techlm77.NowCaption')
             results = []
             auto.set(True, lambda on, message: results.append((on, message)))
             text = auto.path().read_text()
@@ -168,16 +169,16 @@ class AppTests(unittest.TestCase):
         self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.calls = []
-        self.app.capture = NS(start=lambda device, gen: self.calls.append(('start', gen)),
+        self.app.listening.capture = NS(start=lambda device, gen: self.calls.append(('start', gen)),
                               stop=lambda: self.calls.append(('stop',)))
-        self.app.worker = NS(set_source=lambda gen: self.calls.append(('source', gen)),
+        self.app.listening.worker = NS(set_source=lambda gen: self.calls.append(('source', gen)),
                              set_words=lambda fixes: self.calls.append(('words', fixes.fixes)))
-        self.app.ready = True
+        self.app.listening.ready = True
 
     def tearDown(self):
-        self.app.set_paused(False)
-        self.app.worker = None
-        self.app.ready = False
+        self.app.listening.set_paused(False)
+        self.app.listening.worker = None
+        self.app.listening.ready = False
         if self.app.hidden:
             self.app.toggle_captions()
         self.window.disconnect_monitors()
@@ -191,15 +192,15 @@ class AppTests(unittest.TestCase):
             self.app.options.close()
 
     def test_pause_stops_capture_and_resume_listens_again(self):
-        gen = self.app.source_gen
+        gen = self.app.listening.source_gen
         self.app.activate_action('pause', None)
-        self.assertTrue(self.app.paused)
+        self.assertTrue(self.app.listening.paused)
         self.assertEqual(self.calls, [('source', gen + 1), ('stop',)])
         self.assertIn('paused', self.window.status)
-        self.app.start_capture()  # a source change or Clear while paused does not listen
+        self.app.listening.start_capture()  # a source change or Clear while paused does not listen
         self.assertEqual(len(self.calls), 2)
         self.app.activate_action('pause', None)
-        self.assertFalse(self.app.paused)
+        self.assertFalse(self.app.listening.paused)
         self.assertEqual(self.calls[2:], [('source', gen + 2), ('start', gen + 2)])
         self.assertNotIn('paused', self.window.status)
 
@@ -220,7 +221,7 @@ class AppTests(unittest.TestCase):
         self.app.window = None
         with patch.object(self.app, 'activate', lambda: done.append('activate')), \
                 patch.object(self.app, 'activate_action', lambda name, value: done.append(name)):
-            self.app.on_command_line(self.app, line)
+            commands.on_command_line(self.app, line)
         self.assertEqual(done, ['activate'])  # starting it shows the captions; it does not hide them
 
     def test_history_days_apply_with_apply_and_change_the_menu(self):

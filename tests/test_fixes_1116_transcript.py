@@ -153,13 +153,13 @@ class TranscriptFixTests(unittest.TestCase):
 
     def test_deleting_the_history_drops_its_matches(self):
         w = self.window
-        self.app.worker = NS(clear=lambda gen: None, set_history=lambda path: None,
+        self.app.listening.worker = NS(clear=lambda gen: None, set_history=lambda path: None,
                              snapshot=lambda fn, on_error=None: None)
         self.app.window = NS(show_text=lambda text: None)
         self.app.transcript = w
-        self.app.ready = self.app.closing = self.app.quit_requested = False
-        for name in ('worker', 'window', 'transcript'):
-            self.addCleanup(setattr, self.app, name, None)
+        self.app.listening.ready = self.app.closing = self.app.quitting.quit_requested = False
+        for owner, name in ((self.app.listening, 'worker'), (self.app, 'window'), (self.app, 'transcript')):
+            self.addCleanup(setattr, owner, name, None)
         w.apply('[14:05:20] Bright')
         w.entry.set_text('bright')
         w.find()

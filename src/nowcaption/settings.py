@@ -1,4 +1,6 @@
-"""The app's ID and its settings: what each one may be, its default, and the key file that keeps them."""
+"""The app's ID and its settings: what each one may be, its default, and the key file that keeps them.
+Imports GLib, whose key file is the settings file's format and whose config folder is the
+Flatpak's own, but never GTK, the windows or app.py."""
 import logging
 from pathlib import Path
 

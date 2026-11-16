@@ -198,7 +198,7 @@ class AppTests(unittest.TestCase):
     def test_copy_and_save_leave_out_sessions_past_seven_days_before_they_are_deleted(self):
         old, recent = self.session(7 * 86400 + 60, 'Last week.'), self.session(2 * 86400, 'This week.')
         self.assertEqual([text for _, text in self.app.earlier_sessions()], ['[10:00:00] This week.'])
-        self.assertNotIn('Last week', self.app.full_transcript('[12:00:00] Now.'))
+        self.assertNotIn('Last week', self.app.history.full_transcript('[12:00:00] Now.'))
         self.assertTrue(old.exists(), 'only skipped here; prune_history deletes it')
 
     def deliver(self, signum, called):
@@ -212,13 +212,13 @@ class AppTests(unittest.TestCase):
 
     def test_kill_logout_and_shutdown_quit_the_way_quit_does(self):
         a, called = self.app, []
-        a.request_quit = lambda: called.append('request_quit')
-        a.quit = lambda: called.append('quit')
+        a.quitting.request_quit = lambda: called.append('request_quit')
+        a.quitting.quit = lambda: called.append('quit')
         sources = nc.quit_on_signals(a)
         try:
             self.deliver(signal.SIGTERM, called)
             self.assertEqual(called, ['request_quit'])
-            a.quit_requested = True  # still finishing a save: a second signal does not wait for it
+            a.quitting.quit_requested = True  # still finishing a save: a second signal does not wait for it
             self.deliver(signal.SIGHUP, called)
             self.assertEqual(called, ['request_quit', 'quit'])
         finally:

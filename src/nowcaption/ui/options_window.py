@@ -8,7 +8,7 @@ gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 
-from .. import portal  # noqa: E402
+from ..desktop import portal  # noqa: E402
 from ..settings import APP_ID  # noqa: E402
 from ..style import WORD_EFFECTS, WORD_SPEEDS, css_font  # noqa: E402
 from .preview import Preview  # noqa: E402

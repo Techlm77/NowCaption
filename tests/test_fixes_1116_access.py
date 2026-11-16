@@ -23,6 +23,7 @@ from test_window import FakeLayerShell, nc, shared_app
 
 if nc:  # GTK and a display are there
     from nowcaption import settings
+    from nowcaption.control import commands
     from nowcaption.ui import caption_window
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -216,7 +217,7 @@ class LaunchTests(unittest.TestCase):
         activate = patch.object(self.app, 'activate', lambda: done.append('activate'))
         action = patch.object(self.app, 'activate_action', lambda name, value: done.append(name))
         with activate, action:
-            self.assertEqual(self.app.on_command_line(self.app, NS(get_options_dict=lambda: options)), 0)
+            self.assertEqual(commands.on_command_line(self.app, NS(get_options_dict=lambda: options)), 0)
         return done
 
     def test_a_plain_launch_starts_or_shows_the_captions_as_before(self):
@@ -239,7 +240,7 @@ class LaunchTests(unittest.TestCase):
         desktop = nc.GLib.KeyFile()
         desktop.load_from_file(str(ROOT / 'data' / f'{settings.APP_ID}.desktop'), nc.GLib.KeyFileFlags.NONE)
         actions = desktop.get_string_list('Desktop Entry', 'Actions')
-        self.assertEqual(actions, [name for name, _ in nc.NowCaption.LAUNCH_OPTIONS])
+        self.assertEqual(actions, [name for name, _ in commands.LAUNCH_OPTIONS])
         names = {}
         for action in actions:
             group = f'Desktop Action {action}'
@@ -258,6 +259,7 @@ class LaunchTests(unittest.TestCase):
 RUNNING = """
 import subprocess, sys, threading
 from nowcaption import app as nc
+from nowcaption.control import quitting
 
 AGAIN = 'import sys; from nowcaption import app as nc; sys.exit(nc.NowCaption().run(sys.argv))'
 codes = []
@@ -279,12 +281,12 @@ def started(self, app):
 
 def quit(self):
     print('quit', flush=True)
-    nc.Adw.Application.quit(self)
+    nc.Adw.Application.quit(self.app)
 
 nc.NowCaption.on_activate = started
 nc.NowCaption.open_transcript = lambda self: print('transcript', flush=True)
 nc.NowCaption.open_options = lambda self: print('options', flush=True)
-nc.NowCaption.request_quit = quit
+quitting.Quitting.request_quit = quit
 app = nc.NowCaption()
 app.fullscreen_watch.bus = None
 app.panel_float.bus = None  # nor change the panels of the desktop running the tests

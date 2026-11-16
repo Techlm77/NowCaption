@@ -21,37 +21,37 @@ nc = gui.nc
 class RestartListeningTests(unittest.TestCase):
     def make(self):
         a = test_app.AppTests.make(self)
-        a.worker.restarts = 0
-        a.worker.restart = lambda: setattr(a.worker, 'restarts', a.worker.restarts + 1)
+        a.listening.worker.restarts = 0
+        a.listening.worker.restart = lambda: setattr(a.listening.worker, 'restarts', a.listening.worker.restarts + 1)
         return a
 
     def test_after_the_model_fails_to_load_restart_loads_it_again(self):
         a = self.make()
         source = a.settings.get('source')
-        a.on_worker('load-error', 'Could not load the speech model: no space left.')
+        a.listening.on_worker('load-error', 'Could not load the speech model: no space left.')
         self.assertIn('To try again, open More options and press Restart.', a.window.statuses[-1])
         a.lookup_action('restart-listening').activate(None)
-        self.assertEqual(a.worker.restarts, 1)
+        self.assertEqual(a.listening.worker.restarts, 1)
         self.assertEqual(a.window.statuses[-1], 'Retrying the speech model…')
         self.assertEqual(a.settings.get('source'), source)  # the same sound source
 
     def test_after_recognition_gives_up_restart_listens_again_with_new_retries(self):
         a = self.make()
-        a.on_worker('ready', None)
-        a.recognition_failures = 3  # the automatic retries are spent
-        a.on_worker('error', (a.source_gen, 0, 'Speech recognition stopped: decoder failed'))
+        a.listening.on_worker('ready', None)
+        a.listening.recognition_failures = 3  # the automatic retries are spent
+        a.listening.on_worker('error', (a.listening.source_gen, 0, 'Speech recognition stopped: decoder failed'))
         self.assertIn('To try again, open More options and press Restart.', a.window.statuses[-1])
-        self.assertIsNone(a.recognition_retry_id)
+        self.assertIsNone(a.listening.recognition_retry_id)
         a.lookup_action('restart-listening').activate(None)
-        self.assertEqual(a.capture.starts, [1, 2])  # capture started again
-        self.assertEqual(a.recognition_failures, 0)
+        self.assertEqual(a.listening.capture.starts, [1, 2])  # capture started again
+        self.assertEqual(a.listening.recognition_failures, 0)
 
     def test_restart_does_nothing_while_quitting(self):
         a = self.make()
-        a.on_worker('ready', None)
-        a.quit_requested = True  # waiting for a save to finish
+        a.listening.on_worker('ready', None)
+        a.quitting.quit_requested = True  # waiting for a save to finish
         a.lookup_action('restart-listening').activate(None)
-        self.assertEqual(a.capture.starts, [1])
+        self.assertEqual(a.listening.capture.starts, [1])
 
 
 @unittest.skipIf(nc is None, getattr(gui, 'SKIP', ''))
@@ -87,7 +87,8 @@ class OptionsWindowTests(unittest.TestCase):
         self.assertEqual(row.get_ancestor(nc.Adw.PreferencesGroup).get_title(), 'Listen to')
         [restart] = [b for b in self.find(row, nc.Gtk.Button) if b.get_label() == 'Restart']
         self.checks()['mic'].activate()  # a choice that waits for Apply
-        with patch.object(self.app, 'ready', True), patch.object(self.app, 'start_capture') as start:
+        with patch.object(self.app.listening, 'ready', True), \
+                patch.object(self.app.listening, 'start_capture') as start:
             restart.emit('clicked')
         start.assert_called_once_with()
         self.assertEqual(self.app.settings.get('source'), 'desktop')  # what the captions use, not the waiting choice

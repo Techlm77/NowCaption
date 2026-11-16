@@ -1,4 +1,5 @@
-"""Launcher. Loads gtk4-layer-shell before GTK when it is available."""
+"""Launcher. Loads gtk4-layer-shell before GTK when it is available, so nothing here imports GTK, or
+app.py, before preload_layer_shell() has run."""
 import ctypes.util
 import os
 import sys

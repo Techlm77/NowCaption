@@ -1,5 +1,6 @@
 """KDE Plasma integration over D-Bus: a KWin script that reports a fullscreen window on the captions'
-screen, and turning a floating panel's floating off while the captions are docked on its edge."""
+screen, and turning a floating panel's floating off while the captions are docked on its edge.
+Knows nothing of the app beyond its ID and its settings."""
 import json
 import logging
 from pathlib import Path

@@ -21,7 +21,8 @@ try:
     import cairo
     import numpy as np
     from nowcaption import app as nc
-    from nowcaption import plasma, settings, style
+    from nowcaption import settings, style
+    from nowcaption.desktop import plasma
     from nowcaption.ui import caption_text, caption_window, options_window, transcript_window
     from gi.repository import Gdk, Pango
     if not nc.Gtk.init_check() or Gdk.Display.get_default() is None:
@@ -152,7 +153,7 @@ class WindowTests(unittest.TestCase):
         self.window.restyle()
         self.assertEqual(self.window.menu.values['text-size'].get_label(), '30 px')
         self.assertEqual(self.window.menu.values['background'].get_label(), '78%')
-        self.app.resize(+1)
+        self.app.appearance.resize(+1)
         self.assertEqual(self.window.menu.values['text-size'].get_label(), '36 px')
 
     def test_two_row_caption_renders_and_font_size_can_change(self):
@@ -171,7 +172,7 @@ class WindowTests(unittest.TestCase):
     def new_size(self, step):
         """Change the text size, and wait until GTK has applied it to the labels."""
         before = self.fonts()
-        self.app.resize(step)
+        self.app.appearance.resize(step)
         end = time.monotonic() + 5
         while self.fonts() == before and time.monotonic() < end:
             nc.GLib.MainContext.default().iteration(False)
@@ -374,16 +375,16 @@ class TranscriptWindowTests(unittest.TestCase):
     def test_delete_history_removes_every_kept_session(self):
         from types import SimpleNamespace as NS
         cleared, sent = [], []
-        self.app.worker = NS(clear=cleared.append, set_history=sent.append, snapshot=lambda fn, on_error=None: None)
+        self.app.listening.worker = NS(clear=cleared.append, set_history=sent.append, snapshot=lambda fn, on_error=None: None)
         self.app.window = NS(show_text=lambda text: None)
         self.app.transcript = self.window
-        self.app.ready = self.app.closing = self.app.quit_requested = False
-        for name in ('worker', 'window', 'transcript'):
-            self.addCleanup(setattr, self.app, name, None)
+        self.app.listening.ready = self.app.closing = self.app.quitting.quit_requested = False
+        for owner, name in ((self.app.listening, 'worker'), (self.app, 'window'), (self.app, 'transcript')):
+            self.addCleanup(setattr, owner, name, None)
         self.app.delete_history()
         self.assertEqual(nc.engine.history_files(), [])
         self.assertEqual(len(cleared), 1)
-        self.assertEqual(sent, [self.app.history_path])
+        self.assertEqual(sent, [self.app.history.history_path])
         self.assertEqual(self.text(), '')
 
 
@@ -547,14 +548,14 @@ class AnimationTests(unittest.TestCase):
         self.assertGreater(self.window.label.get_color().blue, 0.0, 'the colour changed at once')
 
     def test_quitting_fades_the_box_out_first(self):
-        self.addCleanup(setattr, self.app, 'fading_out', False)
+        self.addCleanup(setattr, self.app.quitting, 'fading_out', False)
         with patch.object(nc.Adw.Application, 'quit') as quit:
-            self.app.quit()
+            self.app.quitting.quit()
             self.assertEqual(quit.call_count, 0)
             self.finish(self.window.box)
             self.assertEqual(self.window.box.get_opacity(), 0.0)
             self.assertEqual(quit.call_count, 1)
-            self.app.quit()  # the safety timer, or a second Quit, while the box is gone
+            self.app.quitting.quit()  # the safety timer, or a second Quit, while the box is gone
             self.assertEqual(quit.call_count, 2)
 
     def effect(self, effect, speed='normal'):
@@ -1043,7 +1044,7 @@ class DockTests(unittest.TestCase):
     def test_a_new_text_size_keeps_a_top_strip_at_its_rows(self):
         w = self.window
         self.position('top')
-        self.app.resize(+1)
+        self.app.appearance.resize(+1)
         w.on_fonts()  # as GTK would once it applies the new size
         self.assertEqual(w.rows, style.ROWS)
         self.assertEqual(w.caption_height(), style.ROWS * w.row_height + 2 * style.PAD_Y)
