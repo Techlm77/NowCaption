@@ -240,9 +240,10 @@ class NowCaption(Adw.Application):
         self.autostart.set(on, answered)
 
     # --- what the windows ask of the app ----------------------------------------------------
-    # Short forwarders to the collaborators in control/: the interface the windows (ui) use, and
-    # main() and PyGObject's Ctrl+C (threads_finished, quit), so none of them needs to know how the
-    # work is split up. Only set_words, which keeps the app's word list, has work of its own; keep
+    # Short forwarders to the collaborators in control/, used by the windows (ui), main() and
+    # PyGObject's Ctrl+C (threads_finished, quit), so none of them needs to know how the work is
+    # split up. The windows also use a few of the app's own methods and attributes; CONTRIBUTING.md
+    # lists all of it. Only set_words, which keeps the app's word list, has work of its own; keep
     # the rest this short.
 
     @property
