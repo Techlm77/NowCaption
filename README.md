@@ -45,36 +45,38 @@ session).
 
 | Distro | Desktop environment | Window manager | Session | Flatpak | AppImage | Before installing |
 |---|---|---|---|---|---|---|
-| Ubuntu 26.04 LTS | GNOME 50 | Mutter 50 | Wayland | Floats | Floats | Install Flatpak² |
-| Ubuntu 24.04 LTS | GNOME 46 | Mutter 46 | Wayland | Floats | Floats | Install Flatpak² |
-| Ubuntu 22.04 LTS | GNOME 42 | Mutter 42 | Wayland, X11 | Floats | Floats | Install Flatpak² |
-| Debian 13 | GNOME 48 | Mutter 48 | Wayland | Floats | Floats | Install Flatpak² |
-| Debian 12 | GNOME 43 | Mutter 43 | Wayland | Floats | Floats | Install Flatpak² |
+| Ubuntu 26.04 LTS | GNOME 50 | Mutter 50 | Wayland | Floats | Floats | Install Flatpak (see below) |
+| Ubuntu 24.04 LTS | GNOME 46 | Mutter 46 | Wayland | Floats | Floats | Install Flatpak (see below) |
+| Ubuntu 22.04 LTS | GNOME 42 | Mutter 42 | Wayland, X11 | Floats | Floats | Install Flatpak (see below) |
+| Debian 13 | GNOME 48 | Mutter 48 | Wayland | Floats | Floats | Install Flatpak (see below) |
+| Debian 12 | GNOME 43 | Mutter 43 | Wayland | Floats | Floats | Install Flatpak (see below) |
 | Fedora Workstation 45 | GNOME 51 | Mutter 51 | Wayland | Floats | Floats | – |
 | Fedora KDE 45 | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | – |
 | Linux Mint 22.3 | Cinnamon 6.6 | Muffin 6.6 | X11 | Floats | Floats | – |
 | Zorin OS 18.1 Core | GNOME 46 | Mutter 46 | Wayland | Floats | Floats | – |
-| Pop!_OS 24.04 LTS | COSMIC 1.11 | cosmic-comp | Wayland | Floats¹ | Docks | – |
+| Pop!_OS 24.04 LTS | COSMIC 1.11 | cosmic-comp | Wayland | Floats (see below) | Docks | – |
 | Arch Linux | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | – |
 | Arch Linux | GNOME 51 | Mutter 51 | Wayland | Floats | Floats | – |
-| Arch Linux | – | Hyprland 0.57 | Wayland | Floats¹ | Docks | Install Flatpak² |
-| Arch Linux | – | Sway 1.12 | Wayland | Floats¹ | Docks | Install Flatpak² |
-| CachyOS | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | Install Flatpak² |
-| EndeavourOS | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | Install Flatpak² |
+| Arch Linux | – | Hyprland 0.57 | Wayland | Floats (see below) | Docks | Install Flatpak (see below) |
+| Arch Linux | – | Sway 1.12 | Wayland | Floats (see below) | Docks | Install Flatpak (see below) |
+| CachyOS | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | Install Flatpak (see below) |
+| EndeavourOS | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | Install Flatpak (see below) |
 | Manjaro 26.1 | KDE Plasma 6.7 | KWin 6.7 | Wayland | Docks | Docks | – |
 | openSUSE Tumbleweed | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | – |
 | Bazzite 45 | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | – |
 | SteamOS 3.9 (Desktop Mode) | KDE Plasma 6.7 | KWin 6.7 | X11 | Floats | Floats | – |
-| NixOS 26.05 | GNOME 50 | Mutter 50 | Wayland | Floats | Floats | See ³ |
+| NixOS 26.05 | GNOME 50 | Mutter 50 | Wayland | Floats | Floats | See NixOS below |
 
-¹ COSMIC, Hyprland and Sway keep docking from sandboxed apps. The AppImage docks there, and
-the Flatpak can too with one optional command (see **Hyprland, Sway and COSMIC** below).
+**Docking on COSMIC, Hyprland and Sway.** These desktops keep docking from sandboxed apps, so
+the Flatpak floats there. The AppImage docks there, and the Flatpak can too with one optional
+command (see **Hyprland, Sway and COSMIC** below).
 
-² Only for the Flatpak: `sudo apt install flatpak` on Ubuntu and Debian, or
-`sudo pacman -S flatpak` on Arch, CachyOS and EndeavourOS; then log out and back in.
+**Installing Flatpak.** Only needed for the Flatpak: `sudo apt install flatpak` on Ubuntu and
+Debian, or `sudo pacman -S flatpak` on Arch, CachyOS and EndeavourOS; then log out and back in.
 
-³ NixOS: for the Flatpak, `services.flatpak.enable = true;`; for the AppImage,
-`programs.appimage = { enable = true; binfmt = true; };`. Then `sudo nixos-rebuild switch`.
+**NixOS.** For the Flatpak, add `services.flatpak.enable = true;` to your configuration; for the
+AppImage, `programs.appimage = { enable = true; binfmt = true; };`. Then run
+`sudo nixos-rebuild switch`.
 
 Rolling distros were tested as they were on 16 November 2026.
 
