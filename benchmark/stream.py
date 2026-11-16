@@ -146,7 +146,12 @@ class App:
 
         class Recognizer(so.OnlineRecognizer):
             def get_result(self, s):  # as engine.load_recognizer, minus the EOU tokens
-                return ''.join(t for t in self.recognizer.get_result(s).tokens if t not in hidden).strip()
+                r = self.recognizer.get_result(s)
+                tokens, times = r.tokens, r.timestamps
+                if hidden.intersection(tokens):
+                    keep = [i for i, t in enumerate(tokens) if t not in hidden]
+                    tokens, times = [tokens[i] for i in keep], [times[i] for i in keep]
+                return engine.join_tokens(tokens, times)
 
         class EouRecognizer(Recognizer):
             """Parakeet Realtime EOU emits nothing after its first <EOU> until its decoder is reset
