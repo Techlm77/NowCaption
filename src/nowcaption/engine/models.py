@@ -1,7 +1,7 @@
 """Finding and loading the speech models: the streaming transducer and the punctuation model.
 
 sherpa-onnx is imported only when a model loads, so tests and tools can import the engine
-without it. Depends on nothing else in NowCaption.
+without it. Depends on tokens.py only.
 """
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ import logging
 import os
 from collections.abc import Callable, Iterable
 from pathlib import Path
+
+from .tokens import join_tokens
 
 LOG = logging.getLogger(__name__)
 
@@ -48,8 +50,11 @@ def load_recognizer(threads: int = 1):
             # sherpa-onnx 1.13.8's result.text leaks a copy of the whole text on every read
             # (py::str(PyUnicode_DecodeUTF8(...)) keeps an extra reference): about 800 MB per
             # hour of speech at 25 reads a second. Its C++ result text is the tokens joined,
-            # and the tokens list converts without leaking.
-            return ''.join(self.recognizer.get_result(s).tokens).strip()
+            # and the tokens and their times convert without leaking (100,000 reads of the
+            # times: no growth). join_tokens also drops the copies of a word the model repeats
+            # on one frame.
+            result = self.recognizer.get_result(s)
+            return join_tokens(result.tokens, result.timestamps)
 
     p = models_dir() / ASR_DIR
     return Recognizer.from_transducer(

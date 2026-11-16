@@ -30,6 +30,7 @@ from .models import (
     load_recognizer,
     models_dir,
 )
+from .tokens import join_tokens
 from .transcript import TranscriptStore, cache_dir, stamp
 from .worker import RecognitionWorker
 
@@ -41,6 +42,7 @@ __all__ = [
     'release_free_memory',
     'ASR_DIR', 'ASR_FILES', 'PUNCT_DIR', 'PUNCT_FILES', 'complete', 'load_models',
     'load_punctuation', 'load_recognizer', 'models_dir',
+    'join_tokens',
     'TranscriptStore', 'cache_dir', 'stamp',
     'RecognitionWorker',
 ]
