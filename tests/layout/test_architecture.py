@@ -6,7 +6,7 @@ This is what keeps the parts apart as the code grows.
 The source is read with ast, never imported, so these tests need only the standard library (no
 GTK, no NumPy) and run on every supported Python:
 
-    python3 tests/test_architecture.py
+    python3 tests/layout/test_architecture.py
 
 NOWCAPTION_ARCHITECTURE_SRC=<a folder holding a nowcaption package> checks that copy instead of
 this checkout's src/, to see a planted violation fail, for example.
@@ -226,11 +226,12 @@ class ArchitectureTests(unittest.TestCase):
         tree = self.tree
         self.assertIn(PACKAGE, tree.modules, f'no {PACKAGE} package in {tree.src}')
         problems = [f'{tree.relative(path)} is in no part that CONTRIBUTING.md names: add it to the layout there '
-                    f'and to MAY_USE in tests/test_architecture.py'
+                    f'and to MAY_USE in tests/layout/test_architecture.py'
                     for module, path in tree.modules.items() if part_of(module) not in MAY_USE and module != PACKAGE]
         found = {part_of(module) for module in tree.modules}
-        problems += [f'MAY_USE in tests/test_architecture.py names {part}, but {tree.relative(tree.src / PACKAGE)} '
-                     f'has no such module or package' for part in MAY_USE if part not in found]
+        problems += [f'MAY_USE in tests/layout/test_architecture.py names {part}, '
+                     f'but {tree.relative(tree.src / PACKAGE)} has no such module or package'
+                     for part in MAY_USE if part not in found]
         self.report(problems, 'The layout and these tests disagree')
         self.assertTrue(any(internal(imp.target) for imp in tree.imports), 'found no imports between modules')
 

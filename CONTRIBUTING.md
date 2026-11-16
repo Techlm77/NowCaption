@@ -41,7 +41,7 @@ Imports under `if TYPE_CHECKING:` never run, so they may name a type against the
 `control` names `NowCaption` that way, and `desktop` names `Settings`. The windows leave the app
 unannotated (their tests pass fakes). Imports inside functions do run, so they follow the rules.
 
-`tests/test_architecture.py` checks these rules. It reads the source with `ast` and imports
+`tests/layout/test_architecture.py` checks these rules. It reads the source with `ast` and imports
 nothing, so it needs only the standard library, and each failure names the file, the line and the
 rule broken. A new top-level module or package goes in the layout above and in the test's `MAY_USE`
 table.
@@ -53,7 +53,7 @@ code can write `engine.RecognitionWorker`. It stays short, with no logic in it.
 
 - One clear responsibility per module and per class. Each module starts with a short
   docstring saying what it does. The dependency rules live here, under "Package layout", where
-  `tests/test_architecture.py` checks them, and each package's `__init__.py` docstring repeats its
+  `tests/layout/test_architecture.py` checks them, and each package's `__init__.py` docstring repeats its
   own rule in a line.
 - No GTK or Adw in `engine/`: it must import with NumPy alone, so its tests run anywhere.
 - Comments explain *why*, not what the next line does. Plain English, British spelling.
@@ -103,14 +103,16 @@ tests/
   app/         # app.py, control/ and settings.py: listening, saving, quitting, commands
   ui/          # the windows: caption window, docking, pointer, animations, options, transcript
   desktop/     # desktop/: KDE Plasma's panels, autostart
+  layout/      # the package layout's dependency rules, read from the source
   packaging/   # the version, the speech model's files, the AppImage, the release workflows
   tools/       # the scripts in tools/ and tests/, and the benchmark's scoring
 ```
 
 A new test goes in the module named after what it tests (`ui/caption_window/docking.py` is
 tested in `ui/test_docking.py`), as a `unittest.TestCase` whose docstring says why it exists.
-Every test module imports `support.sandbox` among its first imports: it gives the process
-private XDG folders (no test may touch the user's settings, transcript or history). Fakes and helpers that
+Every test module that imports NowCaption imports `support.sandbox` among its first imports: it
+gives the process private XDG folders (no test may touch the user's settings, transcript or
+history). Fakes and helpers that
 more than one module needs go in `tests/support/`, never in a test module: test modules never
 import each other. Tests that build the real application use `support.gtk` (and
 `support.windows` for windows); those that need only NumPy run the application's own methods
