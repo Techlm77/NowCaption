@@ -213,6 +213,23 @@ class DockTests(unittest.TestCase):
         w.place(100, 50)
         self.assertEqual(menu_at(w.x + 50, w.y + 10), (down, (50, 10, 1, 1)))
 
+    # Without this, an open menu left where the captions were failed no test
+    def test_an_open_menu_moves_with_the_captions_to_their_new_place(self):
+        w = self.window
+        w.present()
+        for _ in range(50):
+            nc.GLib.MainContext.default().iteration(False)
+        w.menu.popover.popup()
+        self.position('top')
+        self.assertTrue(w.menu.popover.get_visible())
+        ok, moved = w.menu.popover.get_pointing_to()
+        w.menu.point_menu(w.x + w.box_width // 2, w.y + w.box_height() // 2)  # where the menu belongs now
+        ok, expected = w.menu.popover.get_pointing_to()
+        self.assertEqual((moved.x, moved.y, moved.width, moved.height),
+                         (expected.x, expected.y, expected.width, expected.height))
+        self.assertEqual(w.menu.popover.get_position(), nc.Gtk.PositionType.BOTTOM)  # down, away from the top edge
+        w.menu.popover.popdown()
+
     def animated(self):
         gtk = nc.Gtk.Settings.get_default()
         gtk.set_property('gtk-enable-animations', True)

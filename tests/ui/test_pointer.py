@@ -132,6 +132,20 @@ class LongPressTests(unittest.TestCase):
         w.pointer.on_drag_end(None, 0, 0)
 
 
+    # The tests here call the Pointer's handlers; this one checks the window's gesture reaches
+    # them (without it, a window that stopped connecting drag-begin failed no test).
+    def test_dragging_a_corner_of_the_box_resizes_it_through_the_windows_drag_gesture(self):
+        w = self.window
+        controllers = w.observe_controllers()
+        [drag] = [c for c in (controllers.get_item(i) for i in range(controllers.get_n_items()))
+                  if isinstance(c, nc.Gtk.GestureDrag)]
+        drag.emit('drag-begin', w.x + w.box_width - 1, w.y + w.box_height() - 1)
+        self.assertIsNotNone(w.pointer.resizing, 'the drag gesture did not reach the pointer')
+        self.assertEqual(w.pointer.resizing[0], 'se')
+        drag.emit('drag-end', 0, 0)
+        self.assertIsNone(w.pointer.resizing)
+
+
 @unittest.skipIf(nc is None, SKIP)
 class LongPressWithoutLayerShellTests(unittest.TestCase):
     """Without layer shell (GNOME), where the window manager moves the captions' window: a

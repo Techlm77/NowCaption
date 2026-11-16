@@ -8,10 +8,11 @@ from 1.1.16.
 import time
 import unittest
 from types import SimpleNamespace as NS
+from unittest.mock import patch
 
 import support.sandbox  # noqa: F401 - private XDG folders and a quiet log for this process
 from nowcaption import style
-from support.windows import SKIP, nc, shared_app
+from support.windows import SKIP, FakeLayerShell, nc, shared_app
 
 if nc:  # GTK and a display are there
     from nowcaption import settings
@@ -436,6 +437,53 @@ class ScreenTests(unittest.TestCase):
         self.plugged(NS(get_connector=lambda: 'eDP-1'))
         self.assertEqual(len(self.used), 1)
         self.assertIsNot(self.used[0], self.external)
+
+
+@unittest.skipIf(nc is None, SKIP)
+class ScreenMenuTests(unittest.TestCase):
+    """With layer shell, the menu offers "Move to next screen" while there is one: a screen
+    plugged in or unplugged updates it. (ScreenTests above have no layer shell, so without these
+    the menu not being updated failed no test.)"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = shared_app()
+
+    def setUp(self):
+        patcher = patch.object(caption_window.layer_shell, 'LayerShell', FakeLayerShell())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for key in ('monitor', 'position'):
+            self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
+        self.window = caption_window.CaptionWindow(self.app)
+        self.app.window = self.window
+        self.addCleanup(setattr, self.app, 'window', None)
+        self.addCleanup(self.window.destroy)
+        self.addCleanup(self.window.disconnect_monitors)
+        if not self.window.monitor:
+            self.skipTest('No monitor advertised by the display')
+        self.window.use_monitor = lambda monitor: None
+        self.app.settings.set('monitor', '')  # no chosen screen: plugging one in moves nothing
+
+    def plugged(self, *items):
+        self.window.on_monitors_changed(NS(get_n_items=lambda: len(items), get_item=items.__getitem__), 0, 0, 1)
+
+    def actions(self):
+        menu, found = self.window.menu.popover.get_menu_model(), set()
+        for i in range(menu.get_n_items()):
+            section = menu.get_item_link(i, 'section')
+            for j in range(section.get_n_items() if section else 0):
+                action = section.get_item_attribute_value(j, 'action', None)
+                if action:
+                    found.add(action.get_string())
+        return found
+
+    def test_a_second_screen_plugged_in_or_unplugged_updates_the_menu(self):
+        self.assertTrue(self.window.layer)
+        self.plugged(self.window.monitor, NS(get_connector=lambda: 'HDMI-9'))
+        self.assertIn('app.next-screen', self.actions())
+        self.plugged(self.window.monitor)
+        self.assertNotIn('app.next-screen', self.actions())
 
 
 if __name__ == '__main__':
