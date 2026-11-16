@@ -317,6 +317,11 @@ def main() -> int:
               f'GTK {gtk[0]}.{gtk[1]} and libadwaita {adw[0]}.{adw[1]}. The Flatpak includes both.',
               file=sys.stderr)
         return 1
+    # X11 names windows after the program (WM_CLASS), which desktops match to the desktop file;
+    # unnamed, it was "python3" or "ld-linux-x86-64.so.2". Wayland windows carry the app ID anyway.
+    GLib.set_prgname(APP_ID)
+    if GLib.get_application_name() == APP_ID:  # not named yet; a window without a title shows it
+        GLib.set_application_name('NowCaption')
     app = NowCaption()
     quit_on_signals(app)
     status = app.run(sys.argv)

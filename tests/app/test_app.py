@@ -235,6 +235,16 @@ class MainTests(unittest.TestCase):
     def test_main_exits_at_once_while_a_thread_is_still_busy(self):
         self.assertEqual(self.run_main(False), (0, [0]))
 
+    def test_main_names_the_program_after_the_app_id_for_x11(self):
+        """X11 names a window after the program (WM_CLASS), and GNOME matches that to the desktop
+        file: on Ubuntu 22.04's X11 session the top bar said "python3" (Flatpak) and
+        "ld-linux-x86-64.so.2" (AppImage). Its readable name is NowCaption."""
+        self.run_main(True)
+        self.assertEqual(GLib.get_prgname(), 'io.github.Techlm77.NowCaption')
+        self.assertEqual(GLib.get_application_name(), 'NowCaption')
+        self.run_main(True)  # once named, a second main() leaves the names as they are
+        self.assertEqual(GLib.get_application_name(), 'NowCaption')
+
 
 @unittest.skipIf(nc is None, SKIP)
 class RestartListeningTests(unittest.TestCase):
