@@ -43,7 +43,8 @@ class TranscriptStore:
         try:
             folder = Path(folder) if folder else cache_dir()
             folder.mkdir(mode=0o700, parents=True, exist_ok=True)
-            self.file = tempfile.TemporaryFile(dir=folder, buffering=0)  # O_TMPFILE where supported
+            # O_TMPFILE where supported. It stays open while the store lives, so no with block.
+            self.file = tempfile.TemporaryFile(dir=folder, buffering=0)  # noqa: SIM115
         except OSError as e:
             LOG.warning('Keeping the transcript in memory: %s', e)
             self.memory = []

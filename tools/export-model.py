@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # Copyright      2024  Xiaomi Corp.        (authors: Fangjun Kuang)
 import argparse
-from typing import Dict
 
 import nemo.collections.asr as nemo_asr
 import onnx
@@ -16,7 +15,7 @@ def get_args():
     return parser.parse_args()
 
 
-def add_meta_data(filename: str, meta_data: Dict[str, str]):
+def add_meta_data(filename: str, meta_data: dict[str, str]):
     """Add meta data to an ONNX model. It is changed in-place.
 
     Args:

@@ -537,7 +537,7 @@ def main():
         raise SystemExit(f'unknown engine {kind}')
     if kind == 'appreset':
         eng.reset_after_pauses()
-    lead, starts, gaps, total = layout(D, refs, a.seed, a.gap)
+    lead, starts, gaps, _total = layout(D, refs, a.seed, a.gap)
     cpu0, wall0 = os.times(), time.perf_counter()
     off, busy = 0, 0.0
     for x in blocks(D, refs, lead, gaps):

@@ -58,7 +58,7 @@ def clip_errors(items):
     pairs = [(i['audio'], _norm(i['ref']), _norm(i['hyp'])) for i in items]
     pairs = [p for p in pairs if p[1].strip()]
     out = jiwer.process_words([r for _, r, _ in pairs], [h for _, _, h in pairs])
-    count = lambda c: c.hyp_end_idx - c.hyp_start_idx if c.type == 'insert' else c.ref_end_idx - c.ref_start_idx  # noqa: E731
+    count = lambda c: c.hyp_end_idx - c.hyp_start_idx if c.type == 'insert' else c.ref_end_idx - c.ref_start_idx
     return {a: (sum(count(c) for c in al if c.type != 'equal'), len(r.split())) for (a, r, _), al in zip(pairs, out.alignments)}
 
 
@@ -86,7 +86,7 @@ def summary(model, mode):
         out['sets'][s] = {'wer': d['wer'], 'settled_p50': float(np.median(st)) if st else None,
                           'loops': sum(loops(i['hyp']) for i in d['items']), 'cpu_rtf': d['cpu_rtf'],
                           'peak_rss_mb': d['peak_rss_mb'], 'resets': d.get('resets'), 'clips': d.get('clips_total')}
-    pc = lambda v, q: round(float(np.percentile(v, q)), 3) if v else None  # noqa: E731  (sets without word_times.json have no delays)
+    pc = lambda v, q: round(float(np.percentile(v, q)), 3) if v else None  # sets without word_times.json have no delays
     out.update(avg_wer=float(np.mean([out['sets'][s]['wer'] for s in SETS])), cv_wer=out['sets'].get('common_voice', {}).get('wer'),
                settled=[pc(settled, q) for q in (50, 90, 99)], first=[pc(first, q) for q in (50, 90, 99)],
                timed=len(settled), loops=sum(v['loops'] for v in out['sets'].values()),
@@ -98,7 +98,7 @@ def summary(model, mode):
 def paired(new, old, mode):
     """Change new minus old: WER per set and the 8-set average, median and p90 settled latency, with ranges."""
     rng = np.random.default_rng(SEED)
-    per_set, draws_avg = {}, []
+    per_set = {}
     lat_n, lat_o, lat_clip = [], [], []
     cells = []
     for si, s in enumerate(SETS):
@@ -143,7 +143,7 @@ def paired(new, old, mode):
         d90.append(np.percentile(lat_n[t], 90) - np.percentile(lat_o[t], 90))
     lat50 = [float(np.median(lat_n) - np.median(lat_o)), *np.percentile(d50, [2.5, 97.5]).tolist()] if timed else None
     lat90 = [float(np.percentile(lat_n, 90) - np.percentile(lat_o, 90)), *np.percentile(d90, [2.5, 97.5]).tolist()] if timed else None
-    return {'sets': per_set, 'avg_wer': avg, 'settled_p50': lat50, 'settled_p90': lat90, 'paired_words': int(len(lat_n))}
+    return {'sets': per_set, 'avg_wer': avg, 'settled_p50': lat50, 'settled_p90': lat90, 'paired_words': len(lat_n)}
 
 
 def after_pause(model, mode, sets=None, head=2):
@@ -246,8 +246,8 @@ def main():
                 ap = after_pause(r['model'], mode)
                 cv = after_pause(r['model'], mode, ['common_voice']) if 'common_voice' in SETS else ap
                 r['after_pause'], r['after_pause_cv'] = ap, cv
-                f = lambda t: f"{t[0] / t[1] * 100:.1f}%"  # noqa: E731
-                g = lambda x: '—' if x is None else f'{x:.3f} s'  # noqa: E731
+                f = lambda t: f"{t[0] / t[1] * 100:.1f}%"
+                g = lambda x: '—' if x is None else f'{x:.3f} s'
                 print(f"| {r['model']} | {f(ap['first'])} | {f(ap['rest'])} | {g(ap['first'][2])} | {g(ap['rest'][2])} | "
                       f"{f(cv['first'])} / {g(cv['first'][2])} |")
     Path(a.json).write_text(json.dumps(report, indent=1))

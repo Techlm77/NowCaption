@@ -62,8 +62,9 @@ class WordFixes:
         for heard, right, write in self.swaps:
             if heard.search(raw):
                 spans = [m.span() for m in right.finditer(raw)]
-                raw = heard.sub(lambda m: m.group(0) if any(a <= m.start() and m.end() <= b for a, b in spans)
-                                else write, raw)
+                # sub() calls the lambda before the loop moves on, so it sees this pass's spans and write
+                raw = heard.sub(lambda m: m.group(0) if any(a <= m.start() and m.end() <= b for a, b in spans)  # noqa: B023
+                                else write, raw)  # noqa: B023
         return raw
 
     def spelled(self, words):

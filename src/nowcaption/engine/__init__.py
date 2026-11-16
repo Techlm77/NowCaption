@@ -6,11 +6,28 @@ engine imports with NumPy alone. It depends on nowcaption.words only.
 """
 from .captioner import MAX_LINE, PAUSE_S, RATE, WARMUP_S, Captioner
 from .capture import DESKTOP, MICROPHONE, Capture
-from .history import (HISTORY_CHOICES, HISTORY_DAYS, history_cutoff, history_dir, history_file,
-                      history_files, history_span, prune_history)
+from .history import (
+    HISTORY_CHOICES,
+    HISTORY_DAYS,
+    history_cutoff,
+    history_dir,
+    history_file,
+    history_files,
+    history_span,
+    prune_history,
+)
 from .memory import release_free_memory
-from .models import (ASR_DIR, ASR_FILES, PUNCT_DIR, PUNCT_FILES, complete, load_models,
-                     load_punctuation, load_recognizer, models_dir)
+from .models import (
+    ASR_DIR,
+    ASR_FILES,
+    PUNCT_DIR,
+    PUNCT_FILES,
+    complete,
+    load_models,
+    load_punctuation,
+    load_recognizer,
+    models_dir,
+)
 from .transcript import TranscriptStore, cache_dir, stamp
 from .worker import RecognitionWorker
 
