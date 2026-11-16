@@ -125,6 +125,12 @@ NowCaption quits. Plasma 5.27 has no way for apps to do that: there, turn off **
 for that panel in Edit Mode, or dock the captions on another edge.
 Floating captions keep their bottom edge in place when you change the text size.
 
+**Hyprland and Sway.** The Flatpak can't dock there: both desktops keep docking from
+sandboxed apps such as Flatpaks, as part of their security design, so it isn't a bug in
+NowCaption. Its captions are an ordinary floating window, and the menu has no **Position**.
+A way around it inside the sandbox was looked for, but every route hit the same wall. The
+AppImage isn't sandboxed, and docks there out of the box.
+
 **KWin permission.** On KDE Plasma, the Flatpak may talk to KWin, so docked captions can
 float over fullscreen apps. That lets it load a KWin script: NowCaption loads a small one
 while the captions are docked, to learn when a fullscreen app opens on their screen. If
