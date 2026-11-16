@@ -72,7 +72,8 @@
           <li>On X11, NowCaption shows its own name in the top bar and window list</li>
           <li>On Hyprland, Sway and COSMIC, the Flatpak can dock after one optional command
             (see the README)</li>
-          <li>The code is reorganised into smaller parts, with more tests; nothing else changes</li>
+          <li>The code is now clean and modular: split into small, focused parts that are easier
+            to read and build on, with more tests to keep it that way</li>
         </ul>
       </description>
     </release>
