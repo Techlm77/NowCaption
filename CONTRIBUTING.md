@@ -104,7 +104,7 @@ tests/
   ui/          # the windows: caption window, docking, pointer, animations, options, transcript
   desktop/     # desktop/: KDE Plasma's panels, autostart
   layout/      # the package layout's dependency rules, read from the source
-  packaging/   # the version, the speech model's files, the AppImage, the release workflows
+  packaging/   # the version, the speech model's files, the AppImage, the Flatpak's launcher, the release workflows
   tools/       # the scripts in tools/ and tests/, and the benchmark's scoring
 ```
 
