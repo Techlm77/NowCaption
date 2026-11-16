@@ -58,6 +58,24 @@
     <color type="primary" scheme_preference="dark">#7a5214</color>
   </branding>
   <releases>
+    <release version="1.2.4" date="2026-11-16">
+      <description>
+        <p>
+          Fixes for repeated words, small screens and Debian 12, tested on 21 Linux systems.
+        </p>
+        <ul>
+          <li>A word said several times in a row, such as "no no no", no longer shows up with
+            extra copies</li>
+          <li>On Debian 12, Desktop audio captions what you hear instead of the microphone</li>
+          <li>More options and the transcript fit laptop screens such as 1366x768, and the
+            caption box's menu always fits on screen</li>
+          <li>On X11, NowCaption shows its own name in the top bar and window list</li>
+          <li>On Hyprland, Sway and COSMIC, the Flatpak can dock after one optional command
+            (see the README)</li>
+          <li>The code is reorganised into smaller parts, with more tests; nothing else changes</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2.3" date="2026-11-15">
       <description>
         <p>
