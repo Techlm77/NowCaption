@@ -16,6 +16,7 @@ from ..desktop import portal
 from ..settings import APP_ID
 from ..style import WORD_EFFECTS, WORD_SPEEDS, css_font
 from .preview import Preview
+from .screen_fit import fit_height
 from .weak import weakly
 
 
@@ -33,7 +34,8 @@ class OptionsWindow(Adw.Window):
     def __init__(self, app) -> None:
         """app: the NowCaption application: its settings and actions, the word list, starting at
         login and the keyboard shortcuts."""
-        super().__init__(application=app, title='More options', default_width=560, default_height=760)
+        super().__init__(application=app, title='More options', default_width=560)
+        fit_height(self, 760)  # the page scrolls, so on a short screen the window can be shorter
         self.app = app
         self.chosen = Gio.SimpleActionGroup()  # the choices made here, until Apply
         for name, key in self.SETTINGS.items():

@@ -1,11 +1,14 @@
 """A GTK display for the tests that build windows (Xvfb: tests/run.py --gui runs them under
 xvfb-run), with the desktop's animations off so results show at once (the animation tests turn
-them on), the one application every window test shares, and a stand-in for gtk4-layer-shell.
+them on), the one application every window test shares, a stand-in for gtk4-layer-shell, and
+screens of any size.
 
 Without GTK or a display nc is None and SKIP says why, or with NOWCAPTION_REQUIRE_GUI_TESTS=1 the
 import fails. No models or audio pipeline are started.
 """
+import contextlib
 import os
+from unittest.mock import patch
 
 import support.sandbox  # noqa: F401 - private XDG folders and a quiet log for this process
 from support.gtk import SKIP, nc
@@ -39,6 +42,16 @@ def shared_app():
         app.panel_float.bus = None  # nor change the panels of the desktop running the tests
         APP.append(app)
     return APP[0]
+
+
+@contextlib.contextmanager
+def screen_size(width, height):
+    """Every screen measures width x height to NowCaption while this lasts, whatever the size of
+    the test display (xvfb-run's is 640x480)."""
+    geometry = Gdk.Rectangle()
+    geometry.width, geometry.height = width, height
+    with patch.object(Gdk.Monitor, 'get_geometry', lambda monitor: geometry):
+        yield
 
 
 class FakeLayerShell:

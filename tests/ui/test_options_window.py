@@ -2,16 +2,18 @@
 """More options: choices show in the sample and reach the captions only with Apply, Restart
 listens again at once, and a closed window is freed. On the test display.
 
-OptionsWindowTests come from the first window tests, OptionsWindowFixTests from 1.1.16.
+OptionsWindowTests come from the first window tests, OptionsWindowFixTests from 1.1.16, and
+OptionsWindowScreenTests from the distro test lab's 1366x768 laptop screen.
 """
 import gc
+import time
 import unittest
 import weakref
 from unittest.mock import patch
 
 import support.sandbox  # noqa: F401 - private XDG folders and a quiet log for this process
 from nowcaption import style
-from support.windows import SKIP, nc, shared_app
+from support.windows import SKIP, nc, screen_size, shared_app
 
 if nc:  # GTK and a display are there
     from nowcaption.ui import options_window
@@ -158,6 +160,79 @@ class OptionsWindowFixTests(unittest.TestCase):
         gc.collect()
         self.assertIsNone(window())
         self.assertIsNone(preview())
+
+
+@unittest.skipIf(nc is None, SKIP)
+class OptionsWindowScreenTests(unittest.TestCase):
+    """On Debian 13 GNOME at 1366x768 the distro test lab found More options taller than the
+    screen: its bottom options ran off the screen, out of reach. It must open within the space
+    a laptop's desktop leaves it, with Apply in view and every option reachable by scrolling,
+    and as before on a bigger screen."""
+
+    TOP_BAR = 32  # GNOME's top bar, which the lab's desktop has above the windows
+
+    def setUp(self):
+        self.app = shared_app()
+
+    def find(self, widget, kind):
+        child = widget.get_first_child()
+        while child:
+            if isinstance(child, kind):
+                yield child
+            yield from self.find(child, kind)
+            child = child.get_next_sibling()
+
+    def settle(self, seconds=0.3):
+        """Run the main loop for a while: the window is laid out on the frame clock's next tick."""
+        context, end = nc.GLib.MainContext.default(), time.monotonic() + seconds
+        while True:
+            while context.pending():
+                context.iteration(False)
+            if time.monotonic() >= end:
+                return
+            time.sleep(0.01)
+
+    def open_on(self, width, height):
+        """More options shown on a width x height screen, and the height it asked for. GTK fits
+        a window to the test display's own screen as it shows it, so what the window asks the
+        desktop for is read before that."""
+        with screen_size(width, height):
+            window = options_window.OptionsWindow(self.app)
+            self.addCleanup(window.close)
+            window.realize()
+            asked = window.get_default_size().height
+            window.present()
+            self.settle()
+        return window, asked
+
+    def test_it_fits_a_laptop_screen_with_every_option_in_reach(self):
+        for width, height in ((1366, 768), (1280, 720)):
+            with self.subTest(screen=f'{width}x{height}'):
+                window, asked = self.open_on(width, height)
+                room = height - self.TOP_BAR
+                self.assertLessEqual(asked, room)
+                self.assertLessEqual(window.get_height(), room)
+                # Apply is in the header bar, outside what scrolls, so it is always in view
+                self.assertIsNone(window.apply_button.get_ancestor(nc.Gtk.ScrolledWindow))
+                self.assertTrue(window.apply_button.get_mapped())
+                [page] = self.find(window, nc.Adw.PreferencesPage)
+                scroller = next(self.find(page, nc.Gtk.ScrolledWindow))
+                ok, view = scroller.compute_bounds(window)
+                self.assertTrue(ok)
+                self.assertLessEqual(view.get_y() + view.get_height(), window.get_height())
+                last = [row for row in self.find(page, nc.Adw.PreferencesRow) if row.is_visible()][-1]
+                adjustment = scroller.get_vadjustment()
+                self.assertGreater(adjustment.get_upper(), adjustment.get_page_size())  # it does scroll here
+                adjustment.set_value(adjustment.get_upper() - adjustment.get_page_size())
+                self.settle()
+                ok, bounds = last.compute_bounds(scroller)
+                self.assertTrue(ok)
+                self.assertGreaterEqual(bounds.get_y(), 0)
+                self.assertLessEqual(bounds.get_y() + bounds.get_height(), scroller.get_height())
+
+    def test_on_a_bigger_screen_it_opens_as_before(self):
+        _, asked = self.open_on(1920, 1080)
+        self.assertEqual(asked, 760)
 
 
 if __name__ == '__main__':
