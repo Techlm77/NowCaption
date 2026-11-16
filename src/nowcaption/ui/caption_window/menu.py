@@ -2,19 +2,27 @@
 open (text size, background, text colour and position), pointed toward the room on the screen
 and opened by a right-click or a long press. It reads the window's place and size, and changes
 nothing but the menu."""
-import gi
-gi.require_version('Gtk', '4.0')
-from gi.repository import Gdk, GLib, Gtk  # noqa: E402
+from __future__ import annotations
 
-from ...style import COLOURS, MENU_INDENT, POSITIONS, STEPPERS  # noqa: E402
-from . import layer_shell  # noqa: E402
+from typing import TYPE_CHECKING
+
+import gi
+
+gi.require_version('Gtk', '4.0')
+from gi.repository import Gdk, GLib, Gtk
+
+from ...style import COLOURS, MENU_INDENT, POSITIONS, STEPPERS
+from . import layer_shell
+
+if TYPE_CHECKING:  # for annotations only
+    from .window import CaptionWindow
 
 
 class CaptionMenu:
     """The menu that belongs to the caption box. The app builds its model (build_menu); this
     fills the model's custom items, shows the current values in them, and points and opens it."""
 
-    def __init__(self, window):
+    def __init__(self, window: CaptionWindow) -> None:
         self.window = window
         self.popover = Gtk.PopoverMenu()
         self.update_menu(window.layer and window.monitor_count() > 1)
@@ -24,7 +32,7 @@ class CaptionMenu:
         self.popover.connect('closed', lambda *a: window.layer and layer_shell.LayerShell.set_keyboard_mode(
             window, layer_shell.LayerShell.KeyboardMode.NONE))
 
-    def update_menu(self, several_screens):
+    def update_menu(self, several_screens: bool) -> None:
         """Set the menu, with the text size, background and text colour rows as buttons that
         keep it open. The size and background rows show their value between their buttons; the
         colour row shows the chosen colour's name, with a line of colour dots under it."""
@@ -64,11 +72,11 @@ class CaptionMenu:
             self.popover.add_child(self.position_row(), 'position')
         self.show_values()
 
-    def refresh_menu(self):
+    def refresh_menu(self) -> None:
         """Build the menu again, for an item whose label changed."""
         self.update_menu(self.window.layer and self.window.monitor_count() > 1)
 
-    def position_row(self):
+    def position_row(self) -> Gtk.Box:
         """The Position row: the chosen position's name, and a little screen for each position
         showing where the captions go; like the colour dots, they keep the menu open."""
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_start=MENU_INDENT,
@@ -96,7 +104,8 @@ class CaptionMenu:
         box.append(icons)
         return box
 
-    def show_values(self):
+    def show_values(self) -> None:
+        """Show the text size, background, text colour and position chosen now in their rows."""
         values, settings = self.values, self.window.settings
         values['text-size'].set_label(f"{settings.get('size')} px")
         values['background'].set_label(f"{round(settings.get('opacity') * 100)}%")
@@ -104,7 +113,7 @@ class CaptionMenu:
         if 'position' in values:
             values['position'].set_label(POSITIONS[settings.get('position')])
 
-    def point_menu(self, x, y):
+    def point_menu(self, x: float, y: float) -> None:
         """Point the menu at x, y in the window, opening toward the room on the screen: away
         from a docked strip's edge, beside a docked column, and upwards from captions low on
         the screen. KWin squeezes a layer-shell menu that does not fit, or lets it run off the
@@ -130,6 +139,7 @@ class CaptionMenu:
         self.popover.set_pointing_to(rect)
 
     def on_menu(self, gesture, n, x, y):
+        """A right-click, or a long press (Pointer.on_long_press): open the menu at x, y."""
         win = self.window
         if win.layer:  # let the menu take keyboard input while it is open
             shell = layer_shell.LayerShell

@@ -1,13 +1,15 @@
 """The caption box's stylesheet: text size, colour, font and background, the status row, and the
 menu's colour dots and position screens. It also styles the sample caption under More options
 (.caption-preview). Text only: the window loads it into its CSS provider."""
+from __future__ import annotations
+
 from ...style import CHANGE_MS, COLOURS, PAD_X, PAD_Y, css_font
 from ..preview import Preview
 
 
-def caption_css(px, font, alpha, colour):
-    """The stylesheet for text px pixels high in font (empty: the desktop's), in colour, on a
-    background of opacity alpha."""
+def caption_css(px: int, font: str, alpha: float, colour: str) -> str:
+    """The stylesheet for text px pixels high in font (empty: the desktop's), in colour (such as
+    '#ffffff'), on a background of opacity alpha (0 to 1)."""
     family = f'font-family: {css_font(font)};' if font.strip() else ''
     swatches = ''.join(f'window.nowcaption .colour-{name} {{ background: {rgb}; }}\n'
                        for name, (_, rgb) in COLOURS.items())

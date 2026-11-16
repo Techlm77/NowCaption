@@ -2,21 +2,26 @@
 shows the captions and status messages in it. Its parts have modules of their own: docking.py
 (floating, or docked along an edge with layer shell), pointer.py (dragging and resizing), menu.py,
 stylesheet.py, and stage.py (Stage and Drawer, which place and slide the box)."""
+from __future__ import annotations
+
+from collections.abc import Callable
+
 import cairo
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
-from gi.repository import Adw, Gdk, GLib, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, Gdk, GLib, Gtk, Pango
 
-from ...style import BOTTOM_GAP, COLOURS, FADE_IN_MS, MIN_WIDTH, PAD_X, PAD_Y, ROWS, STATUS_MS  # noqa: E402
-from ..caption_text import CaptionText, StyledLabel  # noqa: E402
-from . import layer_shell  # noqa: E402
-from .docking import Docking  # noqa: E402
-from .menu import CaptionMenu  # noqa: E402
-from .pointer import Pointer  # noqa: E402
-from .stage import Drawer, Stage  # noqa: E402
-from .stylesheet import caption_css  # noqa: E402
+from ...style import BOTTOM_GAP, COLOURS, FADE_IN_MS, MIN_WIDTH, PAD_X, PAD_Y, ROWS, STATUS_MS
+from ..caption_text import CaptionText, StyledLabel
+from . import layer_shell
+from .docking import Docking
+from .menu import CaptionMenu
+from .pointer import Pointer
+from .stage import Drawer, Stage
+from .stylesheet import caption_css
 
 
 class CaptionWindow(Gtk.ApplicationWindow):
@@ -34,7 +39,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
     resizing) and menu.
     """
 
-    def __init__(self, app):
+    def __init__(self, app) -> None:
+        """app: the NowCaption application: its settings, the menu's model, and the KWin watches."""
         super().__init__(application=app, title='NowCaption')
         self.app, self.settings = app, app.settings
         self.set_decorated(False)
@@ -117,11 +123,14 @@ class CaptionWindow(Gtk.ApplicationWindow):
     # --- screens --------------------------------------------------------------------------
 
     @staticmethod
-    def monitor_count():
+    def monitor_count() -> int:
+        """How many screens there are."""
         return Gdk.Display.get_default().get_monitors().get_n_items()
 
     @staticmethod
-    def pick_monitor(connector):
+    def pick_monitor(connector: str) -> Gdk.Monitor | None:
+        """The screen with this connector name (such as 'DP-1'), or else the first; None without
+        screens."""
         monitors = Gdk.Display.get_default().get_monitors()
         items = [monitors.get_item(i) for i in range(monitors.get_n_items())]
         for m in items:
@@ -130,11 +139,12 @@ class CaptionWindow(Gtk.ApplicationWindow):
         return items[0] if items else None
 
     @staticmethod
-    def width_for(monitor):
+    def width_for(monitor: Gdk.Monitor | None) -> int:
+        """The floating box's default width on monitor: 70% of the screen, at most 1000 px."""
         geo = monitor.get_geometry() if monitor else None
         return min(1000, int(geo.width * 0.7)) if geo else 1000
 
-    def use_monitor(self, monitor):
+    def use_monitor(self, monitor: Gdk.Monitor | None) -> None:
         """Move to monitor, resizing the box and its text wrapping to fit it."""
         self.monitor = monitor
         self.span = None
@@ -165,7 +175,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self._monitors_handler = self._monitors.connect('items-changed', self.on_monitors_changed)
         self.watch_monitor()
 
-    def watch_monitor(self):
+    def watch_monitor(self) -> None:
+        """Follow the current screen's geometry and scale, in place of the screen before."""
         for monitor, handler in self._monitor_handlers:
             monitor.disconnect(handler)
         self._monitor_handlers = []
@@ -182,6 +193,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
                 self.docking.watch_fullscreen()
 
     def disconnect_monitors(self, *args):
+        """Stop following the screens, as the window is unrealized (see watch_screens)."""
         for monitor, handler in self._monitor_handlers:
             monitor.disconnect(handler)
         self._monitor_handlers = []
@@ -189,7 +201,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self._monitors.disconnect(self._monitors_handler)
             self._monitors_handler = None
 
-    def next_monitor(self):
+    def next_monitor(self) -> None:
+        """Move the captions to the next screen, at its default place, and keep them there. Only
+        with layer shell and more than one screen."""
         monitors = Gdk.Display.get_default().get_monitors()
         items = [monitors.get_item(i) for i in range(monitors.get_n_items())]
         if len(items) < 2 or not self.layer:
@@ -202,7 +216,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     # --- size and place -------------------------------------------------------------------
 
-    def dock_span(self):
+    def dock_span(self) -> int:
         """The docked strip's length along its edge: what the compositor gave it beside any
         panels, or until it says, the whole screen's."""
         if self.span:
@@ -220,7 +234,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.fit()
         self.update_input()
 
-    def seat_footer(self):
+    def seat_footer(self) -> None:
         """Floating, status messages get a row of their own under the captions. Docked, the strip
         must keep its size (the windows beside it would resize), so they show over its corner."""
         footer, docked = self.status_label, bool(self.edge)
@@ -235,15 +249,17 @@ class CaptionWindow(Gtk.ApplicationWindow):
         footer.set_max_width_chars(48 if docked else -1)
         (footer.add_css_class if docked else footer.remove_css_class)('corner')
 
-    def box_height(self):
+    def box_height(self) -> int:
+        """The box's height, px: the caption rows, and the status row while it shows under them."""
         if self.edge in ('left', 'right'):  # the column runs the strip's whole height
             return self.dock_span()
         return self.caption_height() + (self.status_height if self.text and self.status and not self.edge else 0)
 
-    def caption_height(self):
+    def caption_height(self) -> int:
+        """The caption rows' height with their padding, px."""
         return self.rows * self.row_height + 2 * PAD_Y
 
-    def clamp(self, x, y):
+    def clamp(self, x: float | None, y: float | None) -> tuple[int, int]:
         """x, y on the monitor (None: centred near the bottom), keeping the whole box on screen."""
         geo = self.monitor.get_geometry()
         w, h = self.box_width, self.box_height()
@@ -251,7 +267,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         y = geo.height - h - BOTTOM_GAP if y is None else y
         return max(0, min(int(x), geo.width - w)), max(0, min(int(y), geo.height - h))
 
-    def place(self, x=None, y=None):
+    def place(self, x: float | None = None, y: float | None = None) -> None:
         """Put the caption box at x, y on its monitor (docked, it fills the strip)."""
         if not self.layer or not self.monitor or self.edge:
             self.x = self.y = 0
@@ -263,7 +279,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.stage.move(self.x, self.y)
         self.update_input()
 
-    def update_input(self):
+    def update_input(self) -> None:
         """Only the caption box takes pointer input; the rest of the overlay clicks through."""
         surface = self.get_surface()
         if self.layer and surface:
@@ -273,12 +289,13 @@ class CaptionWindow(Gtk.ApplicationWindow):
                 x, y, w, h = self.x, self.y, self.box_width, self.box_height()
             surface.set_input_region(cairo.Region(cairo.RectangleInt(int(x), int(y), max(0, int(w)), max(0, int(h)))))
 
-    def reset_position(self):
+    def reset_position(self) -> None:
+        """Back to the default place, centred near the bottom of the screen."""
         self.settings.set('x', -1)
         self.settings.set('y', -1)
         self.place()
 
-    def reset_size(self):
+    def reset_size(self) -> None:
         """The floating box's size, or docked, the strip's."""
         if self.edge:
             self.settings.set('dock_rows', ROWS)
@@ -290,7 +307,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.box_width = self.width_for(self.monitor)
         self.restyle()
 
-    def max_rows(self):
+    def max_rows(self) -> int:
         """As many rows as fit on the screen."""
         geo = self.monitor.get_geometry() if self.monitor else None
         if not geo:
@@ -298,7 +315,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         height = geo.height // 2 if self.edge in ('top', 'bottom') else geo.height  # a strip leaves room for windows
         return max(1, (height - 2 * PAD_Y - self.status_height) // max(1, self.row_height))
 
-    def restyle(self):
+    def restyle(self) -> None:
         """Apply the text size, background and text colour, and fit the box. A new background or
         colour on its own moves nothing, so the box is not fitted again: that wrapped the rows
         afresh, moving words between them, and stopped the glide and the words arriving."""
@@ -312,7 +329,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if not recoloured:
             self.fit()
 
-    def font_heights(self):
+    def font_heights(self) -> tuple[int, int]:
         """The height of a caption row and of the status row, in the fonts the labels have now."""
         return (self.label.create_pango_layout('Ag').get_pixel_size()[1],
                 self.status_label.create_pango_layout('Ag').get_pixel_size()[1] + PAD_Y)
@@ -323,7 +340,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if hasattr(self, 'status_height') and self.font_heights() != (self.row_height, self.status_height):
             self.fit()
 
-    def fit(self):
+    def fit(self) -> None:
         """Size the box for the caption font and the position. Floating: exactly self.rows rows at
         its width and place, and a new text size keeps its bottom edge where it was. Docked at
         the top or bottom: the strip's rows across the whole edge. Docked at a side: a column of
@@ -359,11 +376,13 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.render()
 
     @staticmethod
-    def dock_width_for(monitor):
+    def dock_width_for(monitor: Gdk.Monitor | None) -> int:
+        """A docked column's default width on monitor: a quarter of the screen, from MIN_WIDTH to
+        480 px."""
         geo = monitor.get_geometry() if monitor else None
         return max(MIN_WIDTH, min(480, geo.width // 4)) if geo else 480
 
-    def relayout(self):
+    def relayout(self) -> None:
         """Wrap the text to the box width and fix the caption at exactly self.rows rows."""
         self.layout = self.label.create_pango_layout('')
         self.layout.set_width((self.box_width - 2 * PAD_X) * Pango.SCALE)
@@ -380,7 +399,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     # --- text -----------------------------------------------------------------------------
 
-    def show_text(self, text):
+    def show_text(self, text: str) -> bool:
         """New caption passage. It replaces a persistent status message such as 'Listening…'."""
         self.text = text
         if text and self.status and not self.status_timer and not self.status_sticky:
@@ -388,8 +407,9 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.render()
         return False
 
-    def show_status(self, message, seconds=None, sticky=False):
-        """Show status below existing captions, or in the empty caption box."""
+    def show_status(self, message: str, seconds: int | None = None, sticky: bool = False) -> None:
+        """Show status below existing captions, or in the empty caption box: for seconds, or until
+        replaced (by captions too, unless sticky)."""
         if self.status_timer:
             GLib.source_remove(self.status_timer)
             self.status_timer = None
@@ -403,19 +423,21 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.status_timer = GLib.timeout_add_seconds(seconds, self.end_status)
         self.render()
 
-    def show_failure(self, scope, message):
+    def show_failure(self, scope: str, message: str) -> None:
         """Retain a runtime problem until that component actually recovers."""
         self.failures.pop(scope, None)
         self.failures[scope] = message
         self.show_status(message, sticky=True)
         self.status_scope = scope
 
-    def clear_failure(self, scope):
+    def clear_failure(self, scope: str) -> None:
+        """That component recovered: stop showing its problem."""
         self.failures.pop(scope, None)
         if self.status_scope == scope:
             self.end_status()
 
-    def end_status(self):
+    def end_status(self) -> bool:
+        """End the status message; a problem not yet recovered from shows again in its place."""
         self.status_timer, self.status = None, ''
         self.status_sticky = False
         self.status_scope = None
@@ -426,7 +448,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.render()
         return False
 
-    def render(self):
+    def render(self) -> None:
+        """Show the captions, or the status message in their place, and the status row."""
         # the text flows on; only the last rows show, so the newest words are always visible
         waiting = not self.text and self.status.endswith('…') and self.status not in self.failures.values()
         self.caption.show(self.text or self.status, status=not self.text, waiting=waiting)
@@ -434,7 +457,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         # The optional status row participates in overlay clamping and pointer input.
         self.place(self.x, self.y)
 
-    def show_footer(self, message):
+    def show_footer(self, message: str) -> None:
         """The status row under the captions. It fades in, and fades out before the box shrinks."""
         footer = self.status_label
         if message:
@@ -455,7 +478,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
             footer.set_visible(False)
         self.footer_shown = bool(message)
 
-    def fade(self, widget, start, end, ms, done=None):
+    def fade(self, widget: Gtk.Widget, start: float | None, end: float, ms: int,
+             done: Callable[[], None] | None = None) -> None:
         """Fade widget's opacity from start (None: from where it is) to end, then call done.
         Instant while the widget is hidden or the desktop turns animations off."""
         old = self.fades.pop(widget, None)
@@ -482,7 +506,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.faded_in = True
             self.fade(box, 0.0, 1.0, FADE_IN_MS)
 
-    def save_png(self, path):
+    def save_png(self, path: str) -> bool:
         """Render the window exactly as drawn, for store screenshots."""
         w, h = self.box.get_width(), self.box.get_height()
         snap = Gtk.Snapshot()
@@ -494,23 +518,23 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     # --- docking and the menu, for the app ------------------------------------------------
 
-    def reposition(self):
+    def reposition(self) -> None:
         """Float or dock as the menu now says (see Docking.reposition)."""
         self.docking.reposition()
 
-    def set_covered(self, covered):
+    def set_covered(self, covered: bool) -> None:
         """A fullscreen app on this screen opened or closed: float over it, or dock again."""
         self.docking.set_covered(covered)
 
-    def touch_panels(self):
+    def touch_panels(self) -> None:
         """Docked, touch the panels on the captions' edge again, as the captions show again."""
         self.docking.touch_panels()
 
     @property
-    def popover(self):
+    def popover(self) -> Gtk.PopoverMenu:
         """The caption box's menu, which the app closes when it hides the captions."""
         return self.menu.popover
 
-    def refresh_menu(self):
+    def refresh_menu(self) -> None:
         """Build the menu again, for an item whose label changed."""
         self.menu.refresh_menu()

@@ -1,15 +1,22 @@
 """The pixel effects' pieces: a new word cut into small squares that fly, drop or switch on into
 place, drawn with cairo and numpy. CaptionText decides when each word arrives."""
+from __future__ import annotations
+
 import math
+from typing import TYPE_CHECKING
 
 import cairo
 import gi
 import numpy as np
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Graphene', '1.0')
-from gi.repository import Graphene, Gtk  # noqa: E402
+from gi.repository import Graphene, Gtk
 
-from ..style import MOSAIC  # noqa: E402
+from ..style import MOSAIC
+
+if TYPE_CHECKING:  # for annotations only
+    from gi.repository import Gdk, Pango
 
 
 class Pieces:
@@ -18,9 +25,10 @@ class Pieces:
     piece has landed they show exactly the word. Pieces with no ink are left out. Each frame
     puts all the pieces into one image, with numpy, rather than drawing them one by one."""
 
-    def __init__(self, layout, colour, box, scale, row_height):
+    def __init__(self, layout: Pango.Layout, colour: Gdk.RGBA, box: tuple[float, float, float, float],
+                 scale: float, row_height: int) -> None:
         """layout: the label's layout without the fading; box: the word's (x, y, width, height)
-        in it, px; scale: the screen's pixels per px."""
+        in it, px; scale: the screen's pixels per px; row_height: a caption row's height, px."""
         x, y, w, h = box
         self.left, self.top = math.floor(x) - 1, math.floor(y)  # whole px, so landed pieces sit on pixels
         self.width, self.height = math.ceil(x + w) + 1 - self.left, math.ceil(y + h) - self.top
@@ -58,7 +66,7 @@ class Pieces:
         self.drop = rng.uniform(0.5, 1.4, n) * row_height  # how far rain drops from
         self.mosaics, self.key, self.placed = {}, None, (None, None)
 
-    def keep(self, old):
+    def keep(self, old: Pieces) -> None:
         """Give the pieces the paths they had in old, the same word cut earlier, so a word cut
         again in flight (moved up a row when the rows glide, or in a colour that is changing)
         flies on instead of starting new paths. Pieces in cells old had no ink in keep their own."""
@@ -71,11 +79,11 @@ class Pieces:
     SHARP = 0.55  # the mosaic has its full detail by here, then blends into the label
 
     @classmethod
-    def blend(cls, p):
+    def blend(cls, p: float) -> float:
         """How far the mosaic has blended into the label, p of the way through."""
         return max(0.0, (p - cls.SHARP) / (1 - cls.SHARP))
 
-    def bounds(self, effect, p, x, y):
+    def bounds(self, effect: str, p: float, x: float, y: float) -> tuple[float, float, float, float] | None:
         """Where the pieces are p of the way through effect while the word lands at (x, y), as
         x, y, width, height; None when none shows."""
         if effect == 'mosaic':
@@ -87,7 +95,7 @@ class Pieces:
         return (x + self.left + left / s, y + self.top + top / s, (px.max() + self.cell - left) / s,
                 (py.max() + self.cell - top) / s)
 
-    def place(self, effect, p):
+    def place(self, effect: str, p: float) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """The pieces that show p of the way through a pixel effect: their numbers, where they
         are in screen pixels from the word's top left, whole ones (landed, exactly where the
         word's are), and their opacity. Kept for the frame, which asks bounds() before draw()."""
@@ -99,7 +107,7 @@ class Pieces:
             self.placed = (effect, p), (k, px, py, alpha[k])
         return self.placed[1]
 
-    def state(self, effect, p):
+    def state(self, effect: str, p: float) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Each piece p of the way (0 to 1) through a pixel effect: whether it shows, how far
         it is from its place (px), and its opacity. The pieces rush in and then settle, so most
         of the word can be read before half the time is up; all have landed by 0.75."""
@@ -114,7 +122,7 @@ class Pieces:
             return t > 0, zero, -self.drop * (1 - q), q
         return p >= self.order * 0.5, zero, zero, zero + 1  # dissolve
 
-    def draw(self, cr, effect, p, x, y):
+    def draw(self, cr: cairo.Context, effect: str, p: float, x: float, y: float) -> None:
         """Draw the word p of the way (0 to 1) through its effect, landing at (x, y)."""
         x, y = x + self.left, y + self.top
         if effect == 'mosaic':

@@ -1,32 +1,37 @@
 """The transcript window: this session's captions and the kept history, searchable, with the
 session headings and times they are shown with."""
+from __future__ import annotations
+
 import bisect
 import logging
 import re
 import time
+from collections.abc import Callable
 
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
-from gi.repository import Adw, Gdk, GLib, GObject, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, Gdk, GLib, GObject, Gtk, Pango
 
-from .. import engine  # noqa: E402
+from .. import engine
 
 LOG = logging.getLogger('nowcaption')
 
 
-def history_title(days):
+def history_title(days: int) -> str:
     """How the transcript window says what it shows, for sessions kept this long."""
     return 'Last 24 hours' if days == 1 else f'Last {days} days' if days else 'Every kept session'
 
 
-def session_heading(started):
+def session_heading(started: float) -> str:
     """A session's heading in the transcript, such as "Thursday 23 October 2026, 14:05"."""
     return time.strftime('%A %-d %B %Y, %H:%M', time.localtime(started))
 
 
-def rgba(spec):
+def rgba(spec: str) -> Gdk.RGBA:
+    """A colour given in CSS, such as 'rgba(255, 140, 0, 0.75)'."""
     colour = Gdk.RGBA()
     colour.parse(spec)
     return colour
@@ -44,7 +49,9 @@ class TranscriptWindow(Adw.Window):
 
     REFRESH_MS = 500
 
-    def __init__(self, app):
+    def __init__(self, app) -> None:
+        """app: the NowCaption application: its settings, the kept sessions, the recognition worker,
+        and copying, saving and deleting the transcript."""
         super().__init__(application=app, default_width=680, default_height=720)
         self.app, self.closed = app, False
         self.block, self.current = [], None  # this session's lines as shown (heading first), and its start
@@ -119,7 +126,7 @@ class TranscriptWindow(Adw.Window):
         self.restyle()
         self.reload()
 
-    def connect_to(self, obj, signal, handler):
+    def connect_to(self, obj: GObject.Object, signal: str, handler: Callable[..., object]) -> None:
         """Connect handler to obj's signal until this window closes."""
         self.handlers.append((obj, obj.connect(signal, handler)))
 
@@ -138,17 +145,20 @@ class TranscriptWindow(Adw.Window):
         GLib.idle_add(self.buffer.set_text, '')  # after the window has gone, or its view starts scrolling as it closes
         return False
 
-    def restyle(self):
+    def restyle(self) -> bool:
+        """Dim the times from the text colour, which follows the light or dark style. False, so
+        it runs once as an idle callback."""
         colour = self.view.get_color()  # the text colour, dimmed for the times
         colour.alpha *= 0.55
         self.time_tag.set_property('foreground-rgba', colour)
         return False
 
-    def show_title(self):
+    def show_title(self) -> None:
+        """Say under the title what the window shows: how long sessions are kept, or this one."""
         keep = self.app.settings.get('history')
         self.title.set_subtitle(history_title(self.app.history_days()) if keep else 'This session only')
 
-    def reload(self):
+    def reload(self) -> None:
         """Read the kept sessions again and fetch this one."""
         self.app.prune_history()
         if self.current:
@@ -164,7 +174,7 @@ class TranscriptWindow(Adw.Window):
         self.refresh()
         GLib.idle_add(self.scroll_to_end)
 
-    def add_lines(self, lines, heading=True):
+    def add_lines(self, lines: list[str], heading: bool = True) -> None:
         """Append lines; the first is a session's heading unless heading is False."""
         for i, line in enumerate(lines):
             if i == 0 and heading:
@@ -176,12 +186,14 @@ class TranscriptWindow(Adw.Window):
                 line = ' ' + line[stamp.end():]
             self.buffer.insert(self.buffer.get_end_iter(), line + '\n')
 
-    def changed(self):
+    def changed(self) -> None:
         """A caption changed: fetch this session again soon (at most twice a second)."""
         if self.refresh_id is None:
             self.refresh_id = GLib.timeout_add(self.REFRESH_MS, self.refresh)
 
-    def refresh(self):
+    def refresh(self) -> bool:
+        """Ask the recognition worker for this session's lines again (apply gets them). False, so
+        it runs once as a timer callback."""
         self.refresh_id = None
         if self.app.worker and not self.app.closing and not self.closed:
             try:
@@ -190,7 +202,7 @@ class TranscriptWindow(Adw.Window):
                 LOG.warning('Could not refresh the transcript: %s', e)
         return False
 
-    def apply(self, text):
+    def apply(self, text: str) -> None:
         """Show this session's transcript, replacing only the lines that changed."""
         if self.closed:
             return
@@ -213,18 +225,21 @@ class TranscriptWindow(Adw.Window):
         if follow:
             GLib.idle_add(self.scroll_to_end)
 
-    def at_end(self):
+    def at_end(self) -> bool:
+        """Whether the view is scrolled to the end, give or take 24 px."""
         adjustment = self.scroller.get_vadjustment()
         return adjustment.get_value() + adjustment.get_page_size() >= adjustment.get_upper() - 24
 
-    def scroll_to_end(self):
+    def scroll_to_end(self) -> bool:
+        """Scroll to the last line. False, so it runs once as an idle callback."""
         self.view.scroll_to_mark(self.end, 0, False, 0, 1)
         return False
 
-    def show_page(self):
+    def show_page(self) -> None:
+        """Show the text, or while there is none, 'No captions yet'."""
         self.stack.set_visible_child_name('text' if self.buffer.get_char_count() else 'empty')
 
-    def find(self, keep=False, since=0):
+    def find(self, keep: bool = False, since: int = 0) -> None:
         """Highlight every match of the search text and go to the newest (or keep the place).
         Matches before offset since are kept: apply() passes where its new lines begin, so live
         captions search only those again, however long the history is."""
@@ -257,13 +272,15 @@ class TranscriptWindow(Adw.Window):
             self.match = len(self.matches) - 1
             self.show_match(scroll=True)
 
-    def step(self, direction):
+    def step(self, direction: int) -> None:
+        """Go to the next match (1) or the previous one (-1), going round at either end."""
         if self.matches:
             self.buffer.remove_tag(self.current_tag, *self.buffer.get_bounds())
             self.match = (self.match + direction) % len(self.matches)
             self.show_match(scroll=True)
 
-    def show_match(self, scroll):
+    def show_match(self, scroll: bool) -> None:
+        """Highlight the current match and say which it is; with scroll, also go to it."""
         if not self.entry.get_text():
             self.count.set_label('')
         elif not self.matches:
@@ -276,15 +293,19 @@ class TranscriptWindow(Adw.Window):
                 self.buffer.place_cursor(self.buffer.get_iter_at_mark(a))  # the arrow keys go on from the match
                 self.view.scroll_to_mark(a, 0.1, True, 0, 0.3)
 
-    def copy_all(self):
+    def copy_all(self) -> None:
+        """Copy every kept session and this one, each under its heading, and say so."""
         self.app.copy_transcript()
         self.toasts.add_toast(Adw.Toast(title='Transcript copied', timeout=2))
 
-    def confirm_delete(self):
+    def confirm_delete(self) -> None:
+        """Ask before deleting every kept transcript, this session's included."""
         span = engine.history_span(self.app.history_days())
-        kept = f'everything NowCaption has kept from the last {span}' if span else 'every transcript NowCaption has kept'
+        kept = (f'everything NowCaption has kept from the last {span}' if span
+                else 'every transcript NowCaption has kept')
         dialog = Adw.AlertDialog(heading='Delete all transcripts?',
-                                 body=f'This deletes {kept}, including this session, and clears the captions on screen.')
+                                 body=f'This deletes {kept}, including this session, and clears the captions '
+                                      'on screen.')
         dialog.add_response('cancel', 'Cancel')
         dialog.add_response('delete', 'Delete')
         dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)

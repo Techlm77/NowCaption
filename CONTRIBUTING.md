@@ -76,7 +76,7 @@ already cleaned up:
 
 ```sh
 ruff check src/nowcaption/__init__.py src/nowcaption/__main__.py src/nowcaption/words.py \
-    src/nowcaption/engine benchmark tools
+    src/nowcaption/style.py src/nowcaption/engine src/nowcaption/ui benchmark tools
 ```
 
 The rest of the code joins that list after its own cleanup. There is no formatter: don't

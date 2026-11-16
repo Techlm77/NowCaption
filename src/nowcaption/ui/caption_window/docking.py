@@ -3,13 +3,22 @@ where the compositor keeps other windows out of their strip (layer shell). Movin
 docked captions slide into their edge and out of the new one; floating ones fade. Docked, they
 float over a fullscreen app and touch Plasma's panels, through the app's KWin watches. Without
 layer shell the captions always float, and none of this runs."""
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gdk  # noqa: E402
+from gi.repository import Adw, Gdk
 
-from ...style import ALONG, DOCK_MS, FADE_IN_MS, FADE_OUT_MS, UNDOCK_MS  # noqa: E402
-from . import layer_shell  # noqa: E402
+from ...style import ALONG, DOCK_MS, FADE_IN_MS, FADE_OUT_MS, UNDOCK_MS
+from . import layer_shell
+
+if TYPE_CHECKING:  # for annotations only
+    from .window import CaptionWindow
 
 
 class Docking:
@@ -17,12 +26,12 @@ class Docking:
     window's edge (None: floating). covered is set while a fullscreen app on the captions' screen
     floats them; moves holds the slides under way, and moving counts the moves begun."""
 
-    def __init__(self, window):
+    def __init__(self, window: CaptionWindow) -> None:
         self.window = window
         self.covered = False  # a fullscreen app on this screen: docked captions float over it
         self.moves, self.moving = [], 0
 
-    def dock(self):
+    def dock(self) -> None:
         """Anchor the overlay for the position chosen in the menu. Floating, it covers the screen
         and the box moves inside it. Docked, it is a strip along one edge that the compositor
         keeps other windows out of, so maximised and snapped windows end where it begins."""
@@ -47,12 +56,12 @@ class Docking:
         win.seat_footer()
         win.set_cursor(Gdk.Cursor.new_from_name(win.pointer.cursor(), None))
 
-    def position(self):
+    def position(self) -> str:
         """Where the captions go now: the menu's choice, or floating over a fullscreen app."""
         chosen = self.window.settings.get('position')
         return 'floating' if self.covered else chosen
 
-    def watch_fullscreen(self):
+    def watch_fullscreen(self) -> None:
         """While the captions are docked, have KWin say when an app on their screen is fullscreen.
         Once it stops, what it said no longer holds: docked again later, the captions would float
         over an app that may have closed meanwhile, until the new watch said otherwise."""
@@ -66,7 +75,7 @@ class Docking:
         else:
             win.app.fullscreen_watch.start('')
 
-    def touch_panels(self):
+    def touch_panels(self) -> None:
         """Docked, the captions touch the panels on their edge: on Plasma those stop floating, as
         they do for a window that touches them (see PANELS_SCRIPT). Floating over a fullscreen
         app changes nothing: the panels are hidden then, and the captions dock again after."""
@@ -75,13 +84,13 @@ class Docking:
         output = (win.monitor.get_connector() or '') if win.monitor else ''
         win.app.panel_float.dock(None if chosen == 'floating' else chosen, output)
 
-    def set_covered(self, covered):
+    def set_covered(self, covered: bool) -> None:
         """A fullscreen app on this screen opened or closed: float over it, or dock again."""
         if covered != self.covered and self.window.layer:
             self.covered = covered
             self.reposition()
 
-    def reposition(self):
+    def reposition(self) -> None:
         """Float or dock as the menu now says. Docked captions slide into their edge while the
         space they reserve shrinks with them, so maximised windows grow along (each app redraws
         as fast as it can and skips the sizes it misses); then they slide out of the new edge
@@ -115,14 +124,14 @@ class Docking:
         else:
             win.fade(win.box, None, 0.0, FADE_OUT_MS, arrived)
 
-    def docked_fully(self):
+    def docked_fully(self) -> None:
         """The slide out of the edge is over: the strip reserves its whole size again."""
         win = self.window
         win.drawer.show_part(None, None)
         layer_shell.LayerShell.auto_exclusive_zone_enable(win)
         win.update_input()
 
-    def arrive(self, slide_in):
+    def arrive(self, slide_in: bool) -> None:
         """Anchor and fit the captions at the new position; docked, slid away into the edge
         first when they are about to slide out of it."""
         win = self.window
@@ -136,7 +145,7 @@ class Docking:
         if win.menu.popover.get_visible():
             win.menu.point_menu(win.x + win.box_width // 2, win.y + win.box_height() // 2)
 
-    def slide(self, start, end, ms, easing, done):
+    def slide(self, start: float, end: float, ms: int, easing: Adw.Easing, done: Callable[[], None]) -> None:
         """Show start..end px of the docked box over ms. Each frame the space the captions
         reserve, and the part that takes clicks, is just what shows, so maximised windows move
         with the slide; the window itself keeps its size."""
@@ -152,7 +161,7 @@ class Docking:
         self.moves.append(animation)
         animation.play()
 
-    def docked_part(self, w, h):
+    def docked_part(self, w: int, h: int) -> tuple[float, float, float, float]:
         """The part of a docked window the captions show: all of it, or during a slide only
         what has slid out of the edge."""
         away = self.window.drawer.hidden()

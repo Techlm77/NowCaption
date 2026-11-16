@@ -1,13 +1,17 @@
 """Wrapping the caption passage into rows that keep their breaks, so words do not hop between
 rows as the passage grows or is punctuated anew. Pango layouts only: no widgets."""
+from __future__ import annotations
+
 import bisect
+from itertools import pairwise
 
 import gi
+
 gi.require_version('Pango', '1.0')
-from gi.repository import Pango  # noqa: E402
+from gi.repository import Pango
 
 
-def bare(word):
+def bare(word: str) -> str:
     """A word without the punctuation and capital the punctuation model may still change."""
     return word.strip('.,?!;:"\'').lower()
 
@@ -20,7 +24,9 @@ class Rows:
     line, once a long conversation filled the passage. New rows wrap a little short of the
     width, so that a comma or capital added later still fits."""
 
-    def __init__(self, layout, row_height):
+    def __init__(self, layout: Pango.Layout, row_height: int) -> None:
+        """layout: the caption's layout, set to its width and the label's font; row_height: a
+        row's height, px."""
         self.width = layout.get_width()  # Pango units
         self.wrap = layout.copy()
         self.wrap.set_width(self.width - max(4, row_height // 2) * Pango.SCALE)
@@ -29,7 +35,7 @@ class Rows:
         self.fit.set_width(-1)
         self.words, self.spans = [], []  # the passage's words and each row's [start, end) in them
 
-    def __call__(self, words):
+    def __call__(self, words: list[str]) -> list[str]:
         """The rows for the passage's words, as text."""
         old, new = [bare(w) for w in self.words], [bare(w) for w in words]
         d = self.dropped(old, new)
@@ -55,7 +61,7 @@ class Rows:
         return [' '.join(words[start:end]) for start, end in spans]
 
     @staticmethod
-    def dropped(old, new):
+    def dropped(old: list[str], new: list[str]) -> int | None:
         """How many words the passage lost at its start, or None if the new passage does not
         continue the old one."""
         key = new[:min(8, len(old))]
@@ -66,8 +72,8 @@ class Rows:
                 return d
         return None
 
-    def greedy(self, words, a, b):
-        """Rows for words[a:b], as Pango wraps them."""
+    def greedy(self, words: list[str], a: int, b: int) -> list[tuple[int, int]]:
+        """Rows for words[a:b] as Pango wraps them: each row's [start, end) in words."""
         if a >= b:
             return []
         text, starts, pos = ' '.join(words[a:b]), [], 0
@@ -77,8 +83,9 @@ class Rows:
         self.wrap.set_text(text, -1)
         firsts = [bisect.bisect_left(starts, line.start_index) for line in self.wrap.get_lines_readonly()]
         bounds = sorted(set(firsts + [b - a]))
-        return [(a + s, a + e) for s, e in zip(bounds, bounds[1:]) if s < e]
+        return [(a + s, a + e) for s, e in pairwise(bounds) if s < e]
 
-    def fits(self, row):
+    def fits(self, row: list[str]) -> bool:
+        """Whether the row's words fit the whole width on one line."""
         self.fit.set_text(' '.join(row), -1)
         return self.fit.get_size()[0] <= self.width

@@ -1,14 +1,17 @@
 """The sample caption under More options, in the captions' own look, that keeps adding words
 like speech so each way for new words to arrive can be seen. The caption box's stylesheet
 styles it too (.caption-preview), up to Preview.MAX_SIZE."""
+from __future__ import annotations
+
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Pango', '1.0')
-from gi.repository import GLib, Gtk, Pango  # noqa: E402
+from gi.repository import GLib, Gtk, Pango
 
-from ..style import PAD_X, PAD_Y  # noqa: E402
-from .caption_text import CaptionText, StyledLabel  # noqa: E402
-from .weak import weakly  # noqa: E402
+from ..style import PAD_X, PAD_Y
+from .caption_text import CaptionText, StyledLabel
+from .weak import weakly
 
 
 class Preview(Gtk.Box):
@@ -16,10 +19,12 @@ class Preview(Gtk.Box):
     adding words like speech, so each way for new words to arrive can be seen before choosing it."""
 
     WIDTH, ROWS, MAX_SIZE, EVERY_MS = 420, 2, 26, 380  # text width (px), rows, largest text (px), a word every
-    SAMPLE = ('So we took the long road back past the old sawmill, and it was getting dark. The radio '
+    # written as the sentence it is, to read as speech; split into words once, as the module loads
+    SAMPLE = ('So we took the long road back past the old sawmill, and it was getting dark. The radio '  # noqa: SIM905
               'kept cutting out, then we saw headlights behind us, way too close.').split()
 
-    def __init__(self, app):
+    def __init__(self, app) -> None:
+        """app: the NowCaption application, whose word_effect() the sample starts with."""
         super().__init__(css_classes=['caption-preview'], halign=Gtk.Align.CENTER,
                          accessible_role=Gtk.AccessibleRole.PRESENTATION)
         self.update_state([Gtk.AccessibleState.HIDDEN], [True])  # sample text, not captions
@@ -41,7 +46,7 @@ class Preview(Gtk.Box):
         self.play(False)
         Gtk.Box.do_unmap(self)
 
-    def fit(self):
+    def fit(self) -> None:
         """Wrap the sample to the preview, in the font GTK has applied to it."""
         height = self.label.create_pango_layout('Ag').get_pixel_size()[1]
         if height != self.row_height:
@@ -52,7 +57,8 @@ class Preview(Gtk.Box):
             self.caption.configure(layout, self.ROWS, height)
             self.caption.show(' '.join(self.SAMPLE[:self.shown]))
 
-    def play(self, on):
+    def play(self, on: bool) -> None:
+        """With on, add a word every EVERY_MS; without, stop. The sample plays only while it is shown."""
         if self.timer:
             GLib.source_remove(self.timer)
             self.timer = 0
@@ -60,6 +66,7 @@ class Preview(Gtk.Box):
             self.timer = GLib.timeout_add(self.EVERY_MS, self.next_word)
 
     def next_word(self):
+        """The timer: one more word of the sample, from the start again after the last."""
         if self.shown == len(self.SAMPLE):  # start again, every word new
             self.shown = 0
             self.caption.show('')
