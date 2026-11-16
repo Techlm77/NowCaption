@@ -33,6 +33,43 @@ To uninstall: `flatpak uninstall io.github.Techlm77.NowCaption`.
 Debian 12 and anything newer: on systems older than 2024 it brings its own C library.
 Gear Lever or AppImageUpdate can keep it up to date.
 
+## Tested on
+
+Every system below was installed fresh in a virtual machine, fully updated, and then tested
+in November 2026 with both the Flatpak and the AppImage: installing them as above, captioning
+speech played on the desktop (90–94% of words right on the test clips everywhere), the launch
+options, the windows, and docking. All passed. **Docks** means the captions can dock along an
+edge like a panel (see **Position** below); **Floats** means they are an ordinary window that
+your desktop places, because it has no way for apps to dock (GNOME, Cinnamon and every X11
+session).
+
+| Distro | Version | Desktop environment | Window manager | Session | Flatpak | AppImage | Before installing |
+|---|---|---|---|---|---|---|---|
+| Ubuntu | 26.04 LTS | GNOME 50 | Mutter 50 | Wayland | Floats | Floats | `sudo apt install flatpak`, then log out and back in |
+| Ubuntu | 24.04 LTS | GNOME 46 | Mutter 46 | Wayland | Floats | Floats | `sudo apt install flatpak`, then log out and back in |
+| Ubuntu | 22.04 LTS | GNOME 42 | Mutter 42 | Wayland and X11 | Floats | Floats | `sudo apt install flatpak`, then log out and back in |
+| Debian | 13 | GNOME 48 | Mutter 48 | Wayland | Floats | Floats | `sudo apt install flatpak`, then log out and back in |
+| Debian | 12 | GNOME 43 | Mutter 43 | Wayland | Floats | Floats | `sudo apt install flatpak`, then log out and back in |
+| Fedora Workstation | 45 | GNOME 51 | Mutter 51 | Wayland | Floats | Floats | – |
+| Fedora KDE | 45 | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | – |
+| Linux Mint | 22.3 | Cinnamon 6.6 | Muffin 6.6 | X11 | Floats | Floats | – |
+| Zorin OS | 18.1 Core | GNOME 46 | Mutter 46 | Wayland | Floats | Floats | – |
+| Pop!_OS | 24.04 LTS | COSMIC 1.11 | cosmic-comp | Wayland | Floats¹ | Docks | – |
+| Arch Linux | rolling | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | – |
+| Arch Linux | rolling | GNOME 51 | Mutter 51 | Wayland | Floats | Floats | – |
+| Arch Linux | rolling | – | Hyprland 0.57 | Wayland | Floats¹ | Docks | `sudo pacman -S flatpak`, then log out and back in |
+| Arch Linux | rolling | – | Sway 1.12 | Wayland | Floats¹ | Docks | `sudo pacman -S flatpak`, then log out and back in |
+| CachyOS | rolling | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | `sudo pacman -S flatpak`, then log out and back in |
+| EndeavourOS | rolling | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | `sudo pacman -S flatpak`, then log out and back in |
+| Manjaro | 26.1 | KDE Plasma 6.7 | KWin 6.7 | Wayland | Docks | Docks | – |
+| openSUSE Tumbleweed | rolling | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | – |
+| Bazzite | 45 | KDE Plasma 6.8 | KWin 6.8 | Wayland | Docks | Docks | – |
+| SteamOS (Desktop Mode) | 3.9 | KDE Plasma 6.7 | KWin 6.7 | X11 | Floats | Floats | – |
+| NixOS | 26.05 | GNOME 50 | Mutter 50 | Wayland | Floats | Floats | Flatpak: `services.flatpak.enable = true;`. AppImage: `programs.appimage = { enable = true; binfmt = true; };`. Then `sudo nixos-rebuild switch` |
+
+¹ COSMIC, Hyprland and Sway keep docking from sandboxed apps; the AppImage docks there, and
+the Flatpak can too with one optional command (see **Hyprland, Sway and COSMIC** below).
+
 ## Use
 
 Captions start straight away from whatever your computer is playing. Drag them to
@@ -107,10 +144,10 @@ while NowCaption waits for speech. For no motion at all, turn animations off for
 desktop (on Plasma, set **Animation speed** to **Instant**; on GNOME, turn on **Reduce
 Animation**) and NowCaption follows.
 
-On KDE Plasma, Hyprland and Sway the captions float above all windows. On GNOME,
-press Alt+Space on the window and choose **Always on Top**.
+Wherever the captions can dock (**Docks** in [Tested on](#tested-on)), they float above all
+windows. On GNOME, press Alt+Space on the window and choose **Always on Top**.
 
-**Position.** On KDE Plasma, Hyprland and Sway, the little screens under **Position** in
+**Position.** Wherever the captions can dock, the little screens under **Position** in
 the menu choose where the captions go. **Floating**, they stay wherever you drag them, over
 any window. **Docked** at the top, bottom, left or right, they take that strip of the
 screen like a panel, next to any panels already there, and maximised or snapped windows
@@ -125,7 +162,7 @@ NowCaption quits. Plasma 5.27 has no way for apps to do that: there, turn off **
 for that panel in Edit Mode, or dock the captions on another edge.
 Floating captions keep their bottom edge in place when you change the text size.
 
-**Hyprland and Sway.** The Flatpak can't dock there: both desktops keep docking from
+**Hyprland, Sway and COSMIC.** The Flatpak can't dock there: these desktops keep docking from
 sandboxed apps such as Flatpaks, as part of their security design, so it isn't a bug in
 NowCaption. Its captions are an ordinary floating window, and the menu has no **Position**.
 A way around it inside the sandbox was looked for, but every route hit the same wall. The
