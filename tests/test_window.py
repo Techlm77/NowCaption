@@ -170,11 +170,15 @@ class WindowTests(unittest.TestCase):
                 w.status_label.create_pango_layout('Ag').get_pixel_size()[1] + style.PAD_Y)
 
     def new_size(self, step):
-        """Change the text size, and wait until GTK has applied it to the labels."""
+        """Change the text size, and wait until GTK has applied it to the labels and the window has
+        fitted the box to it (on_fonts), or 5 s. The labels can measure the new font a few main
+        loop iterations before GTK tells them their CSS changed (GTK 4.24 does), so the new font
+        alone is not the moment to check the box; a box that never fits fails the test's check."""
+        w = self.window
         before = self.fonts()
         self.app.appearance.resize(step)
         end = time.monotonic() + 5
-        while self.fonts() == before and time.monotonic() < end:
+        while (self.fonts() == before or (w.row_height, w.status_height) != self.fonts()) and time.monotonic() < end:
             nc.GLib.MainContext.default().iteration(False)
             time.sleep(0.005)
         self.assertNotEqual(self.fonts(), before, 'GTK never applied the new text size')
