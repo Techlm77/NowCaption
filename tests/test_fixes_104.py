@@ -336,7 +336,7 @@ class SaveTests(unittest.TestCase):
         dialog = NS(save_finish=lambda result: file)
         dialog.save = lambda parent, cancellable, chosen: chosen(dialog, None)
         with patch.dict(APP, Gtk=NS(FileDialog=lambda **kwargs: dialog)):
-            self.app.save_transcript()
+            self.app.saving.save_transcript()
 
     def test_quit_waits_for_queued_snapshot_and_delayed_write(self):
         file = self.delayed_file()
@@ -357,7 +357,7 @@ class SaveTests(unittest.TestCase):
 
     def test_close_button_uses_the_same_save_completion_rule(self):
         file = self.delayed_file()
-        self.app.write_transcript(file, 'close requested')
+        self.app.saving.write_transcript(file, 'close requested')
         self.assertTrue(self.app.quitting.on_window_close(None))
         self.assertEqual(self.app.quits, 0)
         file.callback(file, None)
@@ -365,8 +365,8 @@ class SaveTests(unittest.TestCase):
 
     def test_multiple_accepted_saves_finish_before_quitting(self):
         first, second = self.delayed_file(), self.delayed_file()
-        self.app.write_transcript(first, 'first')
-        self.app.write_transcript(second, 'second')
+        self.app.saving.write_transcript(first, 'first')
+        self.app.saving.write_transcript(second, 'second')
         self.app.quitting.request_quit()
         first.callback(first, None)
         self.assertEqual(self.app.quits, 0)
@@ -376,7 +376,7 @@ class SaveTests(unittest.TestCase):
 
     def test_failed_save_cancels_deferred_quit_and_keeps_error_visible(self):
         file = self.delayed_file(fail=True)
-        self.app.write_transcript(file, 'must not disappear')
+        self.app.saving.write_transcript(file, 'must not disappear')
         self.app.quitting.request_quit()
         file.callback(file, None)
         self.assertEqual(self.app.quits, 0)
@@ -390,7 +390,7 @@ class SaveTests(unittest.TestCase):
         timers = Timers()
         file = self.delayed_file(fail=True)
         self.app.listening.worker = NS(set_source=lambda gen: None)
-        self.app.write_transcript(file, 'words')
+        self.app.saving.write_transcript(file, 'words')
         self.app.quitting.request_quit()
         with patch.dict(APP, GLib=timers):
             self.app.listening.capture_ended(self.app.listening.source_gen, 'device went away')
@@ -401,7 +401,7 @@ class SaveTests(unittest.TestCase):
         self.assertFalse(self.app.quitting.quit_requested)
 
     def test_write_setup_failure_releases_its_hold(self):
-        self.app.write_transcript(self.delayed_file(immediate_error=True), 'words')
+        self.app.saving.write_transcript(self.delayed_file(immediate_error=True), 'words')
         self.assertEqual(self.app.quitting.pending_saves, 0)
         self.assertIn('cannot start writing', self.app.window.statuses[-1])
 

@@ -198,7 +198,7 @@ class AppTests(unittest.TestCase):
     def test_copy_and_save_leave_out_sessions_past_seven_days_before_they_are_deleted(self):
         old, recent = self.session(7 * 86400 + 60, 'Last week.'), self.session(2 * 86400, 'This week.')
         self.assertEqual([text for _, text in self.app.earlier_sessions()], ['[10:00:00] This week.'])
-        self.assertNotIn('Last week', self.app.full_transcript('[12:00:00] Now.'))
+        self.assertNotIn('Last week', self.app.history.full_transcript('[12:00:00] Now.'))
         self.assertTrue(old.exists(), 'only skipped here; prune_history deletes it')
 
     def deliver(self, signum, called):

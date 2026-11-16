@@ -103,7 +103,7 @@ class AppTests(unittest.TestCase):
 
     def test_save_failure_is_reported(self):
         a = self.make()
-        a.write_transcript(Gio.File.new_for_path('/nonexistent-folder/captions.txt'), 'hello')
+        a.saving.write_transcript(Gio.File.new_for_path('/nonexistent-folder/captions.txt'), 'hello')
         ctx, end = GLib.MainContext.default(), time.monotonic() + 5
         while not a.window.statuses and time.monotonic() < end:
             ctx.iteration(False)
@@ -114,7 +114,7 @@ class AppTests(unittest.TestCase):
         a = self.make()
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, 'captions.txt')
-            a.write_transcript(Gio.File.new_for_path(path), 'hello')
+            a.saving.write_transcript(Gio.File.new_for_path(path), 'hello')
             ctx, end = GLib.MainContext.default(), time.monotonic() + 5
             while not a.window.statuses and time.monotonic() < end:
                 ctx.iteration(False)
@@ -212,7 +212,7 @@ class MenuTests(unittest.TestCase):
         self.assertFalse(a.settings.get('history'))
         action.activate(None)
         self.assertTrue(a.settings.get('history'))
-        self.assertEqual(sent, [None, a.history_path])
+        self.assertEqual(sent, [None, a.history.history_path])
 
 
 @unittest.skipIf(nc is None, globals().get('SKIP', ''))

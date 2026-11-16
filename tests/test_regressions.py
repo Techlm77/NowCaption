@@ -41,7 +41,8 @@ def load_app_methods():
                'LayerShell': NS(set_monitor=lambda *a: None),
                'ROWS': 2, 'PAD_Y': 12, 'STATUS_MS': 150}
     for name, module in (('NowCaption', 'app.py'), ('CaptionWindow', 'caption_window.py'),
-                         ('Listening', 'control/listening.py'), ('Quitting', 'control/quitting.py')):
+                         ('Listening', 'control/listening.py'), ('History', 'control/history.py'),
+                         ('Saving', 'control/saving.py'), ('Quitting', 'control/quitting.py')):
         path = ROOT / 'src/nowcaption' / module
         [node] = [n for n in ast.parse(path.read_text()).body if isinstance(n, ast.ClassDef) and n.name == name]
         node.bases, node.keywords, node.decorator_list = [], [], []
@@ -76,11 +77,11 @@ def app_with_fakes():
     a.shortcuts = None
     a.transcript = None
     a.started = 1792760700.0
-    a.history_path = engine.history_file(a.started)
-    a.save_queues = {}
     a.listening = collaborator('Listening', a, worker=None, ready=False, paused=False, source_gen=0, ui_gen=0,
                                capture_failures=0, recognition_failures=0, retry_id=None,
                                recognition_retry_id=None, recognition_retry_token=0)
+    a.history = collaborator('History', a, history_path=engine.history_file(a.started))
+    a.saving = collaborator('Saving', a, save_queues={})
     a.quitting = collaborator('Quitting', a, pending_saves=0, quit_requested=False, fading_out=False)
     a.listening.capture = NS(starts=[], stop=lambda: None,
                              start=lambda device, gen: a.listening.capture.starts.append((device, gen)))

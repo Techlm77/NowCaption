@@ -384,7 +384,7 @@ class TranscriptWindowTests(unittest.TestCase):
         self.app.delete_history()
         self.assertEqual(nc.engine.history_files(), [])
         self.assertEqual(len(cleared), 1)
-        self.assertEqual(sent, [self.app.history_path])
+        self.assertEqual(sent, [self.app.history.history_path])
         self.assertEqual(self.text(), '')
 
 

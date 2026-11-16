@@ -282,8 +282,8 @@ class OrderedSaveTests(unittest.TestCase):
 
     def test_same_destination_is_serialized_even_for_distinct_file_objects(self):
         uri = 'file:///captions.txt'
-        self.app.write_transcript(self.file(uri), 'earlier')
-        self.app.write_transcript(self.file(uri), 'earlier plus newer words')
+        self.app.saving.write_transcript(self.file(uri), 'earlier')
+        self.app.saving.write_transcript(self.file(uri), 'earlier plus newer words')
         self.app.quitting.request_quit()
         self.assertEqual(len(self.operations), 1)
         self.assertEqual(self.app.quitting.pending_saves, 2)
@@ -293,12 +293,12 @@ class OrderedSaveTests(unittest.TestCase):
         self.complete(1)
         self.assertEqual(self.disk[uri], b'earlier plus newer words\n')
         self.assertEqual(self.app.quits, 1)
-        self.assertEqual(self.app.save_queues, {})
+        self.assertEqual(self.app.saving.save_queues, {})
 
     def test_different_destinations_can_finish_in_either_order(self):
         first, second = 'file:///first.txt', 'file:///second.txt'
-        self.app.write_transcript(self.file(first), 'first')
-        self.app.write_transcript(self.file(second), 'second')
+        self.app.saving.write_transcript(self.file(first), 'first')
+        self.app.saving.write_transcript(self.file(second), 'second')
         self.assertEqual(len(self.operations), 2)
         self.complete(1)
         self.complete(0)
@@ -307,8 +307,8 @@ class OrderedSaveTests(unittest.TestCase):
 
     def test_a_failed_write_releases_its_hold_and_the_next_snapshot_can_still_save(self):
         uri = 'file:///captions.txt'
-        self.app.write_transcript(self.file(uri), 'earlier')
-        self.app.write_transcript(self.file(uri), 'newer')
+        self.app.saving.write_transcript(self.file(uri), 'earlier')
+        self.app.saving.write_transcript(self.file(uri), 'newer')
         self.app.quitting.request_quit()
         self.complete(0, fail=True)
         self.assertFalse(self.app.quitting.quit_requested)
@@ -316,15 +316,15 @@ class OrderedSaveTests(unittest.TestCase):
         self.complete(1)
         self.assertEqual(self.disk[uri], b'newer\n')
         self.assertEqual(self.app.quits, 0)
-        self.assertEqual(self.app.save_queues, {})
+        self.assertEqual(self.app.saving.save_queues, {})
 
     def test_failure_to_start_a_queued_write_does_not_leave_a_pending_save(self):
         uri = 'file:///captions.txt'
-        self.app.write_transcript(self.file(uri), 'earlier')
-        self.app.write_transcript(self.file(uri, immediate_error=True), 'newer')
+        self.app.saving.write_transcript(self.file(uri), 'earlier')
+        self.app.saving.write_transcript(self.file(uri, immediate_error=True), 'newer')
         self.complete(0)
         self.assertEqual(self.app.quitting.pending_saves, 0)
-        self.assertEqual(self.app.save_queues, {})
+        self.assertEqual(self.app.saving.save_queues, {})
         self.assertIn('destination unavailable', self.app.window.statuses[-1])
 
     def test_accepted_snapshot_requests_keep_their_order_and_holds(self):

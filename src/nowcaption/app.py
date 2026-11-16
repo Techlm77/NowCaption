@@ -11,13 +11,13 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from . import __version__, engine, words  # noqa: E402
 from .caption_window import CaptionWindow  # noqa: E402
-from .control import Listening, Quitting, quit_on_signals  # noqa: E402
+from .control import History, Listening, Quitting, Saving, quit_on_signals  # noqa: E402
 from .options_window import OptionsWindow  # noqa: E402
 from .desktop import (FULLSCREEN_PATH, FULLSCREEN_XML, Autostart, FullscreenWatch, GlobalShortcuts,  # noqa: E402
                       PanelFloat, in_flatpak, portal_for)
 from .settings import APP_ID, Settings  # noqa: E402
 from .style import COLOURS, POSITIONS, SIZES, STEPPERS, WORD_EFFECTS, WORD_SPEEDS  # noqa: E402
-from .transcript_window import TranscriptWindow, session_heading  # noqa: E402
+from .transcript_window import TranscriptWindow  # noqa: E402
 
 LOG = logging.getLogger('nowcaption')
 
@@ -40,17 +40,17 @@ class NowCaption(Adw.Application):
         self.window = None
         self.closing = False
         self.started = time.time()
-        self.history_path = engine.history_file(self.started)  # created once something is said
         self.transcript = None  # the transcript window, while it is open
         self.options = None  # the More options window, while it is open
-        self.save_queues = {}  # destination URI -> accepted writes, in snapshot order
         self.fullscreen_watch = FullscreenWatch(APP_ID)
         self.panel_float = PanelFloat(self.settings)
         self.hidden = False  # the captions were hidden (toggle_captions); they keep captioning
         self.word_list = words.load_words()  # [(heard, write)], edited under More options
         self.shortcuts = self.autostart = None  # see portals(), once on the session bus
         self.quitting = Quitting(self)
+        self.history = History(self)
         self.listening = Listening(self)
+        self.saving = Saving(self)
         self.connect('command-line', self.on_command_line)
         self.connect('activate', self.on_activate)
         self.connect('shutdown', self.on_shutdown)
@@ -114,14 +114,14 @@ class NowCaption(Adw.Application):
         self.add_action(position)
         for name, key, handler in (('word-effect', 'word_effect', self.on_word_effect),
                                    ('word-speed', 'word_speed', self.on_word_speed),
-                                   ('history-days', 'history_days', self.on_history_days),
+                                   ('history-days', 'history_days', self.history.on_history_days),
                                    ('font', 'font', self.on_font)):
             action = Gio.SimpleAction.new_stateful(name, GLib.VariantType.new('s'),
                                                    GLib.Variant('s', str(self.settings.get(key))))
             action.connect('activate', handler)
             self.add_action(action)
         history = Gio.SimpleAction.new_stateful('history', None, GLib.Variant('b', self.settings.get('history')))
-        history.connect('activate', self.on_history)
+        history.connect('activate', self.history.on_history)
         self.add_action(history)
         pause = Gio.SimpleAction.new_stateful('pause', None, GLib.Variant('b', False))
         pause.connect('activate', lambda action, value: self.listening.set_paused(not self.listening.paused))
@@ -134,8 +134,8 @@ class NowCaption(Adw.Application):
         act('reset-position', lambda: self.window.reset_position())
         act('reset-size', lambda: self.window.reset_size())
         act('next-screen', lambda: self.window.next_monitor())
-        act('copy', self.copy_transcript)
-        act('save', self.save_transcript, ['<Control>s'])
+        act('copy', self.saving.copy_transcript)
+        act('save', self.saving.save_transcript, ['<Control>s'])
         act('clear', self.listening.clear_transcript)
         act('about', self.about)
         act('quit', self.quitting.request_quit, ['<Control>q'])
@@ -177,30 +177,6 @@ class NowCaption(Adw.Application):
     def on_options_closed(self, window):
         self.options = None
         return False
-
-    def on_history_days(self, action, value):
-        """Keep sessions this many days (0: until deleted). A shorter time deletes the older ones now."""
-        try:
-            days = int(value.get_string())
-        except ValueError:
-            return
-        if days not in engine.HISTORY_CHOICES:
-            return
-        action.set_state(value)
-        self.settings.set('history_days', days)
-        self.prune_history()
-        if self.window:
-            self.window.refresh_menu()
-        if self.transcript:
-            self.transcript.show_title()
-            self.transcript.reload()
-
-    def history_days(self):
-        """How many days sessions are kept, 0 for until deleted."""
-        return self.settings.get('history_days')
-
-    def prune_history(self):
-        engine.prune_history(days=self.history_days())
 
     def on_font(self, action, value):
         action.set_state(value)
@@ -281,15 +257,6 @@ class NowCaption(Adw.Application):
             done(now, message)
         self.autostart.set(on, answered)
 
-    def on_history(self, action, value):
-        keep = not action.get_state().get_boolean()
-        action.set_state(GLib.Variant('b', keep))
-        self.settings.set('history', keep)
-        if self.listening.worker:
-            self.listening.worker.set_history(self.history_path if keep else None)
-        if self.transcript:
-            self.transcript.show_title()
-
     def open_transcript(self):
         if self.transcript is None:
             self.transcript = TranscriptWindow(self)
@@ -299,44 +266,6 @@ class NowCaption(Adw.Application):
     def on_transcript_closed(self, window):
         self.transcript = None  # the window lets go of the rest itself (TranscriptWindow.on_close)
         return False
-
-    def earlier_sessions(self):
-        """Kept sessions before this one, oldest first, as (start time, text)."""
-        sessions = []
-        cutoff = engine.history_cutoff(self.history_days())
-        for started, path in engine.history_files():
-            if path == self.history_path:
-                continue
-            try:
-                if path.stat().st_mtime < cutoff:
-                    continue  # no longer kept, even if prune_history has not deleted it yet
-                text = path.read_text(errors='replace').strip()
-            except OSError as e:
-                LOG.warning('Could not read the transcript %s: %s', path, e)
-                continue
-            if text:
-                sessions.append((started, text))
-        return sessions
-
-    def full_transcript(self, current):
-        """Every kept session and this one, each under its heading, as Copy and Save give it."""
-        parts = [f'{session_heading(started)}\n{text}' for started, text in self.earlier_sessions()]
-        if current.strip():
-            parts.append(f'{session_heading(self.started)}\n{current.strip()}')
-        return '\n\n'.join(parts)
-
-    def delete_history(self):
-        """Delete every kept session, this one included, and clear the captions."""
-        for _, path in engine.history_files():
-            try:
-                path.unlink()
-            except OSError as e:
-                LOG.warning('Could not delete the transcript %s: %s', path, e)
-        self.listening.clear_transcript()
-        if self.listening.worker and self.settings.get('history'):
-            self.listening.worker.set_history(self.history_path)  # what is said next starts a new file
-        if self.transcript:
-            self.transcript.reload()
 
     def on_colour(self, action, value):
         if value.get_string() not in COLOURS:
@@ -408,7 +337,7 @@ class NowCaption(Adw.Application):
         self.window.present()
         self.window.show_status('Loading speech model…')
         self.prune_history()
-        self.listening.start(self.history_path if self.settings.get('history') else None, self.word_list)
+        self.listening.start(self.history.history_path if self.settings.get('history') else None, self.word_list)
         self.portals()
         GLib.timeout_add_seconds(60, self.release_memory)
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
@@ -443,90 +372,25 @@ class NowCaption(Adw.Application):
         Listening.threads_finished)."""
         return self.listening.threads_finished(timeout)
 
-    # --- transcript -------------------------------------------------------------------------
+    # --- what the windows ask of the app ----------------------------------------------------
+
+    def history_days(self):
+        return self.history.history_days()
+
+    def prune_history(self):
+        self.history.prune_history()
+
+    def earlier_sessions(self):
+        return self.history.earlier_sessions()
+
+    def delete_history(self):
+        self.history.delete_history()
 
     def copy_transcript(self):
-        def copy(text):
-            text = self.full_transcript(text)
-            self.window.get_clipboard().set(text)
-            self.window.show_status('Transcript copied.' if text else 'Nothing to copy yet.', seconds=3)
-        if self.listening.worker:
-            try:
-                self.listening.worker.snapshot(copy)
-            except Exception as e:
-                self.window.show_status(f'Could not copy the transcript: {e}', seconds=8)
+        self.saving.copy_transcript()
 
     def save_transcript(self):
-        if not self.listening.worker or self.closing or self.quitting.quit_requested:
-            return
-        dialog = Gtk.FileDialog(title='Save transcript', initial_name=GLib.DateTime.new_now_local().format(
-            'Captions %Y-%m-%d %H.%M.txt'))
-
-        def chosen(d, result):
-            try:
-                f = d.save_finish(result)
-            except GLib.Error as e:
-                if not e.matches(Gtk.DialogError.quark(), Gtk.DialogError.DISMISSED):
-                    self.window.show_status(f'Could not save the transcript: {e.message}', seconds=8)
-                return
-            if self.closing or self.quitting.quit_requested:
-                return
-            self.quitting.begin_save()
-
-            def failed_snapshot(error):
-                self.window.show_status(f'Could not save the transcript: {error}', seconds=8)
-                self.quitting.finish_save(False)
-
-            try:
-                self.listening.worker.snapshot(
-                    lambda text: self.write_transcript(f, self.full_transcript(text), tracked=True),
-                    on_error=failed_snapshot)
-            except Exception as e:
-                failed_snapshot(e)
-
-        dialog.save(None, None, chosen)  # its own window: the caption overlay is too small to host it
-
-    def write_transcript(self, f, text, tracked=False):
-        """Queue saves to each destination so an older write cannot replace newer text."""
-        if not tracked:
-            self.quitting.begin_save()
-        key = f.get_uri()
-        queue = self.save_queues.setdefault(key, [])
-        queue.append((f, text))
-        if len(queue) == 1:
-            self.start_save(key)
-
-    def start_save(self, key):
-        """Write one queued snapshot asynchronously; other destinations can proceed in parallel."""
-        queue = self.save_queues[key]
-        f, text = queue[0]
-
-        def finished(success):
-            queue.pop(0)
-            if not queue:
-                del self.save_queues[key]
-            self.quitting.finish_save(success)
-            if queue:
-                self.start_save(key)
-
-        def failed(error):
-            LOG.warning('Saving the transcript failed: %s', error)
-            self.window.show_status(f'Could not save the transcript: {error}', seconds=8)
-            finished(False)
-
-        def written(f, result):
-            try:
-                f.replace_contents_finish(result)
-            except GLib.Error as e:
-                failed(e.message)
-                return
-            self.window.show_status(f'Transcript saved to {f.get_basename()}.', seconds=4)
-            finished(True)
-        try:
-            f.replace_contents_bytes_async(GLib.Bytes.new((text + '\n').encode()), None, False,
-                                           Gio.FileCreateFlags.REPLACE_DESTINATION, None, written)
-        except Exception as e:
-            failed(e)
+        self.saving.save_transcript()
 
     def about(self):
         about = Adw.AboutDialog(
