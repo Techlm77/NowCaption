@@ -788,7 +788,7 @@ class DockTests(unittest.TestCase):
 
     def setUp(self):
         self.shell = FakeLayerShell()
-        patcher = patch.object(caption_window, 'LayerShell', self.shell)
+        patcher = patch.object(caption_window.window, 'LayerShell', self.shell)
         patcher.start()
         self.addCleanup(patcher.stop)
         for key in ('position', 'dock_rows', 'dock_width', 'size'):
