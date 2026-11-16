@@ -72,7 +72,7 @@ class WindowTests(unittest.TestCase):
         self.assertEqual(self.window.label.get_accessible_role(), nc.Gtk.AccessibleRole.STATUS)
         other = nc.Gtk.Label(label='Ordinary label')
         self.assertEqual(other.get_accessible_role(), nc.Gtk.AccessibleRole.LABEL)
-        self.assertIsNotNone(self.window.popover)
+        self.assertIsNotNone(self.window.menu.popover)
 
     def settle(self):
         context = nc.GLib.MainContext.default()
@@ -91,9 +91,9 @@ class WindowTests(unittest.TestCase):
     def test_text_size_and_background_buttons_keep_the_menu_open(self):
         w = self.window
         w.present()
-        w.popover.popup()
+        w.menu.popover.popup()
         self.settle()
-        found = {b.get_action_name(): b for b in self.buttons(w.popover)}
+        found = {b.get_action_name(): b for b in self.buttons(w.menu.popover)}
         for action in ('app.smaller', 'app.larger', 'app.lighter', 'app.darker'):
             self.assertIn(action, found)
         before = self.app.settings.get('size')
@@ -101,24 +101,24 @@ class WindowTests(unittest.TestCase):
             found['app.larger'].emit('clicked')
             self.settle()
         self.assertGreater(self.app.settings.get('size'), before)
-        self.assertTrue(w.popover.get_visible(), 'the menu closed after pressing a + button')
+        self.assertTrue(w.menu.popover.get_visible(), 'the menu closed after pressing a + button')
         found['app.darker'].emit('clicked')
         self.settle()
-        self.assertTrue(w.popover.get_visible())
-        w.popover.popdown()
+        self.assertTrue(w.menu.popover.get_visible())
+        w.menu.popover.popdown()
 
     def test_menu_rows_survive_a_menu_rebuild(self):
-        self.window.update_menu(True)
-        actions = {b.get_action_name() for b in self.buttons(self.window.popover)}
+        self.window.menu.update_menu(True)
+        actions = {b.get_action_name() for b in self.buttons(self.window.menu.popover)}
         self.assertTrue({'app.smaller', 'app.larger', 'app.lighter', 'app.darker', 'app.colour'} <= actions)
 
     def test_text_colour_swatches_colour_the_captions_and_keep_the_menu_open(self):
         w = self.window
         self.addCleanup(self.app.activate_action, 'colour', nc.GLib.Variant('s', 'white'))
         w.present()
-        w.popover.popup()
+        w.menu.popover.popup()
         self.settle()
-        swatches = {b.get_action_target_value().get_string(): b for b in self.buttons(w.popover)
+        swatches = {b.get_action_target_value().get_string(): b for b in self.buttons(w.menu.popover)
                     if b.get_action_name() == 'app.colour'}
         self.assertEqual(list(swatches), list(style.COLOURS))
         for name, button in swatches.items():
@@ -126,17 +126,17 @@ class WindowTests(unittest.TestCase):
         swatches['yellow'].emit('clicked')
         self.settle()
         self.assertEqual(self.app.settings.get('colour'), 'yellow')
-        self.assertTrue(w.popover.get_visible(), 'the menu closed after choosing a colour')
+        self.assertTrue(w.menu.popover.get_visible(), 'the menu closed after choosing a colour')
         self.assertTrue(swatches['yellow'].get_active())
         self.assertFalse(swatches['white'].get_active())
-        self.assertEqual(w.values['text-colour'].get_label(), 'Yellow')
+        self.assertEqual(w.menu.values['text-colour'].get_label(), 'Yellow')
         rgba = w.label.get_color()
         self.assertEqual((rgba.red, rgba.green, rgba.blue), (1.0, 1.0, 0.0))
         swatches['yellow'].emit('clicked')  # choosing the current colour again keeps it chosen
         self.settle()
         self.assertTrue(swatches['yellow'].get_active())
         self.assertEqual(self.app.settings.get('colour'), 'yellow')
-        w.popover.popdown()
+        w.menu.popover.popdown()
 
     def test_a_new_window_uses_the_saved_text_colour(self):
         self.app.settings.set('colour', 'cyan')
@@ -150,10 +150,10 @@ class WindowTests(unittest.TestCase):
     def test_the_size_and_background_rows_show_their_values(self):
         self.app.settings.set('opacity', 0.78)
         self.window.restyle()
-        self.assertEqual(self.window.values['text-size'].get_label(), '30 px')
-        self.assertEqual(self.window.values['background'].get_label(), '78%')
+        self.assertEqual(self.window.menu.values['text-size'].get_label(), '30 px')
+        self.assertEqual(self.window.menu.values['background'].get_label(), '78%')
         self.app.resize(+1)
-        self.assertEqual(self.window.values['text-size'].get_label(), '36 px')
+        self.assertEqual(self.window.menu.values['text-size'].get_label(), '36 px')
 
     def test_two_row_caption_renders_and_font_size_can_change(self):
         self.window.show_text('hello ' * 100)
@@ -953,9 +953,9 @@ class DockTests(unittest.TestCase):
         w.layer = True
 
         def menu_at(x, y):
-            w.point_menu(x, y)
-            ok, rect = w.popover.get_pointing_to()
-            return w.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
+            w.menu.point_menu(x, y)
+            ok, rect = w.menu.popover.get_pointing_to()
+            return w.menu.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
 
         self.position('bottom')
         self.assertEqual(menu_at(900, 40), (up, (900, 0, 1, 1)))  # from the strip's top edge

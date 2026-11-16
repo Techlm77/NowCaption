@@ -11,10 +11,10 @@ gi.require_version('Pango', '1.0')
 from gi.repository import Adw, Gdk, GLib, Gtk, Pango  # noqa: E402
 
 from ...style import (ALONG, BOTTOM_GAP, COLOURS, CURSORS, DOCK_MS, EDGE, FADE_IN_MS, FADE_OUT_MS,  # noqa: E402
-                      INNER, MENU_INDENT, MIN_WIDTH, PAD_X, PAD_Y, POSITIONS, ROWS, STATUS_MS, STEPPERS,
-                      UNDOCK_MS)
+                      INNER, MIN_WIDTH, PAD_X, PAD_Y, ROWS, STATUS_MS, UNDOCK_MS)
 from ..caption_text import CaptionText, StyledLabel  # noqa: E402
 from . import layer_shell  # noqa: E402
+from .menu import CaptionMenu  # noqa: E402
 from .stage import Drawer, Stage  # noqa: E402
 from .stylesheet import caption_css  # noqa: E402
 
@@ -73,6 +73,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.moves, self.moving = [], 0
         self.stage = Stage(self.drawer)  # floating, the box moves inside the window while dragged
         self.set_child(self.stage)
+        self.menu = CaptionMenu(self)
 
         if self.layer:
             shell = layer_shell.LayerShell
@@ -96,15 +97,13 @@ class CaptionWindow(Gtk.ApplicationWindow):
         motion.connect('motion', self.on_motion)
         self.add_controller(motion)
         click = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
-        click.connect('pressed', self.on_menu)
+        click.connect('pressed', self.menu.on_menu)
         self.add_controller(click)
         hold = Gtk.GestureLongPress(touch_only=True)  # a touchscreen's right-click, see on_long_press
         hold.connect('pressed', self.on_long_press)
         self.add_controller(hold)
         self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
 
-        self.popover = Gtk.PopoverMenu()
-        self.update_menu(self.layer and self.monitor_count() > 1)
         self._monitor_handlers, self._monitors_handler = [], None
         self._monitors = Gdk.Display.get_default().get_monitors()
         self.watch_screens()
@@ -112,11 +111,6 @@ class CaptionWindow(Gtk.ApplicationWindow):
         # so watch again on realize; destroying the window unrealizes it for good.
         self.connect('realize', self.watch_screens)
         self.connect('unrealize', self.disconnect_monitors)
-        self.popover.set_parent(self.box)
-        self.popover.set_has_arrow(False)
-        self.popover.set_position(Gtk.PositionType.BOTTOM)
-        self.popover.connect('closed', lambda *a: self.layer and layer_shell.LayerShell.set_keyboard_mode(
-            self, layer_shell.LayerShell.KeyboardMode.NONE))
 
     # --- geometry -------------------------------------------------------------------------
 
@@ -259,8 +253,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         else:
             self.drawer.show_part(None, None)
         self.restyle()
-        if self.popover.get_visible():
-            self.point_menu(self.x + self.box_width // 2, self.y + self.box_height() // 2)
+        if self.menu.popover.get_visible():
+            self.menu.point_menu(self.x + self.box_width // 2, self.y + self.box_height() // 2)
 
     def slide(self, start, end, ms, easing, done):
         """Show start..end px of the docked box over ms. Each frame the space the captions
@@ -327,88 +321,16 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.use_monitor(chosen)
         elif self.monitor not in items:
             self.use_monitor(self.pick_monitor(connector))
-        self.update_menu(self.layer and len(items) > 1)
+        self.menu.update_menu(self.layer and len(items) > 1)
 
-    def update_menu(self, several_screens):
-        """Set the menu, with the text size, background and text colour rows as buttons that
-        keep it open. The size and background rows show their value between their buttons; the
-        colour row shows the chosen colour's name, with a line of colour dots under it."""
-        self.popover.set_menu_model(self.app.build_menu(several_screens, self.layer))
-        self.values = {}
-        for name, (title, *buttons) in STEPPERS.items():
-            row = Gtk.Box(spacing=2, margin_start=MENU_INDENT, margin_end=6)
-            row.append(Gtk.Label(label=title, xalign=0, hexpand=True))
-            for tooltip, action, icon in buttons:
-                button = Gtk.Button(icon_name=icon, action_name=action, tooltip_text=tooltip)
-                button.add_css_class('flat')
-                button.update_property([Gtk.AccessibleProperty.LABEL], [tooltip])
-                row.append(button)
-                if not self.values.get(name):
-                    self.values[name] = Gtk.Label(width_chars=5, css_classes=['dim-label', 'numeric'])
-                    row.append(self.values[name])
-            self.popover.add_child(row, name)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_start=MENU_INDENT,
-                      margin_end=6, margin_top=6, margin_bottom=4)
-        row = Gtk.Box()
-        row.append(Gtk.Label(label='Text colour', xalign=0, hexpand=True))
-        self.values['text-colour'] = Gtk.Label(css_classes=['dim-label'], margin_end=6)
-        row.append(self.values['text-colour'])
-        box.append(row)
-        dots = Gtk.Box(spacing=1)
-        for name, (label, _) in COLOURS.items():  # ringed, like a radio button, when chosen
-            swatch = Gtk.Box(css_classes=['colour-swatch', f'colour-{name}'],
-                             halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
-            button = Gtk.ToggleButton(child=swatch, action_name='app.colour',
-                                      action_target=GLib.Variant('s', name), tooltip_text=label,
-                                      css_classes=['flat', 'colour-dot'])
-            button.update_property([Gtk.AccessibleProperty.LABEL], [label])
-            dots.append(button)
-        box.append(dots)
-        self.popover.add_child(box, 'text-colour')
-        if self.layer:  # elsewhere the window manager places the window
-            self.popover.add_child(self.position_row(), 'position')
-        self.show_values()
+    @property
+    def popover(self):
+        """The caption box's menu, which the app closes when it hides the captions."""
+        return self.menu.popover
 
     def refresh_menu(self):
         """Build the menu again, for an item whose label changed."""
-        self.update_menu(self.layer and self.monitor_count() > 1)
-
-    def position_row(self):
-        """The Position row: the chosen position's name, and a little screen for each position
-        showing where the captions go; like the colour dots, they keep the menu open."""
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_start=MENU_INDENT,
-                      margin_end=6, margin_top=6, margin_bottom=4)
-        row = Gtk.Box()
-        row.append(Gtk.Label(label='Position', xalign=0, hexpand=True))
-        self.values['position'] = Gtk.Label(css_classes=['dim-label'], margin_end=6)
-        row.append(self.values['position'])
-        box.append(row)
-        icons = Gtk.Box(spacing=2)
-        for name, label in POSITIONS.items():
-            screen = Gtk.Box(css_classes=['screen'], halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER)
-            strip = Gtk.Box(css_classes=['strip', 'across' if name in ('top', 'bottom') else
-                                         'down' if name in ('left', 'right') else 'floating'],
-                            hexpand=True, vexpand=name in ('left', 'right'),
-                            halign={'left': Gtk.Align.START, 'right': Gtk.Align.END,
-                                    'floating': Gtk.Align.CENTER}.get(name, Gtk.Align.FILL),
-                            valign={'top': Gtk.Align.START, 'left': Gtk.Align.FILL,
-                                    'right': Gtk.Align.FILL}.get(name, Gtk.Align.END))
-            screen.append(strip)
-            button = Gtk.ToggleButton(child=screen, action_name='app.position', tooltip_text=label,
-                                      action_target=GLib.Variant('s', name), css_classes=['flat', 'position'])
-            button.update_property([Gtk.AccessibleProperty.LABEL], [label])
-            icons.append(button)
-        box.append(icons)
-        return box
-
-    def show_values(self):
-        values = getattr(self, 'values', None)
-        if values:
-            values['text-size'].set_label(f"{self.settings.get('size')} px")
-            values['background'].set_label(f"{round(self.settings.get('opacity') * 100)}%")
-            values['text-colour'].set_label(COLOURS[self.settings.get('colour')][0])
-            if 'position' in values:
-                values['position'].set_label(POSITIONS[self.settings.get('position')])
+        self.menu.refresh_menu()
 
     def watch_screens(self, *args):
         """Follow screens being connected or disconnected, and the current screen's geometry."""
@@ -524,7 +446,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         before, self.look = getattr(self, 'look', None), (px, font, alpha, colour)
         recoloured = before is not None and before[:2] == self.look[:2] and before != self.look
         self.css.load_from_string(caption_css(px, font, alpha, colour))
-        self.show_values()
+        self.menu.show_values()
         if not recoloured:
             self.fit()
 
@@ -860,39 +782,6 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if os.environ.get('NOWCAPTION_DEBUG_DRAG'):
             print('drag end', self.x, self.y, flush=True)
 
-    def point_menu(self, x, y):
-        """Point the menu at x, y in the window, opening toward the room on the screen: away
-        from a docked strip's edge, beside a docked column, and upwards from captions low on
-        the screen. KWin squeezes a layer-shell menu that does not fit, or lets it run off the
-        screen, rather than flipping it."""
-        rect = Gdk.Rectangle()  # the menu belongs to the box, so use box coordinates
-        w, h = self.box_width, self.box_height()
-        side = Gtk.PositionType.BOTTOM
-        if self.edge == 'bottom':
-            side, (rect.x, rect.y, rect.width, rect.height) = Gtk.PositionType.TOP, (int(x), 0, 1, 1)
-        elif self.edge == 'top':
-            rect.x, rect.y, rect.width, rect.height = int(x), h - 1, 1, 1
-        elif self.edge in ('left', 'right'):
-            side = Gtk.PositionType.RIGHT if self.edge == 'left' else Gtk.PositionType.LEFT
-            rect.x, rect.y, rect.width, rect.height = w - 1 if self.edge == 'left' else 0, 0, 1, h
-        else:
-            bx, by = (self.x, self.y) if self.layer else (0, 0)
-            geo = self.monitor.get_geometry() if self.layer and self.monitor else None
-            if geo and y > geo.height / 2:  # the overlay covers the screen, so y is on it
-                side = Gtk.PositionType.TOP
-            rect.x, rect.y, rect.width, rect.height = int(x - bx), int(y - by), 1, 1
-        self.popover.set_position(side)
-        self.popover.set_pointing_to(rect)
-
-    def on_menu(self, gesture, n, x, y):
-        if self.layer:  # let the menu take keyboard input while it is open
-            layer_shell.LayerShell.set_keyboard_mode(self, layer_shell.LayerShell.KeyboardMode.ON_DEMAND)
-        self.point_menu(x, y)
-        if self.layer:  # let the compositor apply the keyboard mode first, or KWin closes the menu at once
-            GLib.timeout_add(60, lambda: self.popover.popup() and False)
-        else:
-            self.popover.popup()
-
     def on_long_press(self, gesture, x, y):
         """A finger held still on the captions opens the menu there, as a right-click does. A
         finger that moves first drags them, or resizes them from an edge, and GTK cancels the
@@ -901,4 +790,4 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if self.resizing:  # an edge took the press
             return
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-        self.on_menu(gesture, 1, x, y)
+        self.menu.on_menu(gesture, 1, x, y)

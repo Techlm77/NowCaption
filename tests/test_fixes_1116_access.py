@@ -76,8 +76,8 @@ class LongPressTests(unittest.TestCase):
             time.sleep(0.01)
 
     def menu(self):
-        ok, rect = self.window.popover.get_pointing_to()
-        return self.window.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
+        ok, rect = self.window.menu.popover.get_pointing_to()
+        return self.window.menu.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
 
     def test_the_long_press_is_for_touch_and_apart_from_the_drag(self):
         controllers = self.window.observe_controllers()
@@ -95,9 +95,9 @@ class LongPressTests(unittest.TestCase):
         w = self.window
         w.place(100, 50)
         x, y = w.x + 50, w.y + 20
-        w.point_menu(x, y)
+        w.menu.point_menu(x, y)
         right_click = self.menu()
-        w.point_menu(w.x + 30, w.y + 30)  # elsewhere, so the long press must point it again
+        w.menu.point_menu(w.x + 30, w.y + 30)  # elsewhere, so the long press must point it again
         w.on_drag_begin(press(), x, y)  # the finger going down starts a move
         self.assertTrue(w.dragging)
         hold = press()
@@ -106,8 +106,8 @@ class LongPressTests(unittest.TestCase):
         self.assertEqual(self.menu(), right_click)
         self.assertEqual(self.shell.modes, [FakeLayerShell.KeyboardMode.ON_DEMAND])  # its items take keys
         self.settle(0.3)
-        self.assertTrue(w.popover.get_visible())
-        w.popover.popdown()
+        self.assertTrue(w.menu.popover.get_visible())
+        w.menu.popover.popdown()
         self.assertEqual(self.shell.modes[-1], FakeLayerShell.KeyboardMode.NONE)
         w.on_drag_end(None, 0, 0)  # as GTK ends the denied drag
         self.assertEqual((self.app.settings.get('x'), self.app.settings.get('y')), (100, 50))
@@ -124,7 +124,7 @@ class LongPressTests(unittest.TestCase):
         self.assertEqual(hold.states, [nc.Gtk.EventSequenceState.CLAIMED])
         self.assertEqual(self.menu(), (nc.Gtk.PositionType.TOP, (x, 0, 1, 1)))
         self.settle(0.3)
-        w.popover.popdown()
+        w.menu.popover.popdown()
 
     def test_holding_still_on_an_edge_keeps_resizing_and_opens_no_menu(self):
         w = self.window
@@ -134,7 +134,7 @@ class LongPressTests(unittest.TestCase):
         w.on_drag_begin(edge, x, y)
         self.assertEqual(edge.states, [nc.Gtk.EventSequenceState.CLAIMED])
         self.assertEqual(w.resizing[0], 'n')
-        w.point_menu(w.x + 30, w.y + 30)
+        w.menu.point_menu(w.x + 30, w.y + 30)
         before = self.menu()
         hold = press()
         w.on_long_press(hold, x, y)
@@ -177,7 +177,7 @@ class LongPressWithoutLayerShellTests(unittest.TestCase):
         w.on_drag_begin(gesture, 100, 30)
         w.on_drag_update(gesture, 2, 1)  # a finger never holds perfectly still
         self.assertEqual(self.moves, [])
-        with patch.object(w, 'on_menu') as menu:
+        with patch.object(w.menu, 'on_menu') as menu:
             w.on_long_press(press(), 100, 30)
         menu.assert_called_once()
         w.on_drag_end(gesture, 2, 1)  # GTK ends the drag once the long press takes the press

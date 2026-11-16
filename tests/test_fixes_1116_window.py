@@ -118,14 +118,14 @@ class RestyleTests(unittest.TestCase):
         self.assertEqual(caption.lines, rows)
         self.assertEqual(caption.glide, 1.0)
         self.assertIn(len(self.words) - 1, caption.appeared)
-        self.assertEqual(w.values['background'].get_label(), f"{round(self.app.settings.get('opacity') * 100)}%")
-        self.assertEqual(w.values['text-colour'].get_label(), 'Yellow')
+        self.assertEqual(w.menu.values['background'].get_label(), f"{round(self.app.settings.get('opacity') * 100)}%")
+        self.assertEqual(w.menu.values['text-colour'].get_label(), 'Yellow')
 
     def test_a_new_text_size_still_fits_the_box_again(self):
         wrapper = self.window.caption.wrapper
         self.app.resize(+1)
         self.assertIsNot(self.window.caption.wrapper, wrapper)
-        self.assertEqual(self.window.values['text-size'].get_label(), '36 px')
+        self.assertEqual(self.window.menu.values['text-size'].get_label(), '36 px')
 
     def test_a_layout_change_with_the_same_look_still_fits(self):
         wrapper = self.window.caption.wrapper
