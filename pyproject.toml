@@ -17,3 +17,37 @@ nowcaption = "nowcaption.launch:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+# The code wraps at about 120 characters (99% of lines are under 114); no formatter is used.
+line-length = 120
+# Folders whose modules are imported as first-party (tests and benchmarks import their siblings).
+# The target Python version comes from requires-python above.
+src = ["src", "tests", "benchmark"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "I",       # import order
+    "B",       # bugbear
+    "UP",      # pyupgrade
+    "SIM",     # flake8-simplify
+    "RUF",     # Ruff's own rules
+]
+ignore = [
+    "B905",    # zip(strict=...): strict=True would raise where lengths match by construction; False is noise
+    "RUF005",  # [a] + b reads plainly, and [a, *b] means something else when b is a NumPy array
+    "RUF012",  # class-level tables are read-only constants; ClassVar would import typing at startup
+    "RUF022",  # __all__ is grouped by submodule, in the order of the imports above it
+    "SIM105",  # try/except/pass is as clear as contextlib.suppress and needs no import
+]
+allowed-confusables = ["‘", "’", "−"]  # typographic quotes and the minus sign are shown on purpose
+
+[tool.ruff.lint.per-file-ignores]
+# GTK modules call gi.require_version() before importing from gi.repository, as PyGObject needs.
+"src/nowcaption/app.py" = ["E402"]
+"src/nowcaption/ui/*.py" = ["E402"]
+# Dense one-off measurement scripts: their compact layout (several statements or imports on a
+# line, long table rows, short lambdas, files read in one expression) is kept.
+"benchmark/*.py" = ["E401", "E501", "E701", "E702", "E731", "E741", "I001", "SIM115"]
