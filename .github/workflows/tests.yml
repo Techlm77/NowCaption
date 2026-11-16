@@ -4,8 +4,9 @@ permissions:
   contents: read
 jobs:
   reliability:
-    # Worker, capture, transcript and setup-script tests with fake models and a fake
-    # GStreamer: they need only NumPy, so they run on every supported Python.
+    # The core tests (tests/run.py without --gui): the engine, the application's logic and the
+    # scripts, with fake models and a fake GStreamer. They need only NumPy, so they run on every
+    # supported Python.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -17,26 +18,13 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install 'numpy>=2'
-      - run: PYTHONPATH=src python tests/test_reliability.py
-      - run: PYTHONPATH=src python tests/test_regressions.py
-      - run: PYTHONPATH=src python tests/test_fixes_104.py
-      - run: PYTHONPATH=src python tests/test_fixes_112.py
-      - run: PYTHONPATH=src python tests/test_fixes_113.py
-      - run: PYTHONPATH=src python tests/test_fixes_114.py
-      - run: PYTHONPATH=src python tests/test_fixes_115.py
-      - run: PYTHONPATH=src python tests/test_fixes_116.py
-      - run: PYTHONPATH=src python tests/test_fixes_117.py
-      - run: PYTHONPATH=src python tests/test_fixes_118.py
-      - run: PYTHONPATH=src python tests/test_fixes_119.py
-      - run: PYTHONPATH=src python tests/test_fixes_1116_history.py
-      - run: PYTHONPATH=src python tests/test_fixes_122.py
-      - run: PYTHONPATH=src:tests python tests/test_qol_features.py
-      - run: python tests/test_version.py
+      - run: python tests/run.py
       - run: python -m compileall -q src tests benchmark tools
       - run: for script in tools/*.sh tests/*.sh flatpak/*.sh; do sh -n "$script"; done
 
   app:
-    # Application logic plus real GTK window construction under Xvfb.
+    # The GUI tests (tests/run.py --gui): the real application, and its windows under Xvfb, with
+    # the system's PyGObject, GTK 4 and libadwaita.
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -46,14 +34,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends python3-gi python3-gi-cairo python3-numpy \
             gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 \
             python3-yaml dbus xvfb xauth
-      - run: NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_app.py
-      - run: PYTHONPATH=src /usr/bin/python3 tests/test_fixes_121.py
-      - run: xvfb-run -a env NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_window.py
-      - run: |
-          for t in history options effects window transcript access packaging; do
-            xvfb-run -a env NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src /usr/bin/python3 tests/test_fixes_1116_$t.py
-          done
-      - run: xvfb-run -a env NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src:tests /usr/bin/python3 tests/test_qol_features.py
+      - run: /usr/bin/python3 tests/run.py --gui
 
   lint:
     # Ruff at a pinned version (the rules are in pyproject.toml; 0.17.4 is also Arch's package).

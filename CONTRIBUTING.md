@@ -54,26 +54,54 @@ code can write `engine.RecognitionWorker`. It stays short, with no logic in it.
 
 ## Running the tests
 
-Each file in `tests/` is a plain unittest script, run on its own from the repository root:
+`tests/run.py` runs the tests the way CI does, each test module in a process of its own:
 
 ```sh
-PYTHONPATH=src:tests python3 tests/test_reliability.py
+python3 tests/run.py                  # the core tests: Python 3.10+ and NumPy are enough
+/usr/bin/python3 tests/run.py --gui   # the GUI tests, each module under xvfb-run
+/usr/bin/python3 tests/run.py --all   # everything CI runs
+python3 tests/run.py tests/engine     # one folder, or name test modules
 ```
 
-Tests that use GTK (`test_app.py`, `test_window.py`, `test_qol_features.py` and the
-`test_fixes_1116_*.py` files) need the system PyGObject with GTK 4 and libadwaita, and those
-that build windows need a display. Run them under Xvfb with `NOWCAPTION_REQUIRE_GUI_TESTS=1`,
-so a missing GTK fails the run instead of skipping its tests:
+A module is a GUI test when it imports `gi`, `cairo` or `yaml`, itself or through
+`tests/support`: it needs the system's Python with PyGObject (GTK 4, libadwaita) and PyYAML,
+and `xvfb-run`. The runner gives GUI tests `NOWCAPTION_REQUIRE_GUI_TESTS=1`, so a missing GTK
+fails them instead of skipping them; `--list` shows which group each module is in. CI's
+`reliability` job runs the core tests on Python 3.10, 3.12 and 3.14, and its `app` job the GUI
+tests. A test module also runs on its own, from the repository root:
 
 ```sh
-xvfb-run -a env NOWCAPTION_REQUIRE_GUI_TESTS=1 PYTHONPATH=src:tests /usr/bin/python3 tests/test_window.py
+PYTHONPATH=src:tests python3 tests/engine/test_worker.py
 ```
 
-`.github/workflows/tests.yml` lists exactly what CI runs. `tests/test_live.py` and
+The tests are grouped by what they test, mirroring `src/nowcaption/`:
+
+```
+tests/
+  run.py       # the runner
+  support/     # what test modules share: fakes, the private XDG folders, GTK and the display
+  engine/      # engine/ and words.py: worker, Captioner, punctuation, capture, history, models
+  app/         # app.py, control/ and settings.py: listening, saving, quitting, commands
+  ui/          # the windows: caption window, docking, pointer, animations, options, transcript
+  desktop/     # desktop/: KDE Plasma's panels, autostart
+  packaging/   # the version, the speech model's files, the AppImage, the release workflows
+  tools/       # the scripts in tools/ and tests/, and the benchmark's scoring
+```
+
+A new test goes in the module named after what it tests (`ui/caption_window/docking.py` is
+tested in `ui/test_docking.py`), as a `unittest.TestCase` whose docstring says why it exists.
+Every test module starts with `import support.sandbox`, which gives the process private XDG
+folders (no test may touch the user's settings, transcript or history). Fakes and helpers that
+more than one module needs go in `tests/support/`, never in a test module: test modules never
+import each other. Tests that build the real application use `support.gtk` (and
+`support.windows` for windows); those that need only NumPy run the application's own methods
+through `support.app_loader`.
+
+The scripts at the top of `tests/` are run by hand. `tests/test_live.py` and
 `tests/test_memory.py` need the downloaded models and sherpa-onnx (the `.venv` that
-`tools/run-dev.sh` sets up), and `test_live.py` also a PulseAudio or PipeWire server, so CI does
-not run them.
-`tests/test_flatpak.sh` tests an installed Flatpak. Also check that everything compiles:
+`tools/run-dev.sh` sets up), and `test_live.py` also a PulseAudio or PipeWire server.
+`tests/test_flatpak.sh` tests an installed Flatpak, with `capture_print.py`, `transcript_check.py`
+and the clips in `tests/fixtures/`. Also check that everything compiles:
 
 ```sh
 python3 -m compileall -q src tests benchmark tools
