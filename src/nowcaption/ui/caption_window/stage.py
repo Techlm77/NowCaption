@@ -1,6 +1,8 @@
 """The two containers that hold the caption box in its window: Stage places the floating box at
 x, y inside an overlay covering the screen; Drawer shows only part of a docked box, the rest
 slid away into its edge. Layout only: they know nothing of captions or settings."""
+from __future__ import annotations
+
 import gi
 
 gi.require_version('Gtk', '4.0')
@@ -19,7 +21,8 @@ class Stage(Gtk.Widget):
     be far wider, the whole of an ellipsized status message or a word wider than the box, and
     the box then ran off the screen, past the part that takes clicks, with no ellipsis shown."""
 
-    def __init__(self, child):
+    def __init__(self, child: Gtk.Widget) -> None:
+        """child: the box (in the window, the Drawer that holds it)."""
         super().__init__()
         self.child, self.x, self.y, self.fill = child, 0, 0, False
         child.set_parent(self)
@@ -29,7 +32,8 @@ class Stage(Gtk.Widget):
             self.child.unparent()
         Gtk.Widget.do_dispose(self)
 
-    def move(self, x, y):
+    def move(self, x: int, y: int) -> None:
+        """Put the floating box at x, y in the window, px."""
         self.x, self.y = x, y
         self.queue_allocate()
 
@@ -58,7 +62,8 @@ class Drawer(Gtk.Widget):
     captions slide (each resize waits for the compositor, which halved the frame rate);
     Docking shrinks and grows only the space it reserves. shown None: all of it."""
 
-    def __init__(self, child):
+    def __init__(self, child: Gtk.Widget) -> None:
+        """child: the caption box."""
         super().__init__(overflow=Gtk.Overflow.HIDDEN)
         self.child, self.edge, self.shown = child, None, None
         child.set_parent(self)
@@ -68,18 +73,20 @@ class Drawer(Gtk.Widget):
             self.child.unparent()
         Gtk.Widget.do_dispose(self)
 
-    def axis(self):
+    def axis(self) -> Gtk.Orientation:
+        """The direction the box slides in and out of its edge."""
         return Gtk.Orientation.VERTICAL if self.edge in ('top', 'bottom') else Gtk.Orientation.HORIZONTAL
 
-    def show_part(self, edge, shown):
+    def show_part(self, edge: str | None, shown: float | None) -> None:
+        """Show shown px of the box from edge ('top', 'left', ...); shown None: all of it."""
         self.edge, self.shown = edge, None if shown is None else max(0.0, shown)
         self.queue_allocate()
 
-    def full(self):
+    def full(self) -> int:
         """The box's whole size across the docked edge."""
         return self.child.measure(self.axis(), -1)[1]
 
-    def hidden(self):
+    def hidden(self) -> float:
         """How far the box is slid away into its edge, in px."""
         return 0 if self.shown is None or not self.edge else max(0, self.full() - self.shown)
 

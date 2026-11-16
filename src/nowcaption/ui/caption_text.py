@@ -2,10 +2,13 @@
 words in, and the label that says when GTK has restyled it. The rows' wrapping is in rows.py,
 the pixel effects' pieces in pieces.py. Nothing here knows about windows or settings: the caption
 window and the sample caption configure it."""
+from __future__ import annotations
+
 import difflib
 import logging
 import math
 import re
+from collections.abc import Callable
 
 import cairo
 import gi
@@ -24,7 +27,8 @@ from .rows import Rows, bare
 LOG = logging.getLogger('nowcaption')
 
 
-def ease_out(p):
+def ease_out(p: float) -> float:
+    """Cubic ease-out: quick at first, slowing to rest at 1 as p (0 to 1) reaches 1."""
     return 1 - (1 - p) ** 3
 
 
@@ -32,7 +36,8 @@ class StyledLabel(Gtk.Label):
     """A Gtk.Label that calls styled() once GTK has applied new CSS to it. GTK applies a new
     font size only when it next lays the window out, after restyle() has measured the font."""
 
-    def __init__(self, styled, **kwargs):
+    def __init__(self, styled: Callable[[], None], **kwargs) -> None:
+        """kwargs: the Gtk.Label's properties."""
         super().__init__(**kwargs)
         self.styled = styled
 
@@ -49,7 +54,9 @@ class CaptionText(Gtk.Widget):
     piece has landed. A status message shown in place of captions fades in, and breathes while
     it waits for speech. Without animations, the label shows just the last rows."""
 
-    def __init__(self, label, **kwargs):
+    def __init__(self, label: Gtk.Label, **kwargs) -> None:
+        """label: shows the rows (a StyledLabel, so the owner hears when it is restyled), and
+        becomes this widget's child; kwargs: the Gtk.Widget's properties, such as margins."""
         super().__init__(overflow=Gtk.Overflow.HIDDEN, **kwargs)
         self.label = label
         label.set_parent(self)
@@ -82,7 +89,7 @@ class CaptionText(Gtk.Widget):
         self.watch(False)
         Gtk.Widget.do_unmap(self)
 
-    def watch(self, on):
+    def watch(self, on: bool) -> None:
         """Follow the desktop turning animations on or off, only while shown, so the settings
         never keep a widget that is gone (the sample under More options) and its handler."""
         if self.watching:
@@ -113,8 +120,9 @@ class CaptionText(Gtk.Widget):
         up = Gsk.Transform().translate(Graphene.Point().init(0, -self.offset)) if self.offset else None
         self.label.allocate(width, height, -1, up)
 
-    def configure(self, layout, rows, row_height, flexible=False):
-        """A new width, font or number of rows: the rows are shown at rest, wrapped afresh."""
+    def configure(self, layout: Pango.Layout, rows: int, row_height: int, flexible: bool = False) -> None:
+        """A new width, font or number of rows: the rows are shown at rest, wrapped afresh.
+        flexible: docked at a side, where the compositor's height decides the rows."""
         self.layout, self.rows, self.row_height, self.flexible = layout, rows, row_height, flexible
         # The label's lines are this far apart: a fraction of a pixel less than the whole-pixel
         # row height, as fonts go. Gliding by it ends exactly where the rows come to rest.
@@ -124,7 +132,7 @@ class CaptionText(Gtk.Widget):
         self.glide, self.appeared, self.pieces = 0.0, {}, {}
         self.queue_resize()
 
-    def set_effect(self, effect, speed):
+    def set_effect(self, effect: str, speed: float) -> None:
         """How new words arrive (a WORD_EFFECTS name), and the factor of its WORD_SPEEDS speed.
         With none, the words still arriving show at once."""
         self.effect, self.speed, self.pieces = effect, speed, {}
@@ -132,13 +140,13 @@ class CaptionText(Gtk.Widget):
             self.appeared = {}
             self.start()
 
-    def word_us(self):
+    def word_us(self) -> float:
         """How long a new word takes to arrive, in µs."""
         if self.effect == 'none':
             return 0
         return (WORD_MS if self.effect == 'fade' else PIXEL_MS) * self.speed * 1000
 
-    def show(self, text, status=False, waiting=False):
+    def show(self, text: str, status: bool = False, waiting: bool = False) -> None:
         """Show the passage, or with status, a status message (waiting: one that waits for
         speech, so it breathes)."""
         now = GLib.get_monotonic_time()
@@ -162,7 +170,7 @@ class CaptionText(Gtk.Widget):
         self.text, self.lines, self.words, self.status = text, lines, words, status
         self.start(now)
 
-    def moved(self, lines):
+    def moved(self, lines: list[str]) -> int | None:
         """How many rows the passage moved up, judged by the row that was on top: None when
         that row is gone (the rows wrapped differently, or the passage changed)."""
         if not self.lines or not lines or self.status:
@@ -177,7 +185,7 @@ class CaptionText(Gtk.Widget):
                 return moved
         return None
 
-    def carry(self, words, now, fresh):
+    def carry(self, words: list[str], now: int, fresh: bool) -> dict[int, int]:
         """When each of the passage's words appeared: words already shown keep their time,
         even with new punctuation, and words added appear now. fresh: no captions were shown
         before (a status message, or an empty box), so every word is new."""
@@ -195,7 +203,7 @@ class CaptionText(Gtk.Widget):
                 appeared[b + j] = now
         return appeared
 
-    def gliding(self, now):
+    def gliding(self, now: int) -> float:
         """Rows still to glide up at time now (µs)."""
         if not self.glide:
             return 0.0
@@ -205,7 +213,7 @@ class CaptionText(Gtk.Widget):
             return 0.0
         return self.glide * (1 - ease_out(max(0.0, p)))
 
-    def update(self, now):
+    def update(self, now: int) -> bool:
         """Show the rows, the words arriving and the status message as of now (µs). True
         while the rows, words or a status message's fade still move (breathing is timed by
         breathe instead)."""
@@ -241,7 +249,7 @@ class CaptionText(Gtk.Widget):
         self.label.set_opacity(opacity)
         return bool(self.glide or self.appeared or self.shown_at is not None)
 
-    def arrivals(self, text, now):
+    def arrivals(self, text: str, now: int) -> tuple[Pango.AttrList, list[tuple[Pieces, float]]]:
         """Pango attributes for the words arriving in the shown text: faded in, or hidden while
         their pieces are drawn over the label; and those pieces, as (Pieces, progress 0 to 1)."""
         spans = [m.span() for m in re.finditer(r'\S+', text)]
@@ -271,7 +279,7 @@ class CaptionText(Gtk.Widget):
         self.pieces = pieces
         return attrs, drawing
 
-    def word_pieces(self, i, layout, word, start, end):
+    def word_pieces(self, i: int, layout: Pango.Layout, word: str, start: int, end: int) -> Pieces | None:
         """The Pieces of passage word i, shown as word between byte offsets start and end of
         the layout; made again if it moved or the colour changed, the pieces flying on."""
         first, last = layout.index_to_pos(start), layout.index_to_pos(end)
@@ -305,7 +313,7 @@ class CaptionText(Gtk.Widget):
                 cr = snapshot.append_cairo(Graphene.Rect().init(x0, y0, x1 - x0, y1 - y0))
                 pieces.draw(cr, self.effect, p, 0, -self.offset)
 
-    def start(self, now=None):
+    def start(self, now: int | None = None) -> None:
         """Show the current state, and keep updating it while anything moves."""
         moving = self.update(GLib.get_monotonic_time() if now is None else now)
         if not self.get_mapped():
@@ -315,7 +323,8 @@ class CaptionText(Gtk.Widget):
         if self.breath_start is not None and not self.breath_timer:
             self.breath_timer = GLib.timeout_add(BREATH_STEP_MS, self.breathe)
 
-    def stop(self):
+    def stop(self) -> None:
+        """Stop the frame updates and the breathing timer, until start()."""
         if self.tick:
             self.remove_tick_callback(self.tick)
             self.tick = 0
@@ -324,6 +333,7 @@ class CaptionText(Gtk.Widget):
             self.breath_timer = 0
 
     def breathe(self):
+        """The breathing timer: update a waiting status message while no frame does."""
         if self.breath_start is None:
             self.breath_timer = 0
             return GLib.SOURCE_REMOVE

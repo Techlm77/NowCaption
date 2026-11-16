@@ -1,6 +1,9 @@
 """More options: the window for what the caption box's menu has no room for, with a sample caption
 (Preview, in preview.py) that shows how new words arrive."""
+from __future__ import annotations
+
 import os
+from collections.abc import Iterable
 
 import gi
 
@@ -27,7 +30,9 @@ class OptionsWindow(Adw.Window):
                 'history-days': 'history_days', 'font': 'font'}  # action: key
     HISTORY = {1: '1 day', 7: '7 days', 30: '30 days', 90: '90 days', 0: 'Until you delete them'}
 
-    def __init__(self, app):
+    def __init__(self, app) -> None:
+        """app: the NowCaption application: its settings and actions, the word list, starting at
+        login and the keyboard shortcuts."""
         super().__init__(application=app, title='More options', default_width=560, default_height=760)
         self.app = app
         self.chosen = Gio.SimpleActionGroup()  # the choices made here, until Apply
@@ -104,20 +109,22 @@ class OptionsWindow(Adw.Window):
         Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), self.sample_css)
         return False
 
-    def choice(self, name):
+    def choice(self, name: str) -> str:
+        """What is chosen here for the action name (see SETTINGS), as a string."""
         return self.chosen.lookup_action(name).get_state().get_string()
 
-    def changed(self):
+    def changed(self) -> list[str]:
         """The choices that differ from what the captions use."""
         return [name for name, key in self.SETTINGS.items() if self.choice(name) != str(self.app.settings.get(key))]
 
     # --- font -------------------------------------------------------------------------------
 
     @staticmethod
-    def desktop_font():
+    def desktop_font() -> Pango.FontDescription:
+        """The desktop's own font, which the captions use unless another is chosen."""
         return Pango.FontDescription.from_string(Gtk.Settings.get_default().get_property('gtk-font-name') or 'Sans')
 
-    def font_group(self):
+    def font_group(self) -> Adw.PreferencesGroup:
         """The caption font: any installed family, or the desktop's own (the default)."""
         group = Adw.PreferencesGroup(title='Font')
         self.font_button = Gtk.FontDialogButton(dialog=Gtk.FontDialog(title='Caption font'), level=Gtk.FontLevel.FAMILY,
@@ -146,7 +153,8 @@ class OptionsWindow(Adw.Window):
         self.quiet = False
         self.chosen.lookup_action('font').activate(GLib.Variant('s', ''))
 
-    def show_font(self):
+    def show_font(self) -> None:
+        """Show the chosen font in its row and in the sample."""
         family = self.choice('font')
         self.font_row.set_subtitle(family or 'Your desktop\'s font')
         self.font_reset.set_visible(bool(family))
@@ -155,7 +163,7 @@ class OptionsWindow(Adw.Window):
 
     # --- word list --------------------------------------------------------------------------
 
-    def words_group(self):
+    def words_group(self) -> Adw.PreferencesGroup:
         """Adding a fix: what NowCaption writes for a word it gets wrong, and what to show."""
         group = Adw.PreferencesGroup(
             title='Word fixes',
@@ -174,6 +182,8 @@ class OptionsWindow(Adw.Window):
         return group
 
     def add_fix(self, *args):
+        """Add the fix typed in the two boxes (Add, or Enter in either), in place of any fix for
+        the same words."""
         write = ' '.join(self.write_entry.get_text().split())
         heard = ' '.join(self.heard_entry.get_text().split())
         if not write:
@@ -185,16 +195,19 @@ class OptionsWindow(Adw.Window):
         self.write_entry.set_text('')
         self.heard_entry.grab_focus()
 
-    def remove_fix(self, fix):
+    def remove_fix(self, fix: tuple[str, str]) -> None:
+        """Remove this (heard, write) fix from the word list."""
         self.save_fixes([f for f in self.app.word_list if f != fix])
 
-    def save_fixes(self, fixes):
+    def save_fixes(self, fixes: list[tuple[str, str]]) -> None:
+        """Use these (heard, write) fixes from now on, and show them, or why they were not saved."""
         error = self.app.set_words(fixes)
         self.show_fixes()
         if error:
             self.fixes.set_description(error)
 
-    def show_fixes(self):
+    def show_fixes(self) -> None:
+        """List the word list's fixes, each with a button that removes it."""
         for row in self.fix_rows:
             self.fixes.remove(row)
         self.fix_rows = []
@@ -215,7 +228,8 @@ class OptionsWindow(Adw.Window):
 
     # --- start at login and keyboard shortcuts ----------------------------------------------
 
-    def start_group(self):
+    def start_group(self) -> Adw.PreferencesGroup:
+        """Starting at login, and the keyboard shortcuts."""
         command = self.launch_command()
         group = Adw.PreferencesGroup(
             title='Start and shortcuts',
@@ -238,7 +252,7 @@ class OptionsWindow(Adw.Window):
         return group
 
     @staticmethod
-    def launch_command():
+    def launch_command() -> str:
         """What a desktop shortcut runs to reach this NowCaption: the Flatpak, the AppImage
         (it has no command of its own) or the installed `nowcaption`."""
         if portal.in_flatpak():
@@ -251,7 +265,9 @@ class OptionsWindow(Adw.Window):
         row.set_sensitive(False)  # until the desktop answers
         self.app.set_autostart(row.get_active(), weakly(self.login_answered))
 
-    def login_answered(self, on, message):
+    def login_answered(self, on: bool, message: str) -> None:
+        """The desktop answered: whether NowCaption now starts at login, and why not as asked
+        ('' when it is)."""
         self.quiet = True
         self.login_row.set_active(on)
         self.quiet = False
@@ -266,7 +282,8 @@ class OptionsWindow(Adw.Window):
         if self.app.shortcuts:
             self.app.shortcuts.configure()
 
-    def show_shortcuts(self):
+    def show_shortcuts(self) -> None:
+        """Say which keys the shortcuts have, or why there are none."""
         keys = self.app.shortcuts
         on = self.app.settings.get('shortcuts')
         if not on:
@@ -287,20 +304,22 @@ class OptionsWindow(Adw.Window):
         action.set_state(value)
         self.show_choices()
 
-    def show_choices(self):
+    def show_choices(self) -> None:
+        """Show the choices made here in the sample, and allow Apply once one differs."""
         self.show_font()
         effect = self.choice('word-effect')
         self.preview.caption.set_effect(effect, WORD_SPEEDS[self.choice('word-speed')][1])
         self.speed.set_sensitive(effect != 'none')  # no speed for words that appear at once
         self.apply_button.set_sensitive(bool(self.changed()))
 
-    def apply(self, button=None):
+    def apply(self, button: Gtk.Button | None = None) -> None:
+        """Use the choices made here for the captions."""
         for name in self.changed():  # only those, so the same source does not restart capture
             self.app.lookup_action(name).activate(GLib.Variant('s', self.choice(name)))
         self.show_choices()
 
     @staticmethod
-    def choices(group, action, options):
+    def choices(group: Adw.PreferencesGroup, action: str, options: Iterable[tuple[str, str, str | None]]) -> None:
         """A row for each (value, title, subtitle), chosen with a radio button bound to action."""
         first = None
         for value, title, subtitle in options:

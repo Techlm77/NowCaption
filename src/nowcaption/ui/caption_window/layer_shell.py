@@ -2,6 +2,8 @@
 captions' window cover a screen, or dock along its edge like a panel. LayerShell is None without
 it. The caption window's parts look it up here each time (layer_shell.LayerShell), so this is the
 one place to replace it, as the tests do."""
+from __future__ import annotations
+
 import gi
 
 gi.require_version('Gtk', '4.0')
@@ -13,6 +15,6 @@ except (ValueError, ImportError):
     LayerShell = None
 
 
-def supported():
+def supported() -> bool:
     """Whether the captions can place their own window: elsewhere the window manager does."""
     return bool(LayerShell and LayerShell.is_supported())

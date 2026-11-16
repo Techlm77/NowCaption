@@ -1,8 +1,11 @@
 """Moving and resizing the caption box with a mouse or a finger: dragging inside the box moves it,
 dragging an edge or corner resizes it (in whole rows), and a finger held still opens the menu.
 It changes the window's place and size through the window, and saves them when a drag ends."""
+from __future__ import annotations
+
 import math
 import os
+from typing import TYPE_CHECKING
 
 import gi
 
@@ -11,21 +14,25 @@ from gi.repository import Gdk, Gtk
 
 from ...style import CURSORS, EDGE, INNER, MIN_WIDTH, PAD_Y
 
+if TYPE_CHECKING:  # for annotations only
+    from .window import CaptionWindow
+
 
 class Pointer:
     """The window's drag, motion and long-press gestures call these handlers. While a drag lasts,
     dragging holds where the box was grabbed, or resizing which edges move and where the box's
     edges were; held is the widget given the drag's cursor."""
 
-    def __init__(self, window):
+    def __init__(self, window: CaptionWindow) -> None:
         self.window = window
         self.dragging = self.resizing = self.held = None
         self.move_from = None  # without layer shell: where a finger pressed, until it travels (on_drag_update)
 
-    def cursor(self):
+    def cursor(self) -> str:
+        """The cursor over the box away from its edges: docked captions do not move."""
         return 'default' if self.window.edge else 'grab'
 
-    def edges_at(self, x, y):
+    def edges_at(self, x: float, y: float) -> str:
         """Which edges of the box the pointer is on, as 'n', 'se', ...; '' inside it.
         A normal window cannot move itself, so there only the right and bottom edges resize.
         Docked, only the edge between the captions and the windows beside them resizes."""
@@ -48,7 +55,7 @@ class Pointer:
         if not (self.dragging or self.resizing):
             self.window.set_cursor(Gdk.Cursor.new_from_name(CURSORS.get(self.edges_at(x, y), self.cursor()), None))
 
-    def hold_cursor(self, x, y, name):
+    def hold_cursor(self, x: float, y: float, name: str) -> None:
         """Show cursor name until the drag ends. Once the pointer leaves the widget it pressed,
         GTK shows that widget's own cursor rather than the window's, and a docked strip moves
         under the pointer as it resizes, so the pressed widget gets the same cursor."""
@@ -84,7 +91,7 @@ class Pointer:
                 return
             self.begin_move(gesture, x, y)
 
-    def begin_move(self, gesture, x, y):
+    def begin_move(self, gesture: Gtk.GestureDrag, x: float, y: float) -> None:
         """Have the window manager move the window from (x, y), where the press is now."""
         gesture.set_state(Gtk.EventSequenceState.CLAIMED)
         self.window.get_surface().begin_move(gesture.get_device(), gesture.get_current_button(), x, y,
@@ -108,7 +115,7 @@ class Pointer:
         if ok:
             self.window.place(px - self.dragging[0], py - self.dragging[1])
 
-    def resize_by(self, dx, dy):
+    def resize_by(self, dx: float, dy: float) -> None:
         """Move the dragged edges by dx, dy from where they started; the other edges stay put."""
         win = self.window
         edges, left, top, right, bottom = self.resizing
@@ -131,7 +138,7 @@ class Pointer:
             win.y = int(bottom - win.caption_height() if 'n' in edges else top)
         win.render()
 
-    def resize_dock(self, x, y):
+    def resize_dock(self, x: float, y: float) -> None:
         """Docked: the inner edge follows the pointer at x, y in the strip; the edge against the
         screen stays, and the windows beside the captions follow. Measured from that outer edge
         each time, since the strip itself moves under the pointer as it grows."""
