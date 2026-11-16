@@ -350,5 +350,24 @@ class HistoryAndSignalTests(unittest.TestCase):
         self.assertEqual(quits, [a])
 
 
+@unittest.skipIf(nc is None, SKIP)
+class QuitTests(unittest.TestCase):
+    """app.quit(), which PyGObject's Ctrl+C fallback calls, quits the way Quit does: the caption
+    box fades out first. When control/ was split from app.py, NowCaption lost its quit(), so
+    Ctrl+C reached Gio.Application.quit and quit at once (found by the review of the split)."""
+
+    def test_quit_fades_the_box_out_before_the_application_quits(self):
+        a, fades, quits, timers = AppTests.make(self), [], [], []
+        a.window.box = NS()
+        a.window.fade = lambda widget, start, end, ms, done: fades.append((widget, end, done))
+        with patch.object(nc.Adw.Application, 'quit', lambda app: quits.append(app)), \
+                patch.object(GLib, 'timeout_add', lambda ms, callback: timers.append(callback) or 1):
+            a.quit()
+            self.assertEqual([(widget, end) for widget, end, _ in fades], [(a.window.box, 0.0)])
+            self.assertEqual(quits, [])  # not before the box has faded out
+            fades[0][2]()  # the fade ends
+            self.assertEqual(quits, [a])
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
