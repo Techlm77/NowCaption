@@ -3,7 +3,8 @@
 resizing them, sliding between positions, and fullscreen apps. On the test display; no models
 or audio pipeline are started.
 
-DockTests come from the first window tests, DockFixTests from 1.1.16.
+DockTests come from the first window tests, DockFixTests from 1.1.16, MenuFitTests from the distro
+test lab (Hyprland and Sway).
 """
 import unittest
 from pathlib import Path
@@ -11,7 +12,7 @@ from types import SimpleNamespace as NS
 
 import support.sandbox  # noqa: F401 - private XDG folders and a quiet log for this process
 from nowcaption import style
-from support.windows import SKIP, FakeLayerShell, nc, shared_app, use_fake_layer_shell
+from support.windows import SKIP, FakeLayerShell, nc, screen_size, shared_app, use_fake_layer_shell
 
 if nc:  # GTK and a display are there
     from nowcaption import settings
@@ -357,6 +358,94 @@ class DockFixTests(unittest.TestCase):
         self.app.settings.set('dock_width', -1)
         w.restyle()
         self.assertEqual(w.box_width, caption_window.CaptionWindow.dock_width_for(w.monitor))
+
+
+@unittest.skipIf(nc is None, SKIP)
+class MenuFitTests(unittest.TestCase):
+    """The menu always fits the screen. On Hyprland and Sway the Flatpak's box was an ordinary
+    floating window (no layer shell for sandboxed apps there), and in the middle of a 1366x768
+    screen the menu fitted neither above nor below it: Hyprland squeezed it (Quit had to be
+    scrolled to) and Sway let it run off the bottom of the screen. The screens here are sized
+    from the menu's own height, so the fonts of the test display do not matter."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = shared_app()
+
+    def make(self, layer):
+        if layer:
+            use_fake_layer_shell(self)
+        for key in ('position', 'x', 'y', 'size'):
+            self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
+        self.app.settings.set('size', 30)
+        w = caption_window.CaptionWindow(self.app)
+        self.app.window = w
+        self.addCleanup(w.destroy)
+        self.addCleanup(w.disconnect_monitors)
+        self.addCleanup(setattr, self.app, 'window', None)
+        if not w.monitor:
+            self.skipTest('No monitor advertised by the display')
+        w.show_text('so we took the long road back past the old sawmill')
+        self.tall = self.height(w)  # in full: nothing has limited it yet
+        return w
+
+    @staticmethod
+    def height(w):
+        """The menu's height as it would show: its contents, padding included."""
+        return w.menu.popover.get_child().get_parent().measure(nc.Gtk.Orientation.VERTICAL, -1)[1]
+
+    def menu(self, w, x, y):
+        w.menu.point_menu(x, y)
+        popover = w.menu.popover
+        _, rect = popover.get_pointing_to()
+        return popover.get_position(), popover.get_valign(), (rect.x, rect.y), self.height(w)
+
+    def test_floating_on_layer_shell_with_no_room_above_or_below_it_opens_beside_the_pointer(self):
+        w = self.make(layer=True)
+        screen = self.tall + 120  # the menu fits the screen, but not above or below its middle
+        with screen_size(1366, screen):
+            w.place(100, screen // 2 - 20)
+            side, align, (x, y), shown = self.menu(w, w.x + 50, w.y + 20)
+            self.assertEqual((side, align, x), (nc.Gtk.PositionType.RIGHT, nc.Gtk.Align.START, 50))
+            self.assertEqual(shown, self.tall)  # whole, no scrolling
+            self.assertGreaterEqual(w.y + y, 0)  # and on the screen
+            self.assertLessEqual(w.y + y + shown, screen)
+            # near the right edge of the screen, it opens to the left of the pointer
+            w.place(1366 - w.box_width, screen // 2 - 20)
+            self.assertEqual(self.menu(w, 1366 - 10, w.y + 20)[0], nc.Gtk.PositionType.LEFT)
+
+    def test_a_menu_taller_than_the_screen_scrolls_inside_it(self):
+        w = self.make(layer=True)
+        screen = self.tall - 60
+        with screen_size(1366, screen):
+            w.place(100, screen // 2 - 20)
+            side, align, (_, y), shown = self.menu(w, w.x + 50, w.y + 20)
+            self.assertEqual((side, align), (nc.Gtk.PositionType.RIGHT, nc.Gtk.Align.START))
+            self.assertGreaterEqual(w.y + y, 0)
+            self.assertLessEqual(w.y + y + shown, screen)
+
+    def test_a_docked_strip_on_a_short_screen_keeps_its_side_and_scrolls(self):
+        w = self.make(layer=True)
+        self.app.activate_action('position', nc.GLib.Variant('s', 'bottom'))
+        screen = self.tall + w.box_height() - 40  # the room above the strip is 40 px short
+        with screen_size(1366, screen):
+            side, _, (x, y), shown = self.menu(w, 900, 20)
+            self.assertEqual((side, x, y), (nc.Gtk.PositionType.TOP, 900, 0))
+            self.assertLessEqual(shown, screen - w.box_height())
+
+    def test_a_floating_window_opens_it_beside_the_pointer_unless_half_the_screen_holds_it(self):
+        # it does not know where it is on the screen, so the compositor slides the menu onto it
+        w, below = self.make(layer=False), nc.Gtk.PositionType.BOTTOM
+        self.assertFalse(w.layer)
+        with screen_size(1920, 2 * self.tall + 60):  # either above or below the pointer has room
+            self.assertEqual(self.menu(w, 50, 20), (below, nc.Gtk.Align.FILL, (50, 20), self.tall))
+        with screen_size(1366, 2 * self.tall - 60):
+            self.assertEqual(self.menu(w, 50, 20), (nc.Gtk.PositionType.RIGHT, nc.Gtk.Align.START, (50, 20),
+                                                    self.tall))
+        with screen_size(1366, self.tall - 60):
+            side, _, _, shown = self.menu(w, 50, 20)
+            self.assertEqual(side, nc.Gtk.PositionType.RIGHT)
+            self.assertLessEqual(shown, self.tall - 60)
 
 
 if __name__ == '__main__':

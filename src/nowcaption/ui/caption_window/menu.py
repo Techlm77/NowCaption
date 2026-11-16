@@ -1,7 +1,7 @@
 """The caption box's menu: the app's menu model in a popover, with rows of buttons that keep it
-open (text size, background, text colour and position), pointed toward the room on the screen
-and opened by a right-click or a long press. It reads the window's place and size, and changes
-nothing but the menu."""
+open (text size, background, text colour and position), pointed toward the room on the screen,
+never taller than the screen, and opened by a right-click or a long press. It reads the window's
+place and size, and changes nothing but the menu."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -16,6 +16,8 @@ from . import layer_shell
 
 if TYPE_CHECKING:  # for annotations only
     from .window import CaptionWindow
+
+SCREEN_MARGIN = 8  # px the menu keeps from the screen's edges
 
 
 class CaptionMenu:
@@ -117,26 +119,75 @@ class CaptionMenu:
         """Point the menu at x, y in the window, opening toward the room on the screen: away
         from a docked strip's edge, beside a docked column, and upwards from captions low on
         the screen. KWin squeezes a layer-shell menu that does not fit, or lets it run off the
-        screen, rather than flipping it."""
+        screen, rather than flipping it.
+
+        A menu taller than the room there opens beside the pointer instead, moved up or down to
+        fit the screen, and one taller than the screen scrolls. A floating window does not know
+        where it is on the screen (Wayland), so there the menu opens beside the pointer, where the
+        compositor slides it onto the screen, unless half the screen holds it: then it fits
+        above or below the pointer, wherever the box is. Hyprland squeezed it there (the menu
+        scrolled), and Sway let it run off the bottom of the screen."""
         win = self.window
         rect = Gdk.Rectangle()  # the menu belongs to the box, so use box coordinates
         w, h = win.box_width, win.box_height()
-        side = Gtk.PositionType.BOTTOM
+        screen = self.screen()
+        tall, wide = self.menu_size()
+        side, room, align = Gtk.PositionType.BOTTOM, None, Gtk.Align.FILL  # room: the menu's height there
         if win.edge == 'bottom':
             side, (rect.x, rect.y, rect.width, rect.height) = Gtk.PositionType.TOP, (int(x), 0, 1, 1)
+            room = screen and screen.height - h
         elif win.edge == 'top':
             rect.x, rect.y, rect.width, rect.height = int(x), h - 1, 1, 1
+            room = screen and screen.height - h
         elif win.edge in ('left', 'right'):
             side = Gtk.PositionType.RIGHT if win.edge == 'left' else Gtk.PositionType.LEFT
             rect.x, rect.y, rect.width, rect.height = w - 1 if win.edge == 'left' else 0, 0, 1, h
+            room = screen and screen.height  # GTK lets the compositor slide it along the column
         else:
             bx, by = (win.x, win.y) if win.layer else (0, 0)
-            geo = win.monitor.get_geometry() if win.layer and win.monitor else None
-            if geo and y > geo.height / 2:  # the overlay covers the screen, so y is on it
-                side = Gtk.PositionType.TOP
             rect.x, rect.y, rect.width, rect.height = int(x - bx), int(y - by), 1, 1
+            if win.layer and screen:  # the overlay covers the screen, so x, y are on it
+                side = Gtk.PositionType.TOP if y > screen.height / 2 else Gtk.PositionType.BOTTOM
+                room = y if side == Gtk.PositionType.TOP else screen.height - y
+                if tall + SCREEN_MARGIN > room:  # beside the pointer, as high as fits the screen
+                    room, align = screen.height, Gtk.Align.START
+                    left = x + wide + SCREEN_MARGIN > screen.width
+                    side = Gtk.PositionType.LEFT if left else Gtk.PositionType.RIGHT
+                    rect.y = int(max(SCREEN_MARGIN, min(y, screen.height - SCREEN_MARGIN - tall)) - by)
+            elif screen and tall + SCREEN_MARGIN > screen.height / 2:
+                side, room, align = Gtk.PositionType.RIGHT, screen.height, Gtk.Align.START
+        self.fit_height(room, tall)
+        self.popover.set_valign(align)
         self.popover.set_position(side)
         self.popover.set_pointing_to(rect)
+
+    def screen(self) -> Gdk.Rectangle | None:
+        """The size of the screen the captions are on, or None if there is none."""
+        win = self.window
+        surface = win.get_surface()
+        monitor = win.monitor if win.layer or surface is None else \
+            Gdk.Display.get_default().get_monitor_at_surface(surface) or win.monitor
+        return monitor.get_geometry() if monitor else None
+
+    def menu_size(self) -> tuple[int, int]:
+        """The menu's full height and width, px, as if nothing limited its height."""
+        child = self.popover.get_child()
+        if isinstance(child, Gtk.ScrolledWindow):
+            child.set_max_content_height(-1)
+        frame = child.get_parent() if child else None  # the popover's contents, with its padding
+        widget = frame or child
+        if widget is None:
+            return 0, 0
+        return (widget.measure(Gtk.Orientation.VERTICAL, -1)[1],
+                widget.measure(Gtk.Orientation.HORIZONTAL, -1)[1])
+
+    def fit_height(self, room: float | None, tall: int) -> None:
+        """Let the menu, tall px high in full, be no taller than room (px, less a margin),
+        scrolling what does not fit."""
+        child = self.popover.get_child()
+        if isinstance(child, Gtk.ScrolledWindow) and room and tall + SCREEN_MARGIN > room:
+            frame = tall - child.measure(Gtk.Orientation.VERTICAL, -1)[1]  # the padding around it
+            child.set_max_content_height(max(1, int(room - SCREEN_MARGIN - frame)))
 
     def on_menu(self, gesture, n, x, y):
         """A right-click, or a long press (Pointer.on_long_press): open the menu at x, y."""
