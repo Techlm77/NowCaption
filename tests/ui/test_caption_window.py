@@ -3,7 +3,7 @@
 rows, screens and status messages. No models or audio pipeline are started.
 
 WindowTests come from the first window tests; FloatingWidthTests, RestyleTests and ScreenTests
-from 1.1.16.
+from 1.1.16, LayerShellTests from the distro test lab (Ubuntu 22.04 on X11).
 """
 import time
 import unittest
@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import support.sandbox  # noqa: F401 - private XDG folders and a quiet log for this process
 from nowcaption import style
-from support.windows import SKIP, FakeLayerShell, nc, shared_app
+from support.windows import SKIP, FakeLayerShell, nc, shared_app, use_fake_layer_shell
 
 if nc:  # GTK and a display are there
     from nowcaption import settings
@@ -450,9 +450,7 @@ class ScreenMenuTests(unittest.TestCase):
         cls.app = shared_app()
 
     def setUp(self):
-        patcher = patch.object(caption_window.layer_shell, 'LayerShell', FakeLayerShell())
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        use_fake_layer_shell(self)
         for key in ('monitor', 'position'):
             self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
         self.window = caption_window.CaptionWindow(self.app)
@@ -484,6 +482,42 @@ class ScreenMenuTests(unittest.TestCase):
         self.assertIn('app.next-screen', self.actions())
         self.plugged(self.window.monitor)
         self.assertNotIn('app.next-screen', self.actions())
+
+
+
+@unittest.skipIf(nc is None, SKIP)
+class LayerShellTests(unittest.TestCase):
+    """On X11 (Ubuntu 22.04's default session in the lab) NowCaption asked gtk4-layer-shell
+    whether it was supported, and it logged "CRITICAL init_and_get_layer_shell_global: assertion
+    'GDK_IS_WAYLAND_DISPLAY (gdk_display)' failed". Only a Wayland display is asked now."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = shared_app()
+
+    def asking(self):
+        shell, asked = FakeLayerShell(), []
+        shell.is_supported = lambda: asked.append(True) or True
+        patcher = patch.object(caption_window.layer_shell, 'LayerShell', shell)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return asked
+
+    def test_on_x11_layer_shell_is_never_asked_and_the_window_floats(self):
+        asked = self.asking()  # the test display is X11
+        self.assertFalse(caption_window.layer_shell.supported())
+        window = caption_window.CaptionWindow(self.app)
+        self.addCleanup(window.destroy)
+        self.addCleanup(window.disconnect_monitors)
+        self.assertFalse(window.layer)
+        self.assertEqual(asked, [])
+        self.assertFalse(caption_window.layer_shell.on_wayland())
+
+    def test_on_wayland_layer_shell_is_asked(self):
+        asked = self.asking()
+        with patch.object(caption_window.layer_shell, 'on_wayland', lambda: True):
+            self.assertTrue(caption_window.layer_shell.supported())
+        self.assertEqual(asked, [True])
 
 
 if __name__ == '__main__':

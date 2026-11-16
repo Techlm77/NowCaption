@@ -8,11 +8,10 @@ DockTests come from the first window tests, DockFixTests from 1.1.16.
 import unittest
 from pathlib import Path
 from types import SimpleNamespace as NS
-from unittest.mock import patch
 
 import support.sandbox  # noqa: F401 - private XDG folders and a quiet log for this process
 from nowcaption import style
-from support.windows import SKIP, FakeLayerShell, nc, shared_app
+from support.windows import SKIP, FakeLayerShell, nc, shared_app, use_fake_layer_shell
 
 if nc:  # GTK and a display are there
     from nowcaption import settings
@@ -29,10 +28,7 @@ class DockTests(unittest.TestCase):
         cls.app = shared_app()
 
     def setUp(self):
-        self.shell = FakeLayerShell()
-        patcher = patch.object(caption_window.layer_shell, 'LayerShell', self.shell)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        self.shell = use_fake_layer_shell(self)
         for key in ('position', 'dock_rows', 'dock_width', 'size'):
             self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
         self.app.settings.set('size', 30)
@@ -317,10 +313,7 @@ class DockFixTests(unittest.TestCase):
         cls.app = shared_app()
 
     def setUp(self):
-        self.shell = FakeLayerShell()
-        patcher = patch.object(caption_window.layer_shell, 'LayerShell', self.shell)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        self.shell = use_fake_layer_shell(self)
         for key in ('position', 'dock_rows', 'dock_width', 'size'):
             self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
         self.app.settings.set('size', 30)

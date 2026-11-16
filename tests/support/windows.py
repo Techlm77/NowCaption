@@ -1,7 +1,7 @@
 """A GTK display for the tests that build windows (Xvfb: tests/run.py --gui runs them under
 xvfb-run), with the desktop's animations off so results show at once (the animation tests turn
 them on), the one application every window test shares, a stand-in for gtk4-layer-shell, and
-screens of any size.
+screens of any size (use_fake_layer_shell).
 
 Without GTK or a display nc is None and SKIP says why, or with NOWCAPTION_REQUIRE_GUI_TESTS=1 the
 import fails. No models or audio pipeline are started.
@@ -86,3 +86,15 @@ class FakeLayerShell:
 
     def __getattr__(self, name):  # init_for_window, set_layer, set_monitor, ...
         return lambda *args: None
+
+
+def use_fake_layer_shell(test, shell=None):
+    """Stand in for gtk4-layer-shell on a Wayland display until the test ends: NowCaption asks for
+    layer shell only on Wayland, and the test display is X11. Returns the stand-in."""
+    from nowcaption.ui.caption_window import layer_shell
+    shell = shell or FakeLayerShell()
+    for name, value in (('LayerShell', shell), ('on_wayland', lambda: True)):
+        patcher = patch.object(layer_shell, name, value)
+        patcher.start()
+        test.addCleanup(patcher.stop)
+    return shell

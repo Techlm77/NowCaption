@@ -9,7 +9,7 @@ from types import SimpleNamespace as NS
 from unittest.mock import patch
 
 import support.sandbox  # noqa: F401 - private XDG folders and a quiet log for this process
-from support.windows import SKIP, FakeLayerShell, nc, shared_app
+from support.windows import SKIP, FakeLayerShell, nc, shared_app, use_fake_layer_shell
 
 if nc:  # GTK and a display are there
     from nowcaption import settings
@@ -35,9 +35,7 @@ class LongPressTests(unittest.TestCase):
         self.shell = FakeLayerShell()
         self.shell.modes = []
         self.shell.set_keyboard_mode = lambda window, mode: self.shell.modes.append(mode)
-        patcher = patch.object(caption_window.layer_shell, 'LayerShell', self.shell)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        use_fake_layer_shell(self, self.shell)
         for key in ('position', 'x', 'y', 'width', 'rows', 'size'):
             self.addCleanup(self.app.settings.set, key, settings.DEFAULTS[key])
         self.app.settings.set('size', 30)
