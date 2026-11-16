@@ -1,11 +1,18 @@
 """KDE Plasma integration over D-Bus: a KWin script that reports a fullscreen window on the captions'
 screen, and turning a floating panel's floating off while the captions are docked on its edge.
 Knows nothing of the app beyond its ID and its settings."""
+from __future__ import annotations
+
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from gi.repository import Gio, GLib
+
+if TYPE_CHECKING:  # for annotations only
+    from ..settings import Settings
 
 LOG = logging.getLogger('nowcaption')
 
@@ -56,14 +63,17 @@ class FullscreenWatch:
     running: the calls just fail."""
     NAME = 'nowcaption-fullscreen'
 
-    def __init__(self, app_id):
+    def __init__(self, app_id: str) -> None:
         self.app_id, self.output, self.bus = app_id, None, None
         try:
             self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
         except GLib.Error:
             pass
 
-    def call(self, method, args, done=None, sync=False):
+    def call(self, method: str, args: tuple[str, tuple] | None, done: Callable[[], None] | None = None,
+             sync: bool = False) -> None:
+        """Call KWin's scripting method with args (a GLib.Variant type string and its value), then
+        done() once it worked. sync waits for the answer, at most half a second (as the app quits)."""
         if not self.bus:
             return
         params = GLib.Variant(args[0], args[1]) if args else None
@@ -85,7 +95,7 @@ class FullscreenWatch:
         self.bus.call('org.kde.KWin', '/Scripting', 'org.kde.kwin.Scripting', method, params,
                       None, Gio.DBusCallFlags.NO_AUTO_START, 2000, None, finished)
 
-    def start(self, output, area=None):
+    def start(self, output: str, area: tuple[int, int, int, int] | None = None) -> None:
         """Watch the screen with this connector name ('' for any), whose area (x, y, width,
         height) finds it on KWin 5, which names no screens."""
         if (output, area) == self.output or not self.bus:
@@ -102,7 +112,8 @@ class FullscreenWatch:
         self.call('unloadScript', ('(s)', (self.NAME,)), lambda: self.call(
             'loadScript', ('(ss)', (str(path), self.NAME)), lambda: self.call('start', None)))
 
-    def stop(self, sync=False):
+    def stop(self, sync: bool = False) -> None:
+        """Stop watching: unload the script, if it is loaded. sync waits for KWin (as the app quits)."""
         if self.output is not None:
             self.output = None
             self.call('unloadScript', ('(s)', (self.NAME,)), sync=sync)
@@ -142,17 +153,18 @@ class PanelFloat:
     once and nothing changes."""
     TIMEOUT_MS = 500
 
-    def __init__(self, settings):
+    def __init__(self, settings: Settings) -> None:
         self.settings, self.want, self.bus = settings, False, None  # False: not told yet
         try:
             self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
         except GLib.Error:
             pass
 
-    def ours(self):
+    def ours(self) -> list[int]:
+        """The ids of the panels NowCaption turned floating off for (kept in the settings)."""
         return [int(i) for i in self.settings.get('unfloated').split(',') if i.strip().isdigit()]
 
-    def dock(self, edge, output=''):
+    def dock(self, edge: str | None, output: str = '') -> None:
         """The captions are docked on edge ('top', 'bottom', 'left' or 'right') of the screen with
         this connector name ('' for any), or not docked (None)."""
         want = (edge, output or '') if edge else None
@@ -162,11 +174,13 @@ class PanelFloat:
         if want or self.ours():
             self.run(*(want or ('', '')))
 
-    def stop(self):
+    def stop(self) -> None:
         """The app quits: the panels float again."""
         self.dock(None)
 
-    def run(self, edge, output):
+    def run(self, edge: str, output: str) -> None:
+        """Run PANELS_SCRIPT for this edge ('' when not docked) and screen, and keep the ids of the
+        panels whose floating it turned off."""
         if not self.bus:
             return
         script = PANELS_SCRIPT % tuple(map(json.dumps, (self.ours(), edge, output)))

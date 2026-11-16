@@ -1,7 +1,14 @@
 """The launch options (`nowcaption --transcript` and so on, as the desktop file's actions run them),
 for this launch or a later one that GLib hands to the NowCaption already running. Each runs the
-app action of the same name; never imports the windows (ui) or app.py."""
+app action of the same name; never imports the windows (ui), and app.py only for annotations."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from gi.repository import GLib
+
+if TYPE_CHECKING:  # for annotations only
+    from ..app import NowCaption
 
 # the desktop file's actions run `nowcaption --transcript` and so on: see on_command_line
 LAUNCH_OPTIONS = (('transcript', 'Open the transcript'), ('options', 'Open More options'),
@@ -10,7 +17,8 @@ LAUNCH_OPTIONS = (('transcript', 'Open the transcript'), ('options', 'Open More 
 RUNNING_ONLY = ('toggle', 'pause')  # for a NowCaption already running; starting one just starts it
 
 
-def add_launch_options(app):
+def add_launch_options(app: NowCaption) -> None:
+    """Give the app's command line the launch options (LAUNCH_OPTIONS)."""
     for name, description in LAUNCH_OPTIONS:
         app.add_main_option(name, 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, description, None)
 

@@ -1,13 +1,20 @@
 """The app's actions (app.colour, app.pause, app.quit…), each handled by the collaborator whose job it
 is, their keyboard shortcuts, and the caption box's menu that offers them. Never imports the
-windows (ui) or app.py."""
+windows (ui); app.py only for annotations."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from gi.repository import Gio, GLib
 
 from .. import engine
 from ..style import STEPPERS
 
+if TYPE_CHECKING:  # for annotations only
+    from ..app import NowCaption
 
-def add_actions(app):
+
+def add_actions(app: NowCaption) -> dict[str, list[str]]:
     """Add every action to app. Returns the keyboard accelerators (action -> keys), which are
     registered once we know the window can take keyboard focus."""
     accels = {}
@@ -65,11 +72,11 @@ def add_actions(app):
     return accels
 
 
-def build_menu(history_days, several_screens=False, layer=False):
+def build_menu(history_days: int, several_screens: bool = False, layer: bool = False) -> Gio.Menu:
     """The caption box's menu, in sections: how captions look, the box's place, the
-    transcript, then More options (a window for the rest) and the app. CaptionWindow.update_menu
-    fills the 'custom' items with rows of buttons that keep the menu open. history_days is how
-    long sessions are kept."""
+    transcript, then More options (a window for the rest) and the app. CaptionMenu.update_menu
+    (ui/caption_window/menu.py) fills the 'custom' items with rows of buttons that keep the menu
+    open. history_days is how long sessions are kept."""
     def section(label, *items):
         m = Gio.Menu()
         for item in items:

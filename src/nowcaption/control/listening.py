@@ -1,13 +1,21 @@
 """Listening: the recognition worker and the audio capture it hears. Starts and pauses them,
 switches the sound source, retries a capture or recognition that failed, and shows the worker's
 events on the caption box. Uses the app's window, settings, transcript window and quit state; never
-imports the windows (ui) or app.py."""
+imports the windows (ui), and app.py only for annotations."""
+from __future__ import annotations
+
 import logging
 import os
+from typing import TYPE_CHECKING
 
 from gi.repository import GLib
 
 from .. import engine, words
+
+if TYPE_CHECKING:  # for annotations only
+    from pathlib import Path
+
+    from ..app import NowCaption
 
 LOG = logging.getLogger('nowcaption')
 
@@ -18,7 +26,7 @@ class Listening:
     on its way from an older source is dropped) and ui_gen the captions (captions from before the
     last Clear are dropped)."""
 
-    def __init__(self, app):
+    def __init__(self, app: NowCaption) -> None:
         self.app = app
         self.worker = None
         self.ready = False
@@ -33,7 +41,7 @@ class Listening:
             on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
             on_ended=lambda gen, reason: GLib.idle_add(self.capture_ended, gen, reason))
 
-    def start(self, history, word_list):
+    def start(self, history: Path | None, word_list: list[tuple[str, str]]) -> None:
         """Start the recognition worker, keeping what is said in history (a file, or None while
         history is off) and fixing the words in word_list. The models load on the worker thread,
         so the window stays responsive meanwhile; capture starts once they are ready."""
@@ -45,6 +53,8 @@ class Listening:
         self.worker.start()
 
     def on_source(self, action, value):
+        """The menu's sound source (desktop or mic): listen to it, or load the speech model again
+        if it failed."""
         if self.app.closing or self.app.quitting.quit_requested:
             return
         self.cancel_recognition_retry(reset=True)
@@ -57,13 +67,13 @@ class Listening:
             self.app.window.show_failure('model', 'Retrying the speech model…')
             self.worker.restart()
 
-    def restart_listening(self):
+    def restart_listening(self) -> None:
         """Choose the same sound source again, which starts capture again, or loads the speech
         model again if it failed: More options' Restart, after a problem or a change of devices."""
         source = self.app.lookup_action('source')
         source.activate(source.get_state())
 
-    def set_paused(self, paused):
+    def set_paused(self, paused: bool) -> None:
         """Pause captions: capture stops, so nothing is heard or kept, and the words already
         heard become a finished line. Resuming listens again from the chosen source."""
         if paused == self.paused or self.app.closing or self.app.quitting.quit_requested:
@@ -87,7 +97,8 @@ class Listening:
                 self.app.window.clear_failure('paused')
             self.start_capture()
 
-    def clear_transcript(self):
+    def clear_transcript(self) -> None:
+        """Clear this session: its captions and lines, and the audio not yet recognised."""
         if self.worker and not self.app.closing and not self.app.quitting.quit_requested:
             self.cancel_recognition_retry(reset=True)
             self.ui_gen += 1  # captions already on their way from before the clear are dropped
@@ -97,7 +108,7 @@ class Listening:
             if self.ready:
                 self.start_capture()
 
-    def stop(self):
+    def stop(self) -> None:
         """The app is shutting down: stop retrying, and stop the capture and the worker without
         waiting for them (see threads_finished)."""
         self.cancel_recognition_retry()
@@ -108,7 +119,7 @@ class Listening:
         if self.worker:
             self.worker.stop()
 
-    def threads_finished(self, timeout):
+    def threads_finished(self, timeout: float) -> bool:
         """After the main loop, wait for the recognition worker and the capture to leave native
         code (never from the window's shutdown: a stalled model must not freeze it). Python 3.12
         and 3.13 end a daemon thread that is still in native code when the interpreter exits
@@ -117,7 +128,9 @@ class Listening:
             self.worker.join(timeout)
         return self.capture.wait_stopped(timeout) and not (self.worker and self.worker.is_alive())
 
-    def cancel_recognition_retry(self, reset=False):
+    def cancel_recognition_retry(self, reset: bool = False) -> None:
+        """Cancel a recognition restart that is waiting; with reset, also forget the failures so
+        far, so the next one waits the shortest time again."""
         self.recognition_retry_token += 1
         if self.recognition_retry_id:
             GLib.source_remove(self.recognition_retry_id)
@@ -126,6 +139,7 @@ class Listening:
             self.recognition_failures = 0
 
     def retry_recognition(self, token, source_gen):
+        """The recognition restart's timer: restart, unless it was cancelled or the source changed."""
         if token != self.recognition_retry_token:
             return False
         self.recognition_retry_id = None
@@ -137,6 +151,7 @@ class Listening:
     # --- recognition worker events ----------------------------------------------------------
 
     def on_worker(self, kind, value):
+        """A recognition worker event (see RecognitionWorker), passed to the GTK thread."""
         if self.app.closing:
             return False
         if kind == 'ready':
@@ -190,6 +205,8 @@ class Listening:
     # --- capture ----------------------------------------------------------------------------
 
     def start_capture(self):
+        """Capture from the chosen source, or NOWCAPTION_SOURCE, as a new source generation: once
+        the speech model is ready, and not while paused or as the app closes."""
         if not self.ready or self.app.closing or self.paused:
             return
         self.cancel_recognition_retry()
@@ -209,6 +226,7 @@ class Listening:
             self.app.window.show_status('Listening to the microphone…' if mic else 'Listening to desktop audio…')
 
     def capture_started(self, gen):
+        """The capture is running: after a failure, say the audio is back."""
         if gen == self.source_gen and self.capture_failures:
             self.capture_failures = 0
             self.app.window.clear_failure('capture')
@@ -227,6 +245,7 @@ class Listening:
         return False
 
     def retry_capture(self):
+        """The capture retry's timer: capture again."""
         self.retry_id = None
         self.start_capture()
         return False

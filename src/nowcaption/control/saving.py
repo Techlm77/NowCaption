@@ -1,12 +1,19 @@
 """Copying and saving the transcript (every kept session and this one, see History.full_transcript).
 Save asks where, then writes in the background, each destination's writes in order, and Quit waits
-for them (app.quitting). Uses the app's window and recognition worker (app.listening)."""
+for them (app.quitting). Uses the app's window and recognition worker (app.listening); never imports
+the windows (ui), and app.py only for annotations."""
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import gi
 
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gio, GLib, Gtk
+
+if TYPE_CHECKING:  # for annotations only
+    from ..app import NowCaption
 
 LOG = logging.getLogger('nowcaption')
 
@@ -14,11 +21,12 @@ LOG = logging.getLogger('nowcaption')
 class Saving:
     """Copy and Save, and the writes they have queued."""
 
-    def __init__(self, app):
+    def __init__(self, app: NowCaption) -> None:
         self.app = app
         self.save_queues = {}  # destination URI -> accepted writes, in snapshot order
 
-    def copy_transcript(self):
+    def copy_transcript(self) -> None:
+        """Copy every kept session and this one to the clipboard (the menu's Copy)."""
         def copy(text):
             text = self.app.history.full_transcript(text)
             self.app.window.get_clipboard().set(text)
@@ -29,7 +37,9 @@ class Saving:
             except Exception as e:
                 self.app.window.show_status(f'Could not copy the transcript: {e}', seconds=8)
 
-    def save_transcript(self):
+    def save_transcript(self) -> None:
+        """Ask where to save every kept session and this one, then write them there in the
+        background (Save, Ctrl+S)."""
         if not self.app.listening.worker or self.app.closing or self.app.quitting.quit_requested:
             return
         dialog = Gtk.FileDialog(title='Save transcript', initial_name=GLib.DateTime.new_now_local().format(
@@ -59,8 +69,9 @@ class Saving:
 
         dialog.save(None, None, chosen)  # its own window: the caption overlay is too small to host it
 
-    def write_transcript(self, f, text, tracked=False):
-        """Queue saves to each destination so an older write cannot replace newer text."""
+    def write_transcript(self, f: Gio.File, text: str, tracked: bool = False) -> None:
+        """Queue saves to each destination so an older write cannot replace newer text. tracked:
+        Quit already waits for this save (Quitting.begin_save)."""
         if not tracked:
             self.app.quitting.begin_save()
         key = f.get_uri()
@@ -69,7 +80,7 @@ class Saving:
         if len(queue) == 1:
             self.start_save(key)
 
-    def start_save(self, key):
+    def start_save(self, key: str) -> None:
         """Write one queued snapshot asynchronously; other destinations can proceed in parallel."""
         queue = self.save_queues[key]
         f, text = queue[0]
