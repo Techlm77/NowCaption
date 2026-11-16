@@ -109,7 +109,7 @@ class WriteErrorTests(unittest.TestCase):
         self.store.append(time.time(), 'Kept again.')
         self.assertEqual(lines(self.path), ['Kept again.'])
         self.assertEqual(len(self.store.lines()), 3, 'Copy and Save still have every line')
-        with patch.object(engine.os, 'write', side_effect=OSError(errno.ENOSPC, os.strerror(errno.ENOSPC))):
+        with patch.object(engine.transcript.os, 'write', side_effect=OSError(errno.ENOSPC, os.strerror(errno.ENOSPC))):
             self.store.append(time.time(), 'Lost again.')  # it fails again: the user is told again
         self.assertEqual(self.warnings[1:], ['Could not save the history: No space left on device'])
         self.assertEqual(lines(self.path), ['Kept again.'])
@@ -125,7 +125,7 @@ class WriteErrorTests(unittest.TestCase):
             if len(calls) == 1:
                 return real(fd, data[:5])
             raise OSError(errno.ENOSPC, os.strerror(errno.ENOSPC))
-        with patch.object(engine.os, 'write', disk_fills):
+        with patch.object(engine.transcript.os, 'write', disk_fills):
             self.store.append(time.time(), 'Cut off by a full disk.')
         self.assertEqual(self.warnings, ['Could not save the history: No space left on device'])
         self.assertEqual(lines(self.path), ['First.'])

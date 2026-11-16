@@ -118,7 +118,7 @@ for name in repo.get_loaded_namespaces():
     if not path.startswith(sys.argv[2]):
         shutil.copy(path, sys.argv[2])
 EOF
-for p in coreelements app audioconvert audioresample pulseaudio; do  # audio.PIPELINE's elements
+for p in coreelements app audioconvert audioresample pulseaudio; do  # engine.capture.PIPELINE's elements
     cp -L "$LIB/gstreamer-1.0/libgst$p.so" "$APPDIR/usr/lib/gstreamer-1.0/"
 done
 cp -L "$LIB/gio/modules/libdconfsettings.so" "$APPDIR/usr/lib/gio/modules/"

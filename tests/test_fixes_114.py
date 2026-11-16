@@ -72,7 +72,7 @@ class TranscriptStoreTests(unittest.TestCase):
                 raise OSError(errno.ENOSPC, 'No space left on device')
             return real_pwrite(fd, data, offset)
 
-        with patch.object(engine.os, 'pwrite', full_disk):
+        with patch.object(engine.transcript.os, 'pwrite', full_disk):
             store.append(TS, 'two')
             store.append(TS, 'three')
         self.assertIsNone(store.file)
@@ -147,16 +147,16 @@ class BoundedCaptionerTests(unittest.TestCase):
 
 class ReleaseMemoryTests(unittest.TestCase):
     def test_freed_memory_is_returned_where_glibc_is_available(self):
-        engine._malloc_trim = None
+        engine.memory._malloc_trim = None
         self.assertIsInstance(engine.release_free_memory(), bool)
-        self.assertIsNotNone(engine._malloc_trim)
+        self.assertIsNotNone(engine.memory._malloc_trim)
 
     def test_without_glibc_it_does_nothing(self):
-        with patch.object(engine.ctypes, 'CDLL', side_effect=OSError('no libc.so.6')):
-            engine._malloc_trim = None
+        with patch.object(engine.memory.ctypes, 'CDLL', side_effect=OSError('no libc.so.6')):
+            engine.memory._malloc_trim = None
             self.assertFalse(engine.release_free_memory())
             self.assertFalse(engine.release_free_memory())
-        engine._malloc_trim = None
+        engine.memory._malloc_trim = None
 
 
 if __name__ == '__main__':

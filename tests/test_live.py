@@ -7,7 +7,7 @@ through the same GStreamer capture and engine the app uses. Nothing is played al
 import json, os, queue, subprocess, sys, time
 from pathlib import Path
 
-from nowcaption import audio, engine
+from nowcaption import engine
 from capture_print import wait_for
 from transcript_check import transcript_words, words, wer
 
@@ -28,7 +28,7 @@ def main():
         worker = engine.RecognitionWorker(on_event)
         worker.start()
         assert wait_for(events, 'ready', 60) is None
-        capture = audio.Capture(worker.feed,
+        capture = engine.Capture(worker.feed,
             on_started=lambda gen: events.put(('capture-ready', gen)),
             on_ended=lambda gen, reason: events.put(('capture-error', reason)))
         worker.set_source(1)

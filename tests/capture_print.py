@@ -4,7 +4,7 @@ import json
 import sys
 import time
 
-from nowcaption import audio, engine
+from nowcaption import engine
 
 def emit(kind, **fields):
     print(json.dumps(dict(kind=kind, **fields)), flush=True)
@@ -40,7 +40,7 @@ def main():
     worker.start()
     try:
         wait_for(events, 'ready', 60)
-        capture = audio.Capture(worker.feed,
+        capture = engine.Capture(worker.feed,
             on_started=lambda gen: events.put(('capture-ready', gen)),
             on_ended=lambda gen, reason: events.put(('capture-error', reason)))
         worker.set_source(1)

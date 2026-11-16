@@ -25,7 +25,7 @@ os.environ['XDG_CACHE_HOME'] = CACHE.name
 DATA = tempfile.TemporaryDirectory()  # transcript history goes here, never to the user's
 os.environ['XDG_DATA_HOME'] = DATA.name
 
-from nowcaption import audio, engine
+from nowcaption import engine
 
 import logging
 logging.getLogger('nowcaption').setLevel(logging.CRITICAL)  # the failures below are injected on purpose
@@ -337,7 +337,7 @@ class CaptureTests(unittest.TestCase):
     def capture(self, behaviour, on_audio=lambda gen, pcm: None):
         ended, started = queue.Queue(), []
         gst = FakeGst(behaviour)
-        cap = audio.Capture(on_audio, on_started=started.append,
+        cap = engine.Capture(on_audio, on_started=started.append,
                             on_ended=lambda gen, reason: ended.put((gen, reason)), gst=gst)
         return cap, gst, ended, started
 
@@ -438,14 +438,14 @@ class ModelFileTests(unittest.TestCase):
 
     def test_missing_punctuation_model_still_loads_with_a_warning(self):
         warnings = []
-        real = (engine.load_recognizer, engine.load_punctuation)
+        real = (engine.models.load_recognizer, engine.models.load_punctuation)
         def no_punct():
             raise FileNotFoundError('punctuation model is missing')
         try:
-            engine.load_recognizer, engine.load_punctuation = (lambda: FakeRecognizer()), no_punct
+            engine.models.load_recognizer, engine.models.load_punctuation = (lambda: FakeRecognizer()), no_punct
             rec, punct = engine.load_models(warnings.append)
         finally:
-            engine.load_recognizer, engine.load_punctuation = real
+            engine.models.load_recognizer, engine.models.load_punctuation = real
         self.assertIsInstance(rec, FakeRecognizer)
         self.assertIsNone(punct)
         self.assertIn('Punctuation is off', warnings[0])

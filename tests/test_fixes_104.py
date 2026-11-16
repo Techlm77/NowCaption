@@ -514,7 +514,7 @@ class TraceBenchmarkTests(unittest.TestCase):
             output = io.StringIO()
             with patch.object(self.e2e, 'ROOT', root), \
                  patch.object(self.e2e.engine, 'RecognitionWorker', Worker), \
-                 patch.object(self.e2e.audio, 'Capture', Capture), \
+                 patch.object(self.e2e.engine, 'Capture', Capture), \
                  patch.object(self.e2e.subprocess, 'check_output', return_value=b'42'), \
                  patch.object(self.e2e.subprocess, 'run', side_effect=subprocess_run), \
                  patch.object(self.e2e.time, 'sleep', return_value=None), \

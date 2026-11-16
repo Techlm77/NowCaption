@@ -10,7 +10,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
-from . import __version__, audio, engine, portal, words  # noqa: E402
+from . import __version__, engine, portal, words  # noqa: E402
 from .caption_window import CaptionWindow  # noqa: E402
 from .options_window import OptionsWindow  # noqa: E402
 from .plasma import FULLSCREEN_PATH, FULLSCREEN_XML, FullscreenWatch, PanelFloat  # noqa: E402
@@ -57,7 +57,7 @@ class NowCaption(Adw.Application):
         self.hidden = False  # the captions were hidden (toggle_captions); they keep captioning
         self.word_list = words.load_words()  # [(heard, write)], edited under More options
         self.shortcuts = self.autostart = None  # see portals(), once on the session bus
-        self.capture = audio.Capture(
+        self.capture = engine.Capture(
             on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
             on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
             on_ended=lambda gen, reason: GLib.idle_add(self.capture_ended, gen, reason))
@@ -614,7 +614,7 @@ class NowCaption(Adw.Application):
         self.source_gen += 1
         self.worker.set_source(self.source_gen)
         # NOWCAPTION_SOURCE names any PulseAudio/PipeWire source, overriding the menu choice
-        device = os.environ.get('NOWCAPTION_SOURCE') or (audio.MICROPHONE if mic else audio.DESKTOP)
+        device = os.environ.get('NOWCAPTION_SOURCE') or (engine.MICROPHONE if mic else engine.DESKTOP)
         try:
             self.capture.start(device, self.source_gen)
         except Exception as e:

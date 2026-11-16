@@ -17,7 +17,7 @@ from types import SimpleNamespace as NS
 from unittest.mock import patch
 
 import numpy as np
-from nowcaption import audio, engine
+from nowcaption import engine
 from test_reliability import Events, FakeGst, FakePipeline, FakeRecognizer, FakeStream, SPEECH, SILENCE
 from transcript_check import check, words
 import capture_print
@@ -34,7 +34,7 @@ def load_app_methods():
               'full_transcript', 'earlier_sessions', 'history_days',
               'show_text', 'show_status', 'show_failure', 'clear_failure', 'end_status',
               'render', 'show_footer', 'caption_height', 'box_height'}
-    context = {'os': __import__('os'), 'audio': audio, 'engine': engine,
+    context = {'os': __import__('os'), 'engine': engine,
                'session_heading': lambda started: 'Thursday 23 October 2026, 14:05',
                'LOG': __import__('logging').getLogger('nowcaption'),
                'GLib': NS(timeout_add_seconds=lambda *a: 1, source_remove=lambda *a: None),
@@ -110,7 +110,7 @@ class WorkerRegressions(unittest.TestCase):
         self.worker.feed(a.source_gen, SPEECH)
         a.on_worker('caption', events.wait('caption', lambda v: 'Recovered' in v[1]))
         self.assertEqual(len(attempts), 2)
-        self.assertEqual(a.capture.starts, [(audio.MICROPHONE, 1)])
+        self.assertEqual(a.capture.starts, [(engine.MICROPHONE, 1)])
         self.assertEqual(a.window.text, 'Recovered')
 
     def test_initial_stream_creation_failure_is_reported_and_retryable(self):
@@ -194,7 +194,7 @@ class WorkerRegressions(unittest.TestCase):
         a.window.text = 'old words'
         a.clear_transcript()
         self.assertEqual(calls, [('clear', 1), ('source', 1)])
-        self.assertEqual(a.capture.starts, [(audio.DESKTOP, 1)])
+        self.assertEqual(a.capture.starts, [(engine.DESKTOP, 1)])
         self.assertEqual(a.window.text, '')
 
     def test_stalled_recognizer_keeps_audio_bounded_and_reports_overload(self):
@@ -256,7 +256,7 @@ class CaptureRegressions(unittest.TestCase):
                 self.pipelines.append(p)
                 return p
         gst = Gst('ok')
-        cap = audio.Capture(lambda *a: None, on_started=started.put,
+        cap = engine.Capture(lambda *a: None, on_started=started.put,
                             on_ended=lambda gen, why: ended.put((gen, why)), gst=gst)
         try:
             cap.start('desktop', 1)
@@ -295,7 +295,7 @@ class CaptureRegressions(unittest.TestCase):
                 self.pipelines.append(p)
                 return p
         gst = Gst('ok')
-        cap = audio.Capture(lambda *a: None, on_started=started.put, on_ended=lambda *a: ended.put(a), gst=gst)
+        cap = engine.Capture(lambda *a: None, on_started=started.put, on_ended=lambda *a: ended.put(a), gst=gst)
         try:
             cap.start('desktop', 1)
             self.assertEqual(started.get(timeout=2), 1)
@@ -326,7 +326,7 @@ class CaptureRegressions(unittest.TestCase):
                     raise TimeoutError('test did not release pipeline setup')
                 return super().parse_launch(description)
         gst, started = Gst('ok'), []
-        cap = audio.Capture(lambda *a: None, on_started=started.append, gst=gst)
+        cap = engine.Capture(lambda *a: None, on_started=started.append, gst=gst)
         try:
             cap.start('desktop', 1)
             self.assertTrue(entered.wait(1))
@@ -454,7 +454,7 @@ class CaptureReadinessRegressions(unittest.TestCase):
                 return True
         out = io.StringIO()
         with patch.object(capture_print.engine, 'RecognitionWorker', Worker), \
-             patch.object(capture_print.audio, 'Capture', Capture), \
+             patch.object(capture_print.engine, 'Capture', Capture), \
              patch.object(capture_print.sys, 'argv', ['capture_print.py', 'test.monitor', '0.01']), \
              contextlib.redirect_stdout(out):
             runner = threading.Thread(target=lambda: result.append(capture_print.main()))

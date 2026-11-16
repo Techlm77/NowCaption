@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent / 'src'))
-from nowcaption import audio, engine  # noqa: E402
+from nowcaption import engine  # noqa: E402
 
 ABBR = {'mr': 'mister', 'mrs': 'missus', 'dr': 'doctor', 'st': 'saint'}
 
@@ -149,7 +149,7 @@ def main():
     worker.start()
     try:
         wait_for('ready', 60)
-        capture = audio.Capture(worker.feed,
+        capture = engine.Capture(worker.feed,
             on_started=lambda gen: events.put((time.monotonic(), 'capture-ready', gen)),
             on_ended=lambda gen, reason: events.put((time.monotonic(), 'capture-error', reason)))
         worker.set_source(1)
