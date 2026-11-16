@@ -8,17 +8,25 @@ import sys
 import time
 
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gio, GLib, Gtk
 
-from . import __version__, engine, words  # noqa: E402
-from .control import (Appearance, History, Listening, Quitting, Saving, actions, commands,  # noqa: E402
-                      quit_on_signals)
-from .desktop import (FULLSCREEN_PATH, FULLSCREEN_XML, Autostart, FullscreenWatch, GlobalShortcuts,  # noqa: E402
-                      PanelFloat, in_flatpak, portal_for)
-from .settings import APP_ID, Settings  # noqa: E402
-from .ui import CaptionWindow, OptionsWindow, TranscriptWindow  # noqa: E402
+from . import __version__, engine, words
+from .control import Appearance, History, Listening, Quitting, Saving, actions, commands, quit_on_signals
+from .desktop import (
+    FULLSCREEN_PATH,
+    FULLSCREEN_XML,
+    Autostart,
+    FullscreenWatch,
+    GlobalShortcuts,
+    PanelFloat,
+    in_flatpak,
+    portal_for,
+)
+from .settings import APP_ID, Settings
+from .ui import CaptionWindow, OptionsWindow, TranscriptWindow
 
 LOG = logging.getLogger('nowcaption')
 

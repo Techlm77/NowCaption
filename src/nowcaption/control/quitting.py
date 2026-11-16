@@ -4,10 +4,11 @@ its hold(), release() and Adw.Application.quit; never imports the windows (ui) o
 import signal
 
 import gi
-gi.require_version('Adw', '1')
-from gi.repository import Adw, GLib  # noqa: E402
 
-from ..style import FADE_OUT_MS  # noqa: E402
+gi.require_version('Adw', '1')
+from gi.repository import Adw, GLib
+
+from ..style import FADE_OUT_MS
 
 
 class Quitting:

@@ -4,8 +4,9 @@ for them (app.quitting). Uses the app's window and recognition worker (app.liste
 import logging
 
 import gi
+
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gio, GLib, Gtk  # noqa: E402
+from gi.repository import Gio, GLib, Gtk
 
 LOG = logging.getLogger('nowcaption')
 

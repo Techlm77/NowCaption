@@ -71,15 +71,13 @@ python3 -m compileall -q src tests benchmark tools
 ## Lint
 
 The rules are in `pyproject.toml` under `[tool.ruff]`, each ignored rule with its reason. CI
-runs Ruff 0.17.4 (`pip install ruff==0.17.4`; other versions may differ slightly) on the parts
-already cleaned up:
+runs Ruff 0.17.4 (`pip install ruff==0.17.4`; other versions may differ slightly):
 
 ```sh
-ruff check src/nowcaption/__init__.py src/nowcaption/__main__.py src/nowcaption/words.py \
-    src/nowcaption/style.py src/nowcaption/engine src/nowcaption/ui benchmark tools
+ruff check src benchmark tools
 ```
 
-The rest of the code joins that list after its own cleanup. There is no formatter: don't
+`tests/` joins that list after its own cleanup. There is no formatter: don't
 reformat code you are not otherwise changing. When a finding is a false positive, add
 `# noqa: <code>` with a comment saying why, rather than rewriting working code to please it.
 

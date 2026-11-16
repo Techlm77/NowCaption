@@ -47,6 +47,7 @@ allowed-confusables = ["‘", "’", "−"]  # typographic quotes and the minus 
 [tool.ruff.lint.per-file-ignores]
 # GTK modules call gi.require_version() before importing from gi.repository, as PyGObject needs.
 "src/nowcaption/app.py" = ["E402"]
+"src/nowcaption/control/*.py" = ["E402"]
 "src/nowcaption/ui/*.py" = ["E402"]
 # Dense one-off measurement scripts: their compact style (several statements or imports on a
 # line, long table rows, short lambdas, one-letter names, files read in one expression) is kept.

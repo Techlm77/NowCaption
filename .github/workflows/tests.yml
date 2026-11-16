@@ -57,8 +57,7 @@ jobs:
 
   lint:
     # Ruff at a pinned version (the rules are in pyproject.toml; 0.17.4 is also Arch's package).
-    # Only the parts already cleaned up are checked: desktop/, app.py, the other top-level modules
-    # and tests/ join this list after their own cleanup.
+    # tests/ joins this list after its own cleanup.
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -67,7 +66,4 @@ jobs:
         with:
           python-version: '3.14'
       - run: python -m pip install ruff==0.17.4
-      - run: >-
-          ruff check --output-format=github
-          src/nowcaption/__init__.py src/nowcaption/__main__.py src/nowcaption/words.py src/nowcaption/style.py
-          src/nowcaption/engine src/nowcaption/ui benchmark tools
+      - run: ruff check --output-format=github src benchmark tools
