@@ -1,4 +1,8 @@
-"""Audio capture through GStreamer's PulseAudio source (also works with PipeWire)."""
+"""Audio capture through GStreamer's PulseAudio source (also works with PipeWire).
+
+The only engine module that uses GStreamer, and it imports gi only when a Capture is made, so
+the engine imports without it. Depends on nothing else in NowCaption.
+"""
 import logging
 import threading
 

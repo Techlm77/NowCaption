@@ -138,28 +138,13 @@ class RecognitionWorker(threading.Thread):
     def run(self):
         loaded = self._load()
         while True:
-            with self.lock:
-                while not self.inbox and not self.stopping:
-                    self.lock.wait()
-                if self.stopping:
-                    break
-                kind, value = self.inbox.popleft()
-                self._event_source_gen = (value[0] if kind == 'audio' else
-                                          value if kind == 'source' else self.source_gen)
-                discontinuity = False
-                if kind == 'audio':
-                    self.backlog -= 1
-                    discontinuity, self.discontinuity = self.discontinuity, False
+            item = self._next()
+            if item is None:
+                break
+            kind, value, discontinuity = item
             if kind == 'audio':
-                gen, pcm = value
-                if loaded and gen == self.source_gen and not self.broken:
-                    if discontinuity:
-                        self._safely(self._new_captioner)
-                    if self.broken:
-                        continue
-                    if self._safely(self.captioner.feed, pcm) and self.captioner.decoded and not self.confirmed:
-                        self.confirmed = True
-                        self.on_event('recognition-ok', gen)
+                if loaded:
+                    self._recognise(*value, discontinuity)
             elif kind == 'clear':
                 self._safely(self._handle, kind, value)  # generations apply even when loading failed
             elif kind in ('snapshot', 'history', 'words'):
@@ -171,6 +156,35 @@ class RecognitionWorker(threading.Thread):
                 loaded = self._load()
         if loaded and self.captioner:  # finish() needs no native stream, so a failed one does not matter
             self._safely(self.captioner.finish)  # the last words reach the session's history
+
+    def _next(self):
+        """Wait for the next command or audio block: (kind, value, discontinuity), or None once
+        stopping. discontinuity: audio was dropped just before this block."""
+        with self.lock:
+            while not self.inbox and not self.stopping:
+                self.lock.wait()
+            if self.stopping:
+                return None
+            kind, value = self.inbox.popleft()
+            self._event_source_gen = (value[0] if kind == 'audio' else
+                                      value if kind == 'source' else self.source_gen)
+            discontinuity = False
+            if kind == 'audio':
+                self.backlog -= 1
+                discontinuity, self.discontinuity = self.discontinuity, False
+        return kind, value, discontinuity
+
+    def _recognise(self, gen, pcm, discontinuity):
+        """Recognise a block of the current source's audio; after dropped audio, on a new stream."""
+        if gen != self.source_gen or self.broken:
+            return
+        if discontinuity:
+            self._safely(self._new_captioner)
+        if self.broken:
+            return
+        if self._safely(self.captioner.feed, pcm) and self.captioner.decoded and not self.confirmed:
+            self.confirmed = True
+            self.on_event('recognition-ok', gen)
 
     def _load(self):
         try:
