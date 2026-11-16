@@ -90,8 +90,8 @@ tests/
 
 A new test goes in the module named after what it tests (`ui/caption_window/docking.py` is
 tested in `ui/test_docking.py`), as a `unittest.TestCase` whose docstring says why it exists.
-Every test module starts with `import support.sandbox`, which gives the process private XDG
-folders (no test may touch the user's settings, transcript or history). Fakes and helpers that
+Every test module imports `support.sandbox` among its first imports: it gives the process
+private XDG folders (no test may touch the user's settings, transcript or history). Fakes and helpers that
 more than one module needs go in `tests/support/`, never in a test module: test modules never
 import each other. Tests that build the real application use `support.gtk` (and
 `support.windows` for windows); those that need only NumPy run the application's own methods
