@@ -277,12 +277,12 @@ class WindowTests(unittest.TestCase):
         w = self.window
         w.show_text('hello ' * 100)
         rows, width = w.rows, w.box_width
-        w.resizing = ('se', w.x, w.y, w.x + w.box_width, w.y + w.caption_height())
-        w.resize_by(-100, 2 * w.row_height)
+        w.pointer.resizing = ('se', w.x, w.y, w.x + w.box_width, w.y + w.caption_height())
+        w.pointer.resize_by(-100, 2 * w.row_height)
         self.assertEqual(w.rows, min(rows + 2, w.max_rows()))
         self.assertEqual(w.box_width, max(style.MIN_WIDTH, width - 100))
         self.assertLessEqual(len(w.label.get_text().splitlines()), w.rows)
-        w.on_drag_end(None, 0, 0)
+        w.pointer.on_drag_end(None, 0, 0)
         self.assertEqual(self.app.settings.get('rows'), w.rows)
         w.reset_size()
         self.assertEqual(w.rows, style.ROWS)
@@ -893,14 +893,14 @@ class DockTests(unittest.TestCase):
         for _ in range(200):
             nc.GLib.MainContext.default().iteration(False)
         width, height = w.get_width(), w.get_height()
-        self.assertEqual(w.edges_at(width // 2, 2), 'n')
-        self.assertEqual(w.edges_at(width // 2, height - 2), '')
-        self.assertEqual(w.edges_at(2, height // 2), '')
+        self.assertEqual(w.pointer.edges_at(width // 2, 2), 'n')
+        self.assertEqual(w.pointer.edges_at(width // 2, height - 2), '')
+        self.assertEqual(w.pointer.edges_at(2, height // 2), '')
         # dragging the top edge one row up adds a row; the strip grows from the screen's edge
-        w.resizing = ('n',)
-        w.resize_dock(width // 2, -w.row_height)
+        w.pointer.resizing = ('n',)
+        w.pointer.resize_dock(width // 2, -w.row_height)
         self.assertEqual(w.rows, style.ROWS + 1)
-        w.on_drag_end(None, 0, 0)
+        w.pointer.on_drag_end(None, 0, 0)
         self.assertEqual(self.app.settings.get('dock_rows'), style.ROWS + 1)
 
     def test_the_resize_cursor_stays_while_the_strip_is_dragged(self):
@@ -913,11 +913,11 @@ class DockTests(unittest.TestCase):
             nc.GLib.MainContext.default().iteration(False)
         press = (w.get_width() // 2, 2)
         pressed = w.pick(*press, nc.Gtk.PickFlags.DEFAULT)
-        w.on_drag_begin(NS(set_state=lambda state: None), *press)
+        w.pointer.on_drag_begin(NS(set_state=lambda state: None), *press)
         self.assertEqual(w.get_cursor().get_name(), 'n-resize')
         self.assertIsNot(pressed, w)
         self.assertEqual(pressed.get_cursor().get_name(), 'n-resize')
-        w.on_drag_end(None, 0, 0)
+        w.pointer.on_drag_end(None, 0, 0)
         self.assertIsNone(pressed.get_cursor())
         self.assertEqual(w.get_cursor().get_name(), 'default')
 
@@ -927,10 +927,10 @@ class DockTests(unittest.TestCase):
         self.position('right')
         for _ in range(200):
             nc.GLib.MainContext.default().iteration(False)
-        w.resizing = ('w',)
-        w.resize_dock(-100, 10)  # 100 px left of the strip's left edge
+        w.pointer.resizing = ('w',)
+        w.pointer.resize_dock(-100, 10)  # 100 px left of the strip's left edge
         self.assertEqual(w.box_width, w.get_width() + 100)
-        w.on_drag_end(None, 0, 0)
+        w.pointer.on_drag_end(None, 0, 0)
         self.assertEqual(self.app.settings.get('dock_width'), w.box_width)
 
     def test_docked_status_messages_show_in_a_corner_without_resizing_the_strip(self):

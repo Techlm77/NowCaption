@@ -1,8 +1,5 @@
 """The caption box's window, floating where it is dragged or docked along an edge of the screen
 (layer shell), with its menu and resizing. Stage and Drawer (stage.py) place and slide the box."""
-import math
-import os
-
 import cairo
 import gi
 gi.require_version('Gtk', '4.0')
@@ -10,11 +7,12 @@ gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
 from gi.repository import Adw, Gdk, GLib, Gtk, Pango  # noqa: E402
 
-from ...style import (ALONG, BOTTOM_GAP, COLOURS, CURSORS, DOCK_MS, EDGE, FADE_IN_MS, FADE_OUT_MS,  # noqa: E402
-                      INNER, MIN_WIDTH, PAD_X, PAD_Y, ROWS, STATUS_MS, UNDOCK_MS)
+from ...style import (ALONG, BOTTOM_GAP, COLOURS, DOCK_MS, FADE_IN_MS, FADE_OUT_MS, MIN_WIDTH, PAD_X,  # noqa: E402
+                      PAD_Y, ROWS, STATUS_MS, UNDOCK_MS)
 from ..caption_text import CaptionText, StyledLabel  # noqa: E402
 from . import layer_shell  # noqa: E402
 from .menu import CaptionMenu  # noqa: E402
+from .pointer import Pointer  # noqa: E402
 from .stage import Drawer, Stage  # noqa: E402
 from .stylesheet import caption_css  # noqa: E402
 
@@ -36,8 +34,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.set_decorated(False)
         self.set_resizable(False)
         self.layer = layer_shell.supported()
-        self.dragging = self.resizing = self.held = None
-        self.move_from = None  # without layer shell: where a finger pressed, until it travels (on_drag_update)
+        self.pointer = Pointer(self)  # moving and resizing the box
         self.rows = self.settings.get('rows')
         self.text, self.status, self.status_timer = '', '', None
         self.status_sticky = False
@@ -89,20 +86,20 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.restyle()
 
         drag = Gtk.GestureDrag()  # primary button
-        drag.connect('drag-begin', self.on_drag_begin)
-        drag.connect('drag-update', self.on_drag_update)
-        drag.connect('drag-end', self.on_drag_end)
+        drag.connect('drag-begin', self.pointer.on_drag_begin)
+        drag.connect('drag-update', self.pointer.on_drag_update)
+        drag.connect('drag-end', self.pointer.on_drag_end)
         self.add_controller(drag)
         motion = Gtk.EventControllerMotion()  # show a resize cursor over the edges
-        motion.connect('motion', self.on_motion)
+        motion.connect('motion', self.pointer.on_motion)
         self.add_controller(motion)
         click = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
         click.connect('pressed', self.menu.on_menu)
         self.add_controller(click)
-        hold = Gtk.GestureLongPress(touch_only=True)  # a touchscreen's right-click, see on_long_press
-        hold.connect('pressed', self.on_long_press)
+        hold = Gtk.GestureLongPress(touch_only=True)  # a touchscreen's right-click, see Pointer.on_long_press
+        hold.connect('pressed', self.pointer.on_long_press)
         self.add_controller(hold)
-        self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
+        self.set_cursor(Gdk.Cursor.new_from_name(self.pointer.cursor(), None))
 
         self._monitor_handlers, self._monitors_handler = [], None
         self._monitors = Gdk.Display.get_default().get_monitors()
@@ -155,7 +152,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
             shell.set_exclusive_zone(self, -1)  # float over everything, panels too
             self.remove_css_class('docked')
         self.seat_footer()
-        self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
+        self.set_cursor(Gdk.Cursor.new_from_name(self.pointer.cursor(), None))
 
     def position(self):
         """Where the captions go now: the menu's choice, or floating over a fullscreen app."""
@@ -277,9 +274,6 @@ class CaptionWindow(Gtk.ApplicationWindow):
         return {'top': (0, 0, w, h - away), 'bottom': (0, away, w, h - away),
                 'left': (0, 0, w - away, h), 'right': (away, 0, w - away, h)}[self.edge]
 
-    def cursor(self):
-        return 'default' if self.edge else 'grab'
-
     def dock_span(self):
         """The docked strip's length along its edge: what the compositor gave it beside any
         panels, or until it says, the whole screen's."""
@@ -293,7 +287,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
     def on_layout(self, surface, width, height):
         """The compositor sized the window. Docked, fit the captions to the strip it gave them."""
         span = (width if self.edge in ('top', 'bottom') else height) if self.edge else None
-        if span and span != self.span and not self.resizing:
+        if span and span != self.span and not self.pointer.resizing:
             self.span = span
             self.fit()
         self.update_input()
@@ -629,165 +623,3 @@ class CaptionWindow(Gtk.ApplicationWindow):
         if node:
             self.get_renderer().render_texture(node, None).save_to_png(path)
         return False
-
-    # --- moving and resizing ------------------------------------------------------------------
-
-    def edges_at(self, x, y):
-        """Which edges of the box the pointer is on, as 'n', 'se', ...; '' inside it.
-        A normal window cannot move itself, so there only the right and bottom edges resize.
-        Docked, only the edge between the captions and the windows beside them resizes."""
-        if self.edge:
-            w, h = self.get_width(), self.get_height()
-            inner = INNER[self.edge]
-            near = {'n': y < EDGE, 's': y >= h - EDGE, 'w': x < EDGE, 'e': x >= w - EDGE}[inner]
-            return inner if near and 0 <= x < w and 0 <= y < h else ''
-        bx, by = (self.x, self.y) if self.layer else (0, 0)
-        x, y = x - bx, y - by
-        w, h = self.box_width, self.box_height()
-        if not (0 <= x < w and 0 <= y < h):
-            return ''
-        ns = 'n' if y < EDGE and self.layer else 's' if y >= h - EDGE else ''
-        ew = 'w' if x < EDGE and self.layer else 'e' if x >= w - EDGE else ''
-        return ns + ew
-
-    def on_motion(self, controller, x, y):
-        if not (self.dragging or self.resizing):
-            self.set_cursor(Gdk.Cursor.new_from_name(CURSORS.get(self.edges_at(x, y), self.cursor()), None))
-
-    def hold_cursor(self, x, y, name):
-        """Show cursor name until the drag ends. Once the pointer leaves the widget it pressed,
-        GTK shows that widget's own cursor rather than the window's, and a docked strip moves
-        under the pointer as it resizes, so the pressed widget gets the same cursor."""
-        cursor = Gdk.Cursor.new_from_name(name, None)
-        self.set_cursor(cursor)
-        self.held = self.pick(x, y, Gtk.PickFlags.DEFAULT)
-        if self.held is self:
-            self.held = None
-        if self.held:
-            self.held.set_cursor(cursor)
-
-    def on_drag_begin(self, gesture, x, y):
-        edges = self.edges_at(x, y)
-        if self.edge:  # docked: only the inner edge resizes, and nothing moves
-            if edges:
-                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-                self.resizing = (edges,)
-                self.hold_cursor(x, y, CURSORS[edges])
-            return
-        if edges:  # remember which edges, and where the box's edges were
-            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-            self.resizing = (edges, self.x, self.y, self.x + self.box_width, self.y + self.caption_height())
-            self.hold_cursor(x, y, CURSORS[edges])
-            return
-        self.hold_cursor(x, y, 'grabbing')
-        if self.layer:  # x, y are overlay (monitor) coordinates; remember where the box was grabbed
-            self.dragging = (x - self.x, y - self.y)
-            return
-        if isinstance(self.get_surface(), Gdk.Toplevel):  # the window manager moves normal windows
-            if gesture.get_current_sequence() is not None:  # a finger: held still, it opens the menu instead
-                self.move_from = (x, y)
-                return
-            self.begin_move(gesture, x, y)
-
-    def begin_move(self, gesture, x, y):
-        """Have the window manager move the window from (x, y), where the press is now."""
-        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-        self.get_surface().begin_move(gesture.get_device(), gesture.get_current_button(), x, y,
-                                      gesture.get_current_event_time())
-
-    def on_drag_update(self, gesture, dx, dy):
-        if self.move_from:  # a finger moves the window once it travels as far as a drag must
-            if math.hypot(dx, dy) >= self.get_settings().props.gtk_dnd_drag_threshold:
-                x, y = self.move_from
-                self.move_from = None
-                self.begin_move(gesture, x + dx, y + dy)
-            return
-        if self.resizing and self.edge:
-            ok, px, py = gesture.get_point(None)
-            return ok and self.resize_dock(px, py)
-        if self.resizing:
-            return self.resize_by(dx, dy)
-        if not self.dragging:
-            return
-        ok, px, py = gesture.get_point(None)
-        if ok:
-            self.place(px - self.dragging[0], py - self.dragging[1])
-
-    def resize_by(self, dx, dy):
-        """Move the dragged edges by dx, dy from where they started; the other edges stay put."""
-        edges, left, top, right, bottom = self.resizing
-        geo = self.monitor.get_geometry() if self.monitor else None
-        limit = (geo.width if self.layer else left + geo.width) if geo else left + 10000
-        if 'w' in edges:
-            left = max(0, min(left + dx, right - MIN_WIDTH))
-        if 'e' in edges:
-            right = max(left + MIN_WIDTH, min(right + dx, limit))
-        rows = self.rows
-        if 'n' in edges or 's' in edges:
-            height = bottom - top + (dy if 's' in edges else -dy)
-            rows = max(1, min(round((height - 2 * PAD_Y) / max(1, self.row_height)), self.max_rows()))
-        width = int(right - left)
-        if (width, rows) != (self.box_width, self.rows):
-            self.box_width, self.rows = width, rows
-            self.relayout()
-        if self.layer:  # render() places the box, clamped to the screen
-            self.x = int(left)
-            self.y = int(bottom - self.caption_height() if 'n' in edges else top)
-        self.render()
-
-    def resize_dock(self, x, y):
-        """Docked: the inner edge follows the pointer at x, y in the strip; the edge against the
-        screen stays, and the windows beside the captions follow. Measured from that outer edge
-        each time, since the strip itself moves under the pointer as it grows."""
-        w, h = self.get_width(), self.get_height()
-        if self.edge in ('top', 'bottom'):
-            height = y if self.edge == 'top' else h - y
-            rows = max(1, min(round((height - 2 * PAD_Y) / max(1, self.row_height)), self.max_rows()))
-            if rows != self.rows:
-                self.rows = rows
-                self.relayout()
-        else:
-            geo = self.monitor.get_geometry() if self.monitor else None
-            width = max(MIN_WIDTH, min(int(x if self.edge == 'left' else w - x), int(geo.width * 0.6) if geo else 2000))
-            if width != self.box_width:
-                self.box_width = width
-                self.relayout()
-        self.render()
-
-    def on_drag_end(self, gesture, dx, dy):
-        self.move_from = None
-        self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
-        if self.held:
-            self.held.set_cursor(None)
-            self.held = None
-        if self.resizing and self.edge:
-            self.resizing = None
-            if self.edge in ('top', 'bottom'):
-                self.settings.set('dock_rows', self.rows)
-            else:
-                self.settings.set('dock_width', self.box_width)
-            return
-        if self.resizing:
-            self.resizing = None
-            self.settings.set('width', self.box_width)
-            self.settings.set('rows', self.rows)
-            self.settings.set('x', self.x)
-            self.settings.set('y', self.y)
-            return
-        if not self.dragging:
-            return
-        self.dragging = None
-        self.settings.set('x', self.x)
-        self.settings.set('y', self.y)
-        if os.environ.get('NOWCAPTION_DEBUG_DRAG'):
-            print('drag end', self.x, self.y, flush=True)
-
-    def on_long_press(self, gesture, x, y):
-        """A finger held still on the captions opens the menu there, as a right-click does. A
-        finger that moves first drags them, or resizes them from an edge, and GTK cancels the
-        long press; taking the press here ends a move that began with it. Without layer shell,
-        the window manager moves the window only once the finger travels (on_drag_update)."""
-        if self.resizing:  # an edge took the press
-            return
-        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-        self.menu.on_menu(gesture, 1, x, y)
