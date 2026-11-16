@@ -2,13 +2,14 @@
 like speech so each way for new words to arrive can be seen. The caption box's stylesheet
 styles it too (.caption-preview), up to Preview.MAX_SIZE."""
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Pango', '1.0')
-from gi.repository import GLib, Gtk, Pango  # noqa: E402
+from gi.repository import GLib, Gtk, Pango
 
-from ..style import PAD_X, PAD_Y  # noqa: E402
-from .caption_text import CaptionText, StyledLabel  # noqa: E402
-from .weak import weakly  # noqa: E402
+from ..style import PAD_X, PAD_Y
+from .caption_text import CaptionText, StyledLabel
+from .weak import weakly
 
 
 class Preview(Gtk.Box):

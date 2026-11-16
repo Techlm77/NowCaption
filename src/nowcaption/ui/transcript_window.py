@@ -6,12 +6,13 @@ import re
 import time
 
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
-from gi.repository import Adw, Gdk, GLib, GObject, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, Gdk, GLib, GObject, Gtk, Pango
 
-from .. import engine  # noqa: E402
+from .. import engine
 
 LOG = logging.getLogger('nowcaption')
 

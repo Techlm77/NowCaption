@@ -3,8 +3,9 @@ rows as the passage grows or is punctuated anew. Pango layouts only: no widgets.
 import bisect
 
 import gi
+
 gi.require_version('Pango', '1.0')
-from gi.repository import Pango  # noqa: E402
+from gi.repository import Pango
 
 
 def bare(word):

@@ -3,11 +3,12 @@ open (text size, background, text colour and position), pointed toward the room 
 and opened by a right-click or a long press. It reads the window's place and size, and changes
 nothing but the menu."""
 import gi
-gi.require_version('Gtk', '4.0')
-from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
-from ...style import COLOURS, MENU_INDENT, POSITIONS, STEPPERS  # noqa: E402
-from . import layer_shell  # noqa: E402
+gi.require_version('Gtk', '4.0')
+from gi.repository import Gdk, GLib, Gtk
+
+from ...style import COLOURS, MENU_INDENT, POSITIONS, STEPPERS
+from . import layer_shell
 
 
 class CaptionMenu:

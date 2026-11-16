@@ -5,11 +5,12 @@ import math
 import cairo
 import gi
 import numpy as np
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Graphene', '1.0')
-from gi.repository import Graphene, Gtk  # noqa: E402
+from gi.repository import Graphene, Gtk
 
-from ..style import MOSAIC  # noqa: E402
+from ..style import MOSAIC
 
 
 class Pieces:

@@ -4,12 +4,13 @@ docked captions slide into their edge and out of the new one; floating ones fade
 float over a fullscreen app and touch Plasma's panels, through the app's KWin watches. Without
 layer shell the captions always float, and none of this runs."""
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gdk  # noqa: E402
+from gi.repository import Adw, Gdk
 
-from ...style import ALONG, DOCK_MS, FADE_IN_MS, FADE_OUT_MS, UNDOCK_MS  # noqa: E402
-from . import layer_shell  # noqa: E402
+from ...style import ALONG, DOCK_MS, FADE_IN_MS, FADE_OUT_MS, UNDOCK_MS
+from . import layer_shell
 
 
 class Docking:

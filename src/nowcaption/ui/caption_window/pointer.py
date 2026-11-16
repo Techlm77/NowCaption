@@ -5,10 +5,11 @@ import math
 import os
 
 import gi
-gi.require_version('Gtk', '4.0')
-from gi.repository import Gdk, Gtk  # noqa: E402
 
-from ...style import CURSORS, EDGE, INNER, MIN_WIDTH, PAD_Y  # noqa: E402
+gi.require_version('Gtk', '4.0')
+from gi.repository import Gdk, Gtk
+
+from ...style import CURSORS, EDGE, INNER, MIN_WIDTH, PAD_Y
 
 
 class Pointer:

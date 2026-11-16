@@ -3,6 +3,7 @@ captions' window cover a screen, or dock along its edge like a panel. LayerShell
 it. The caption window's parts look it up here each time (layer_shell.LayerShell), so this is the
 one place to replace it, as the tests do."""
 import gi
+
 gi.require_version('Gtk', '4.0')
 
 try:

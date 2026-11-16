@@ -2,10 +2,11 @@
 x, y inside an overlay covering the screen; Drawer shows only part of a docked box, the rest
 slid away into its edge. Layout only: they know nothing of captions or settings."""
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gsk', '4.0')
 gi.require_version('Graphene', '1.0')
-from gi.repository import Graphene, Gsk, Gtk  # noqa: E402
+from gi.repository import Graphene, Gsk, Gtk
 
 
 class Stage(Gtk.Widget):

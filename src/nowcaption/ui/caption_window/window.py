@@ -4,19 +4,20 @@ shows the captions and status messages in it. Its parts have modules of their ow
 stylesheet.py, and stage.py (Stage and Drawer, which place and slide the box)."""
 import cairo
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
-from gi.repository import Adw, Gdk, GLib, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, Gdk, GLib, Gtk, Pango
 
-from ...style import BOTTOM_GAP, COLOURS, FADE_IN_MS, MIN_WIDTH, PAD_X, PAD_Y, ROWS, STATUS_MS  # noqa: E402
-from ..caption_text import CaptionText, StyledLabel  # noqa: E402
-from . import layer_shell  # noqa: E402
-from .docking import Docking  # noqa: E402
-from .menu import CaptionMenu  # noqa: E402
-from .pointer import Pointer  # noqa: E402
-from .stage import Drawer, Stage  # noqa: E402
-from .stylesheet import caption_css  # noqa: E402
+from ...style import BOTTOM_GAP, COLOURS, FADE_IN_MS, MIN_WIDTH, PAD_X, PAD_Y, ROWS, STATUS_MS
+from ..caption_text import CaptionText, StyledLabel
+from . import layer_shell
+from .docking import Docking
+from .menu import CaptionMenu
+from .pointer import Pointer
+from .stage import Drawer, Stage
+from .stylesheet import caption_css
 
 
 class CaptionWindow(Gtk.ApplicationWindow):

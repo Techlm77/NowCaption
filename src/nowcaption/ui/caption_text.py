@@ -9,17 +9,17 @@ import re
 
 import cairo
 import gi
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
 gi.require_version('Gsk', '4.0')
 gi.require_version('Graphene', '1.0')
-from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
+from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango
 
-from ..style import (BREATH_MS, BREATH_STEP_MS, GLIDE_MS, PIXEL_MS, PIXEL_WORDS, ROWS,  # noqa: E402
-                     STATUS_MS, WORD_MS)
-from .pieces import Pieces  # noqa: E402
-from .rows import Rows, bare  # noqa: E402
+from ..style import BREATH_MS, BREATH_STEP_MS, GLIDE_MS, PIXEL_MS, PIXEL_WORDS, ROWS, STATUS_MS, WORD_MS
+from .pieces import Pieces
+from .rows import Rows, bare
 
 LOG = logging.getLogger('nowcaption')
 
