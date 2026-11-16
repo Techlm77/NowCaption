@@ -14,7 +14,9 @@ from .history import (
     history_file,
     history_files,
     history_span,
+    history_title,
     prune_history,
+    session_heading,
 )
 from .memory import release_free_memory
 from .models import (
@@ -35,7 +37,7 @@ __all__ = [
     'MAX_LINE', 'PAUSE_S', 'RATE', 'WARMUP_S', 'Captioner',
     'DESKTOP', 'MICROPHONE', 'Capture',
     'HISTORY_CHOICES', 'HISTORY_DAYS', 'history_cutoff', 'history_dir', 'history_file',
-    'history_files', 'history_span', 'prune_history',
+    'history_files', 'history_span', 'history_title', 'prune_history', 'session_heading',
     'release_free_memory',
     'ASR_DIR', 'ASR_FILES', 'PUNCT_DIR', 'PUNCT_FILES', 'complete', 'load_models',
     'load_punctuation', 'load_recognizer', 'models_dir',

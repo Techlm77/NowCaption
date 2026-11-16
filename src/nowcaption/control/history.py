@@ -6,7 +6,7 @@ import logging
 from gi.repository import GLib
 
 from .. import engine
-from ..ui import session_heading
+from ..engine import session_heading
 
 LOG = logging.getLogger('nowcaption')
 

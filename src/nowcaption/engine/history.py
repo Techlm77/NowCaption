@@ -1,6 +1,6 @@
-"""The transcript history folder: each session's file, which sessions are kept, and deleting
-those older than the user's choice. Writing the files is TranscriptStore's job (transcript.py).
-Depends on nothing else in NowCaption.
+"""The transcript history folder: each session's file, which sessions are kept, deleting those
+older than the user's choice, and the words the menu and the transcript use for them. Writing the
+files is TranscriptStore's job (transcript.py). Depends on nothing else in NowCaption.
 """
 from __future__ import annotations
 
@@ -19,6 +19,16 @@ def history_span(days: int) -> str | None:
     """How long sessions are kept, as the menu and the transcript say it: "7 days", "1 day", or
     None when they are kept until deleted."""
     return None if not days else '1 day' if days == 1 else f'{days} days'
+
+
+def history_title(days: int) -> str:
+    """How the transcript window says what it shows, for sessions kept this long."""
+    return 'Last 24 hours' if days == 1 else f'Last {days} days' if days else 'Every kept session'
+
+
+def session_heading(started: float) -> str:
+    """A session's heading in the transcript, such as "Thursday 23 October 2026, 14:05"."""
+    return time.strftime('%A %-d %B %Y, %H:%M', time.localtime(started))
 
 
 def history_dir() -> Path:

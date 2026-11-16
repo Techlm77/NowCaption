@@ -5,7 +5,6 @@ from __future__ import annotations
 import bisect
 import logging
 import re
-import time
 from collections.abc import Callable
 
 import gi
@@ -16,18 +15,9 @@ gi.require_version('Pango', '1.0')
 from gi.repository import Adw, Gdk, GLib, GObject, Gtk, Pango
 
 from .. import engine
+from ..engine import history_title, session_heading
 
 LOG = logging.getLogger('nowcaption')
-
-
-def history_title(days: int) -> str:
-    """How the transcript window says what it shows, for sessions kept this long."""
-    return 'Last 24 hours' if days == 1 else f'Last {days} days' if days else 'Every kept session'
-
-
-def session_heading(started: float) -> str:
-    """A session's heading in the transcript, such as "Thursday 23 October 2026, 14:05"."""
-    return time.strftime('%A %-d %B %Y, %H:%M', time.localtime(started))
 
 
 def rgba(spec: str) -> Gdk.RGBA:
