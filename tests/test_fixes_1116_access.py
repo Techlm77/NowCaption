@@ -48,7 +48,7 @@ class LongPressTests(unittest.TestCase):
         self.shell = FakeLayerShell()
         self.shell.modes = []
         self.shell.set_keyboard_mode = lambda window, mode: self.shell.modes.append(mode)
-        patcher = patch.object(caption_window.window, 'LayerShell', self.shell)
+        patcher = patch.object(caption_window.layer_shell, 'LayerShell', self.shell)
         patcher.start()
         self.addCleanup(patcher.stop)
         for key in ('position', 'x', 'y', 'width', 'rows', 'size'):

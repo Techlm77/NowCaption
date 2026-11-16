@@ -10,17 +10,12 @@ gi.require_version('Adw', '1')
 gi.require_version('Pango', '1.0')
 from gi.repository import Adw, Gdk, GLib, Gtk, Pango  # noqa: E402
 
-try:
-    gi.require_version('Gtk4LayerShell', '1.0')
-    from gi.repository import Gtk4LayerShell as LayerShell
-except (ValueError, ImportError):
-    LayerShell = None
-
 from ...style import (ALONG, BOTTOM_GAP, CHANGE_MS, COLOURS, CURSORS, DOCK_MS, EDGE, FADE_IN_MS,  # noqa: E402
                       FADE_OUT_MS, INNER, MENU_INDENT, MIN_WIDTH, PAD_X, PAD_Y, POSITIONS, ROWS, STATUS_MS,
                       STEPPERS, UNDOCK_MS, css_font)
 from ..caption_text import CaptionText, StyledLabel  # noqa: E402
 from ..preview import Preview  # noqa: E402
+from . import layer_shell  # noqa: E402
 from .stage import Drawer, Stage  # noqa: E402
 
 
@@ -40,7 +35,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.app, self.settings = app, app.settings
         self.set_decorated(False)
         self.set_resizable(False)
-        self.layer = bool(LayerShell and LayerShell.is_supported())
+        self.layer = layer_shell.supported()
         self.dragging = self.resizing = self.held = None
         self.move_from = None  # without layer shell: where a finger pressed, until it travels (on_drag_update)
         self.rows = self.settings.get('rows')
@@ -80,12 +75,13 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.set_child(self.stage)
 
         if self.layer:
-            LayerShell.init_for_window(self)
-            LayerShell.set_layer(self, LayerShell.Layer.OVERLAY)
-            LayerShell.set_namespace(self, 'nowcaption')
-            LayerShell.set_keyboard_mode(self, LayerShell.KeyboardMode.NONE)
+            shell = layer_shell.LayerShell
+            shell.init_for_window(self)
+            shell.set_layer(self, shell.Layer.OVERLAY)
+            shell.set_namespace(self, 'nowcaption')
+            shell.set_keyboard_mode(self, shell.KeyboardMode.NONE)
             if self.monitor:
-                LayerShell.set_monitor(self, self.monitor)
+                shell.set_monitor(self, self.monitor)
             self.set_resizable(True)  # or the compositor cannot stretch it across the edges it is anchored to
             self.dock()
             self.connect('realize', lambda *a: self.get_surface().connect('layout', self.on_layout))
@@ -119,8 +115,8 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.popover.set_parent(self.box)
         self.popover.set_has_arrow(False)
         self.popover.set_position(Gtk.PositionType.BOTTOM)
-        self.popover.connect('closed', lambda *a: self.layer and LayerShell.set_keyboard_mode(
-            self, LayerShell.KeyboardMode.NONE))
+        self.popover.connect('closed', lambda *a: self.layer and layer_shell.LayerShell.set_keyboard_mode(
+            self, layer_shell.LayerShell.KeyboardMode.NONE))
 
     # --- geometry -------------------------------------------------------------------------
 
@@ -146,22 +142,23 @@ class CaptionWindow(Gtk.ApplicationWindow):
         """Anchor the overlay for the position chosen in the menu. Floating, it covers the screen
         and the box moves inside it. Docked, it is a strip along one edge that the compositor
         keeps other windows out of, so maximised and snapped windows end where it begins."""
+        shell = layer_shell.LayerShell
         position = self.position()
         self.edge = None if position == 'floating' else position
         self.span = None
         # docked, like a panel: next to the panels already there; floating, above everything,
         # fullscreen apps included
-        LayerShell.set_layer(self, LayerShell.Layer.TOP if self.edge else LayerShell.Layer.OVERLAY)
+        shell.set_layer(self, shell.Layer.TOP if self.edge else shell.Layer.OVERLAY)
         self.watch_fullscreen()
         self.touch_panels()
         for name in ('top', 'bottom', 'left', 'right'):
-            LayerShell.set_anchor(self, getattr(LayerShell.Edge, name.upper()),
-                                  self.edge is None or name == self.edge or name in ALONG[self.edge])
+            shell.set_anchor(self, getattr(shell.Edge, name.upper()),
+                             self.edge is None or name == self.edge or name in ALONG[self.edge])
         if self.edge:
-            LayerShell.auto_exclusive_zone_enable(self)
+            shell.auto_exclusive_zone_enable(self)
             self.add_css_class('docked')
         else:
-            LayerShell.set_exclusive_zone(self, -1)  # float over everything, panels too
+            shell.set_exclusive_zone(self, -1)  # float over everything, panels too
             self.remove_css_class('docked')
         self.seat_footer()
         self.set_cursor(Gdk.Cursor.new_from_name(self.cursor(), None))
@@ -249,7 +246,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
     def docked_fully(self):
         """The slide out of the edge is over: the strip reserves its whole size again."""
         self.drawer.show_part(None, None)
-        LayerShell.auto_exclusive_zone_enable(self)
+        layer_shell.LayerShell.auto_exclusive_zone_enable(self)
         self.update_input()
 
     def arrive(self, slide_in):
@@ -258,7 +255,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         self.dock()
         if self.edge and slide_in:
             self.drawer.show_part(self.edge, 0)
-            LayerShell.set_exclusive_zone(self, 0)
+            layer_shell.LayerShell.set_exclusive_zone(self, 0)
         else:
             self.drawer.show_part(None, None)
         self.restyle()
@@ -271,7 +268,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
         with the slide; the window itself keeps its size."""
         def step(value):
             self.drawer.show_part(self.edge, value)
-            LayerShell.set_exclusive_zone(self, round(value))
+            layer_shell.LayerShell.set_exclusive_zone(self, round(value))
             self.update_input()
         animation = Adw.TimedAnimation.new(self, start, end, ms, Adw.CallbackAnimationTarget.new(step))
         animation.set_easing(easing)
@@ -317,7 +314,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
             self.touch_panels()
         self.watch_monitor()
         if self.layer and monitor:
-            LayerShell.set_monitor(self, monitor)
+            layer_shell.LayerShell.set_monitor(self, monitor)
         self.restyle()
 
     def on_monitors_changed(self, monitors, position, removed, added):
@@ -922,7 +919,7 @@ class CaptionWindow(Gtk.ApplicationWindow):
 
     def on_menu(self, gesture, n, x, y):
         if self.layer:  # let the menu take keyboard input while it is open
-            LayerShell.set_keyboard_mode(self, LayerShell.KeyboardMode.ON_DEMAND)
+            layer_shell.LayerShell.set_keyboard_mode(self, layer_shell.LayerShell.KeyboardMode.ON_DEMAND)
         self.point_menu(x, y)
         if self.layer:  # let the compositor apply the keyboard mode first, or KWin closes the menu at once
             GLib.timeout_add(60, lambda: self.popover.popup() and False)
