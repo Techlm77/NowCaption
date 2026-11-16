@@ -182,7 +182,8 @@ class App:
     def reset_after_pauses(self):
         """Experiment (not in the app): once the Captioner has flushed after a pause and gone idle, reset
         the stream, so the next words start on a fresh stream primed with WARMUP_S of silence, as a new
-        stream is. The Captioner's own 20,000-character reset does the same bookkeeping."""
+        stream is. Like the Captioner's own 20,000-character reset, it sets done and result back; unlike
+        it, it also sets primed back to False and primes the new stream at once, in the pause."""
         cap, orig = self.cap, self.cap.flush
         self.resets = 0
 
