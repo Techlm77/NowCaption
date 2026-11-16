@@ -2,6 +2,10 @@
 
 The only engine module that uses GStreamer, and it imports gi only when a Capture is made, so
 the engine imports without it. Depends on nothing else in NowCaption.
+
+"Desktop audio" records the default output's monitor by its name (see default_monitor): asked for
+@DEFAULT_MONITOR@, PipeWire 0.3.65 with WirePlumber 0.4.13 (Debian 12) records the default
+microphone instead.
 """
 from __future__ import annotations
 
@@ -18,6 +22,28 @@ PIPELINE = ('pulsesrc name=src client-name=NowCaption buffer-time=100000 latency
             '! audio/x-raw,format=S16LE,rate=16000,channels=1 '
             '! appsink name=sink sync=false max-buffers=50 drop=false emit-signals=false')
 BLOCK = 1280  # 40 ms of 16 kHz PCM16: smaller blocks reach the model sooner (benchmark/README.md)
+
+
+def default_monitor(gst) -> str | None:
+    """The default output's monitor source, '<default sink>.monitor', as the sound server lists it
+    to GStreamer's PulseAudio device provider (the same connection pulsesrc makes, so it works in
+    the Flatpak and the AppImage, which may have no pactl); None when it cannot say. The provider
+    marks the default devices only while it is started, so it is started and stopped here."""
+    provider = gst.DeviceProviderFactory.get_by_name('pulsedeviceprovider')
+    if provider is None or not provider.start():
+        return None
+    try:
+        devices = provider.get_devices()
+    finally:
+        provider.stop()
+    names = {}
+    for device in devices:
+        props = device.get_properties()
+        default = bool(props and props.has_field('is-default') and props.get_value('is-default'))
+        names.setdefault(device.get_device_class(), {})[device.get_property('internal-name')] = default
+    sink = next((name for name, default in names.get('Audio/Sink', {}).items() if default), None)
+    monitor = f'{sink}.monitor' if sink else None
+    return monitor if monitor in names.get('Audio/Source', {}) else None
 
 
 class Capture:
@@ -48,7 +74,8 @@ class Capture:
 
     def start(self, device: str, gen: int) -> None:
         """Capture from this PulseAudio device (DESKTOP, MICROPHONE or a source name) as generation
-        gen, in place of any capture running now."""
+        gen, in place of any capture running now. DESKTOP is looked up again at each start, so
+        starting again follows a change of the default output."""
         with self._lock:
             if self._stop:
                 self._stop.set()
@@ -86,9 +113,10 @@ class Capture:
                 if self._stranded is not None:
                     self._shutdown(self._stranded)
                     self._stranded = None
+                source = self._source(device)
                 pipeline = self.gst.parse_launch(PIPELINE)
                 src = pipeline.get_by_name('src')
-                src.set_property('device', device)
+                src.set_property('device', source)
                 src.set_property('stream-properties', self.gst.Structure.new_from_string(
                     'props,media.role=accessibility,application.icon_name=io.github.Techlm77.NowCaption'))
                 with self._lock:
@@ -96,7 +124,7 @@ class Capture:
                 if not stop.is_set():
                     if pipeline.set_state(self.gst.State.PLAYING) == self.gst.StateChangeReturn.FAILURE:
                         raise RuntimeError('GStreamer could not start capturing from this sound source')
-                    reason = self._pump(gen, pipeline, stop, device)
+                    reason = self._pump(gen, pipeline, stop, source)
             except Exception as e:
                 LOG.exception('Audio capture failed')
                 reason = f'{type(e).__name__}: {e}'
@@ -115,6 +143,21 @@ class Capture:
                     self.on_ended(gen, reason)
                 except Exception:
                     LOG.exception('Audio error callback failed')
+
+    def _source(self, device):
+        """The source to give pulsesrc: DESKTOP named as the default output's monitor, else as it is."""
+        if device != DESKTOP:
+            return device
+        try:
+            monitor = default_monitor(self.gst)
+        except Exception:
+            LOG.exception('Could not ask the sound server for the default output')
+            monitor = None
+        if monitor:
+            LOG.info('Desktop audio: recording %s', monitor)
+            return monitor
+        LOG.warning('Could not find the default output\'s monitor; recording %s', DESKTOP)
+        return DESKTOP
 
     def _shutdown(self, pipeline):
         if pipeline.set_state(self.gst.State.NULL) == self.gst.StateChangeReturn.FAILURE:

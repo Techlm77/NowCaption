@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """The audio capture's lifecycle, with a fake GStreamer: errors, end of stream, a missing source,
-switching sources without waiting, and a pipeline slow or failing to shut down.
+switching sources without waiting, a pipeline slow or failing to shut down, and which source
+"Desktop audio" records.
 
-CaptureTests come from the reliability review (findings 1-3), CaptureRegressions from 1.0.3.
+CaptureTests come from the reliability review (findings 1-3), CaptureRegressions from 1.0.3,
+DesktopAudioTests from the distro test lab (Debian 12).
 """
 import queue
 import threading
@@ -11,7 +13,7 @@ import unittest
 
 import support.sandbox  # noqa: F401 - private XDG folders and a quiet log for this process
 from nowcaption import engine
-from support.fakes import FakeGst, FakePipeline
+from support.fakes import FakeDeviceProvider, FakeGst, FakePipeline
 
 
 class CaptureTests(unittest.TestCase):
@@ -179,6 +181,61 @@ class CaptureRegressions(unittest.TestCase):
             self.assertTrue(cap.wait_stopped(3))
         self.assertEqual(started, [])
         self.assertEqual(gst.pipelines[0].state, 'null')
+
+
+class DesktopAudioTests(unittest.TestCase):
+    """On Debian 12 (PipeWire 0.3.65, WirePlumber 0.4.13) a pulsesrc asked for @DEFAULT_MONITOR@
+    records the default microphone, so "Desktop audio" captioned the room instead of the computer.
+    It now records the default output's monitor by its name, and falls back to @DEFAULT_MONITOR@
+    only when the sound server cannot say which that is."""
+
+    def started_device(self, provider, device=engine.DESKTOP):
+        started = queue.Queue()
+        gst = FakeGst('ok')
+        gst.provider = provider
+        cap = engine.Capture(lambda *a: None, on_started=started.put, gst=gst)
+        try:
+            cap.start(device, 1)
+            self.assertEqual(started.get(timeout=2), 1)
+            return gst.pipelines[0].device
+        finally:
+            cap.stop()
+            self.assertTrue(cap.wait_stopped(3))
+
+    def speakers(self, **changes):
+        devices = dict(sinks=['hdmi', 'speakers'], sources=['mic', 'hdmi.monitor', 'speakers.monitor'],
+                       default_sink='speakers', default_source='mic')
+        return FakeDeviceProvider(**dict(devices, **changes))
+
+    def test_desktop_audio_records_the_default_outputs_monitor_by_name(self):
+        provider = self.speakers()
+        self.assertEqual(self.started_device(provider), 'speakers.monitor')
+        self.assertEqual((provider.starts, provider.running), (1, 0))  # asked once, and let go
+
+    def test_each_start_asks_again_so_restarting_follows_a_new_default_output(self):
+        provider = self.speakers()
+        self.assertEqual(self.started_device(provider), 'speakers.monitor')
+        provider.default_sink = 'hdmi'
+        self.assertEqual(self.started_device(provider), 'hdmi.monitor')
+
+    def test_without_an_answer_it_still_asks_for_the_default_monitor(self):
+        class Broken(FakeDeviceProvider):
+            def get_devices(self):
+                raise RuntimeError('injected provider failure')
+        for provider in (None, self.speakers(can_start=False), self.speakers(default_sink=None),
+                         self.speakers(sources=['mic', 'hdmi.monitor']), Broken()):
+            with self.subTest(provider=provider):
+                self.assertEqual(self.started_device(provider), engine.DESKTOP)
+                if provider is not None:
+                    self.assertEqual(provider.running, 0)
+
+    def test_the_microphone_and_named_sources_are_recorded_as_they_are(self):
+        # NOWCAPTION_SOURCE names any source, and the menu's microphone is the default source
+        for device in (engine.MICROPHONE, 'hdmi.monitor', 'usb-mic'):
+            with self.subTest(device=device):
+                provider = self.speakers()
+                self.assertEqual(self.started_device(provider, device), device)
+                self.assertEqual(provider.starts, 0)
 
 
 if __name__ == '__main__':

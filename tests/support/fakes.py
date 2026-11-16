@@ -142,6 +142,9 @@ class FakeGst:
 
     def __init__(self, behaviour):
         self.behaviour, self.pipelines = behaviour, []
+        self.provider = None  # the PulseAudio device provider, if a test gives one
+        self.DeviceProviderFactory = NS(
+            get_by_name=lambda name: self.provider if name == 'pulsedeviceprovider' else None)
 
     def init(self, arg):
         pass
@@ -150,6 +153,47 @@ class FakeGst:
         p = FakePipeline(self.behaviour)
         self.pipelines.append(p)
         return p
+
+
+class FakeDevice:
+    def __init__(self, device_class, name, default):
+        self.device_class, self.name, self.default = device_class, name, default
+
+    def get_device_class(self):
+        return self.device_class
+
+    def get_property(self, name):
+        assert name == 'internal-name', name
+        return self.name
+
+    def get_properties(self):
+        fields = {'is-default': self.default}
+        return NS(has_field=lambda f: f in fields, get_value=fields.get)
+
+
+class FakeDeviceProvider:
+    """Like GStreamer's PulseAudio device provider: the sound server's outputs (sinks) and sources,
+    the defaults marked only while it is started, as the real one does."""
+
+    def __init__(self, sinks=(), sources=(), default_sink=None, default_source=None, can_start=True):
+        self.sinks, self.sources = list(sinks), list(sources)
+        self.default_sink, self.default_source, self.can_start = default_sink, default_source, can_start
+        self.running = self.starts = 0
+
+    def start(self):
+        if not self.can_start:
+            return False
+        self.running += 1
+        self.starts += 1
+        return True
+
+    def stop(self):
+        self.running -= 1
+
+    def get_devices(self):
+        started = self.running > 0
+        return ([FakeDevice('Audio/Source', n, started and n == self.default_source) for n in self.sources] +
+                [FakeDevice('Audio/Sink', n, started and n == self.default_sink) for n in self.sinks])
 
 
 class FakePipeline:
