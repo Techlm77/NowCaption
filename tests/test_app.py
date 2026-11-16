@@ -63,35 +63,36 @@ class AppTests(unittest.TestCase):
         a.fullscreen_watch.bus = None  # never load a KWin script into the desktop running the tests
         a.panel_float.bus = None  # nor change the panels of the desktop running the tests
         a.window = FakeWindow()
-        a.capture = NS(starts=[], start=lambda device, gen: a.capture.starts.append(gen), stop=lambda: None)
-        a.worker = NS(set_source=lambda gen: None, clear=lambda gen: None, restart=lambda: None)
+        a.listening.capture = NS(starts=[], stop=lambda: None,
+                                 start=lambda device, gen: a.listening.capture.starts.append(gen))
+        a.listening.worker = NS(set_source=lambda gen: None, clear=lambda gen: None, restart=lambda: None)
         return a
 
     def test_quitting_during_model_loading_never_starts_capture(self):
         a = self.make()
         a.closing = True  # the user quit while the worker was still loading
-        a.on_worker('ready', None)
-        self.assertEqual(a.capture.starts, [])
+        a.listening.on_worker('ready', None)
+        self.assertEqual(a.listening.capture.starts, [])
 
     def test_captions_from_before_clear_cannot_repaint(self):
         a = self.make()
-        a.on_worker('ready', None)
-        a.on_worker('caption', (0, 'Private words'))
-        a.clear_transcript()
-        a.on_worker('caption', (0, 'Private words and more'))  # already queued before the clear
+        a.listening.on_worker('ready', None)
+        a.listening.on_worker('caption', (0, 'Private words'))
+        a.listening.clear_transcript()
+        a.listening.on_worker('caption', (0, 'Private words and more'))  # already queued before the clear
         self.assertEqual(a.window.text, '')
-        a.on_worker('caption', (1, 'New words'))
+        a.listening.on_worker('caption', (1, 'New words'))
         self.assertEqual(a.window.text, 'New words')
 
     def test_capture_failure_is_shown_and_retried_with_backoff(self):
         a = self.make()
-        a.on_worker('ready', None)
-        a.capture_ended(a.source_gen, 'device disappeared')
+        a.listening.on_worker('ready', None)
+        a.listening.capture_ended(a.listening.source_gen, 'device disappeared')
         self.assertIn('device disappeared', a.window.statuses[-1])
         self.assertIn('Retrying in 1 s', a.window.statuses[-1])
-        a.capture_ended(a.source_gen, 'device disappeared')
+        a.listening.capture_ended(a.listening.source_gen, 'device disappeared')
         self.assertIn('Retrying in 2 s', a.window.statuses[-1])
-        a.capture_ended(a.source_gen - 1, 'an old capture')  # ignored: not the current source
+        a.listening.capture_ended(a.listening.source_gen - 1, 'an old capture')  # ignored: not the current source
         self.assertEqual(len(a.window.statuses), 3)
 
     def test_box_fits_a_smaller_monitor(self):
@@ -204,7 +205,7 @@ class MenuTests(unittest.TestCase):
     def test_the_history_switch_is_remembered_and_reaches_the_worker(self):
         a = AppTests.make(self)
         sent = []
-        a.worker = NS(set_history=sent.append)
+        a.listening.worker = NS(set_history=sent.append)
         action = a.lookup_action('history')
         self.assertTrue(action.get_state().get_boolean(), 'history is on by default')
         action.activate(None)

@@ -45,7 +45,7 @@ class RecoveryTests(unittest.TestCase):
         self.patch = patch.dict(APP, GLib=self.timers)
         self.patch.start()
         self.app = app_with_fakes()
-        self.app.ready = True
+        self.app.listening.ready = True
         self.events = Events()
 
     def tearDown(self):
@@ -57,7 +57,7 @@ class RecoveryTests(unittest.TestCase):
 
     def start_worker(self, recognizer):
         self.worker = engine.RecognitionWorker(self.events, load=lambda: (recognizer, None))
-        self.app.worker = self.worker
+        self.app.listening.worker = self.worker
         self.worker.start()
         self.events.wait('ready')
 
@@ -69,7 +69,7 @@ class RecoveryTests(unittest.TestCase):
             kind, value = self.events.q.get(timeout=max(0.001, end - time.monotonic()))
             if kind == 'snapshot':
                 return value[1]
-            self.app.on_worker(kind, value)
+            self.app.listening.on_worker(kind, value)
 
     def test_consecutive_decode_failures_back_off_then_stop_after_three_retries(self):
         rec = FakeRecognizer()
@@ -78,11 +78,11 @@ class RecoveryTests(unittest.TestCase):
         for failure in range(1, 5):
             self.worker.feed(0, SPEECH)
             self.barrier()
-            self.assertEqual(self.app.recognition_failures, failure)
+            self.assertEqual(self.app.listening.recognition_failures, failure)
             if failure <= 3:
-                self.timers.fire(self.app.recognition_retry_id)
+                self.timers.fire(self.app.listening.recognition_retry_id)
                 self.barrier()  # replaying empty captions must not count as recognition success
-                self.assertEqual(self.app.recognition_failures, failure)
+                self.assertEqual(self.app.listening.recognition_failures, failure)
         self.assertEqual(self.timers.delays, [2, 4, 8])
         self.assertEqual(self.timers.pending, {})
         self.assertIn('press Restart', self.app.window.statuses[-1])
@@ -95,9 +95,9 @@ class RecoveryTests(unittest.TestCase):
         rec.fail = True
         self.worker.feed(0, SPEECH)
         self.barrier()
-        self.timers.fire(self.app.recognition_retry_id)
+        self.timers.fire(self.app.listening.recognition_retry_id)
         self.barrier()
-        self.assertEqual(self.app.recognition_failures, 1)
+        self.assertEqual(self.app.listening.recognition_failures, 1)
         self.assertIn('Already recognised', self.app.window.text)
 
     def test_buffering_before_a_permanent_decode_failure_does_not_reset_backoff(self):
@@ -120,12 +120,12 @@ class RecoveryTests(unittest.TestCase):
             for _ in range(2):
                 self.worker.feed(0, SPEECH)
                 self.barrier()
-                self.assertEqual(self.app.recognition_failures, failure - 1)
+                self.assertEqual(self.app.listening.recognition_failures, failure - 1)
             self.worker.feed(0, SPEECH)
             self.barrier()
-            self.assertEqual(self.app.recognition_failures, failure)
+            self.assertEqual(self.app.listening.recognition_failures, failure)
             if failure <= 3:
-                self.timers.fire(self.app.recognition_retry_id)
+                self.timers.fire(self.app.listening.recognition_retry_id)
                 self.barrier()
         self.assertEqual(self.timers.delays, [2, 4, 8])
         self.assertEqual(self.timers.pending, {})
@@ -136,14 +136,14 @@ class RecoveryTests(unittest.TestCase):
         self.start_worker(rec)
         self.worker.feed(0, SPEECH)
         self.barrier()
-        self.assertEqual(self.app.recognition_failures, 1)
+        self.assertEqual(self.app.listening.recognition_failures, 1)
         rec.fail = False
-        self.timers.fire(self.app.recognition_retry_id)
+        self.timers.fire(self.app.listening.recognition_retry_id)
         self.barrier()
-        self.assertEqual(self.app.recognition_failures, 1)
+        self.assertEqual(self.app.listening.recognition_failures, 1)
         self.worker.feed(0, SILENCE)
         self.barrier()
-        self.assertEqual(self.app.recognition_failures, 0)
+        self.assertEqual(self.app.listening.recognition_failures, 0)
         self.assertEqual(self.timers.pending, {})
 
     def test_manual_source_change_invalidates_an_already_dispatched_timer(self):
@@ -152,10 +152,10 @@ class RecoveryTests(unittest.TestCase):
         self.start_worker(rec)
         self.worker.feed(0, SPEECH)
         self.barrier()
-        old_timer = self.app.recognition_retry_id
+        old_timer = self.app.listening.recognition_retry_id
         old_callback = self.timers.pending[old_timer]
         rec.fail = False
-        self.app.on_source(NS(set_state=lambda value: None), NS(get_string=lambda: 'mic'))
+        self.app.listening.on_source(NS(set_state=lambda value: None), NS(get_string=lambda: 'mic'))
         self.barrier()
         recovered_stream = self.worker.captioner.stream
         self.assertNotIn(old_timer, self.timers.pending)
@@ -164,26 +164,26 @@ class RecoveryTests(unittest.TestCase):
         self.assertIs(self.worker.captioner.stream, recovered_stream)
 
     def test_clear_and_shutdown_cancel_pending_recognition_timers(self):
-        self.app.worker = NS(clear=lambda gen: None, set_source=lambda gen: None,
+        self.app.listening.worker = NS(clear=lambda gen: None, set_source=lambda gen: None,
                              stop=lambda: None, restart=lambda **kwargs: None)
-        self.app.on_worker('error', (self.app.source_gen, 0, 'failure'))
-        old = self.app.recognition_retry_id
-        self.app.clear_transcript()
+        self.app.listening.on_worker('error', (self.app.listening.source_gen, 0, 'failure'))
+        old = self.app.listening.recognition_retry_id
+        self.app.listening.clear_transcript()
         self.assertNotIn(old, self.timers.pending)
-        self.app.on_worker('error', (self.app.source_gen, 0, 'another failure'))
-        old = self.app.recognition_retry_id
+        self.app.listening.on_worker('error', (self.app.listening.source_gen, 0, 'another failure'))
+        old = self.app.listening.recognition_retry_id
         self.app.on_shutdown(None)
         self.assertNotIn(old, self.timers.pending)
 
     def test_stale_success_from_an_old_source_cannot_reset_backoff(self):
-        self.app.source_gen, self.app.recognition_failures = 3, 2
-        self.app.on_worker('recognition-ok', 2)
-        self.assertEqual(self.app.recognition_failures, 2)
+        self.app.listening.source_gen, self.app.listening.recognition_failures = 3, 2
+        self.app.listening.on_worker('recognition-ok', 2)
+        self.assertEqual(self.app.listening.recognition_failures, 2)
 
     def test_queued_error_is_ignored_after_source_recovery_has_already_succeeded(self):
-        self.app.worker = NS(broken=False)
-        self.app.on_worker('error', (self.app.source_gen, 0, 'an error from before the source change'))
-        self.assertEqual(self.app.recognition_failures, 0)
+        self.app.listening.worker = NS(broken=False)
+        self.app.listening.on_worker('error', (self.app.listening.source_gen, 0, 'an error from before the source change'))
+        self.assertEqual(self.app.listening.recognition_failures, 0)
         self.assertEqual(self.timers.pending, {})
 
     def test_queued_automatic_retry_cannot_replace_a_healthy_buffered_stream(self):
@@ -301,7 +301,7 @@ class NotificationTests(unittest.TestCase):
 class SaveTests(unittest.TestCase):
     def setUp(self):
         self.app = app_with_fakes()
-        self.app.ready = True
+        self.app.listening.ready = True
         self.app.holds = self.app.quits = 0
         self.app.hold = lambda: setattr(self.app, 'holds', self.app.holds + 1)
         self.app.release = lambda: setattr(self.app, 'holds', self.app.holds - 1)
@@ -341,13 +341,13 @@ class SaveTests(unittest.TestCase):
     def test_quit_waits_for_queued_snapshot_and_delayed_write(self):
         file = self.delayed_file()
         callbacks = []
-        self.app.worker = NS(snapshot=lambda callback, on_error=None: callbacks.append(callback))
+        self.app.listening.worker = NS(snapshot=lambda callback, on_error=None: callbacks.append(callback))
         self.accept_destination(file)
         self.assertEqual(self.app.quitting.pending_saves, 1)
         self.assertEqual(self.app.holds, 1)
         self.app.quitting.request_quit()
         self.assertEqual(self.app.quits, 0)
-        self.app.on_worker('snapshot', (callbacks.pop(), 'requested transcript'))
+        self.app.listening.on_worker('snapshot', (callbacks.pop(), 'requested transcript'))
         # Saved transcripts start with the session's heading (fixed in the test fakes) since 1.1.9.
         self.assertEqual(file.contents, b'Thursday 23 October 2026, 14:05\nrequested transcript\n')
         self.assertEqual(self.app.quits, 0)
@@ -389,14 +389,14 @@ class SaveTests(unittest.TestCase):
     def test_capture_retries_continue_while_quit_waits_for_a_save(self):
         timers = Timers()
         file = self.delayed_file(fail=True)
-        self.app.worker = NS(set_source=lambda gen: None)
+        self.app.listening.worker = NS(set_source=lambda gen: None)
         self.app.write_transcript(file, 'words')
         self.app.quitting.request_quit()
         with patch.dict(APP, GLib=timers):
-            self.app.capture_ended(self.app.source_gen, 'device went away')
-            self.assertIsNotNone(self.app.retry_id)
-            timers.fire(self.app.retry_id)
-        self.assertEqual(len(self.app.capture.starts), 1)
+            self.app.listening.capture_ended(self.app.listening.source_gen, 'device went away')
+            self.assertIsNotNone(self.app.listening.retry_id)
+            timers.fire(self.app.listening.retry_id)
+        self.assertEqual(len(self.app.listening.capture.starts), 1)
         file.callback(file, None)
         self.assertFalse(self.app.quitting.quit_requested)
 
@@ -408,7 +408,7 @@ class SaveTests(unittest.TestCase):
     def test_snapshot_request_failure_releases_its_hold(self):
         def fail(callback, on_error=None):
             raise RuntimeError('snapshot failed')
-        self.app.worker = NS(snapshot=fail)
+        self.app.listening.worker = NS(snapshot=fail)
         self.accept_destination(self.delayed_file())
         self.assertEqual(self.app.quitting.pending_saves, 0)
         self.assertIn('snapshot failed', self.app.window.statuses[-1])

@@ -168,16 +168,16 @@ class AppTests(unittest.TestCase):
         self.window = caption_window.CaptionWindow(self.app)
         self.app.window = self.window
         self.calls = []
-        self.app.capture = NS(start=lambda device, gen: self.calls.append(('start', gen)),
+        self.app.listening.capture = NS(start=lambda device, gen: self.calls.append(('start', gen)),
                               stop=lambda: self.calls.append(('stop',)))
-        self.app.worker = NS(set_source=lambda gen: self.calls.append(('source', gen)),
+        self.app.listening.worker = NS(set_source=lambda gen: self.calls.append(('source', gen)),
                              set_words=lambda fixes: self.calls.append(('words', fixes.fixes)))
-        self.app.ready = True
+        self.app.listening.ready = True
 
     def tearDown(self):
-        self.app.set_paused(False)
-        self.app.worker = None
-        self.app.ready = False
+        self.app.listening.set_paused(False)
+        self.app.listening.worker = None
+        self.app.listening.ready = False
         if self.app.hidden:
             self.app.toggle_captions()
         self.window.disconnect_monitors()
@@ -191,15 +191,15 @@ class AppTests(unittest.TestCase):
             self.app.options.close()
 
     def test_pause_stops_capture_and_resume_listens_again(self):
-        gen = self.app.source_gen
+        gen = self.app.listening.source_gen
         self.app.activate_action('pause', None)
-        self.assertTrue(self.app.paused)
+        self.assertTrue(self.app.listening.paused)
         self.assertEqual(self.calls, [('source', gen + 1), ('stop',)])
         self.assertIn('paused', self.window.status)
-        self.app.start_capture()  # a source change or Clear while paused does not listen
+        self.app.listening.start_capture()  # a source change or Clear while paused does not listen
         self.assertEqual(len(self.calls), 2)
         self.app.activate_action('pause', None)
-        self.assertFalse(self.app.paused)
+        self.assertFalse(self.app.listening.paused)
         self.assertEqual(self.calls[2:], [('source', gen + 2), ('start', gen + 2)])
         self.assertNotIn('paused', self.window.status)
 

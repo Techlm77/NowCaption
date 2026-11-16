@@ -9,9 +9,9 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
-from . import __version__, audio, engine, words  # noqa: E402
+from . import __version__, engine, words  # noqa: E402
 from .caption_window import CaptionWindow  # noqa: E402
-from .control import Quitting, quit_on_signals  # noqa: E402
+from .control import Listening, Quitting, quit_on_signals  # noqa: E402
 from .options_window import OptionsWindow  # noqa: E402
 from .desktop import (FULLSCREEN_PATH, FULLSCREEN_XML, Autostart, FullscreenWatch, GlobalShortcuts,  # noqa: E402
                       PanelFloat, in_flatpak, portal_for)
@@ -37,13 +37,8 @@ class NowCaption(Adw.Application):
         for name, description in self.LAUNCH_OPTIONS:
             self.add_main_option(name, 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE, description, None)
         self.settings = Settings()
-        self.window = self.worker = None
-        self.ready = self.closing = False
-        self.source_gen = self.ui_gen = 0
-        self.capture_failures = self.recognition_failures = 0
-        self.retry_id = None
-        self.recognition_retry_id = None
-        self.recognition_retry_token = 0
+        self.window = None
+        self.closing = False
         self.started = time.time()
         self.history_path = engine.history_file(self.started)  # created once something is said
         self.transcript = None  # the transcript window, while it is open
@@ -51,15 +46,11 @@ class NowCaption(Adw.Application):
         self.save_queues = {}  # destination URI -> accepted writes, in snapshot order
         self.fullscreen_watch = FullscreenWatch(APP_ID)
         self.panel_float = PanelFloat(self.settings)
-        self.paused = False  # Pause captions: nothing is captured until it is turned off
         self.hidden = False  # the captions were hidden (toggle_captions); they keep captioning
         self.word_list = words.load_words()  # [(heard, write)], edited under More options
         self.shortcuts = self.autostart = None  # see portals(), once on the session bus
-        self.capture = audio.Capture(
-            on_audio=lambda gen, pcm: self.worker.feed(gen, pcm),
-            on_started=lambda gen: GLib.idle_add(self.capture_started, gen),
-            on_ended=lambda gen, reason: GLib.idle_add(self.capture_ended, gen, reason))
         self.quitting = Quitting(self)
+        self.listening = Listening(self)
         self.connect('command-line', self.on_command_line)
         self.connect('activate', self.on_activate)
         self.connect('shutdown', self.on_shutdown)
@@ -107,7 +98,7 @@ class NowCaption(Adw.Application):
         self.accels = {}  # registered once we know the window can take keyboard focus
         source = Gio.SimpleAction.new_stateful('source', GLib.VariantType.new('s'),
                                                GLib.Variant('s', self.settings.get('source')))
-        source.connect('activate', self.on_source)
+        source.connect('activate', self.listening.on_source)
         self.add_action(source)
         colour = Gio.SimpleAction.new_stateful('colour', GLib.VariantType.new('s'),
                                                GLib.Variant('s', self.settings.get('colour')))
@@ -133,40 +124,21 @@ class NowCaption(Adw.Application):
         history.connect('activate', self.on_history)
         self.add_action(history)
         pause = Gio.SimpleAction.new_stateful('pause', None, GLib.Variant('b', False))
-        pause.connect('activate', lambda action, value: self.set_paused(not self.paused))
+        pause.connect('activate', lambda action, value: self.listening.set_paused(not self.listening.paused))
         self.add_action(pause)
         act('toggle', self.toggle_captions)
         act('transcript', self.open_transcript, ['<Control>t'])
         act('options', self.open_options, ['<Control>comma'])
-        act('restart-listening', self.restart_listening)
+        act('restart-listening', self.listening.restart_listening)
         act('reset', lambda: (self.window.reset_position(), self.window.reset_size()))
         act('reset-position', lambda: self.window.reset_position())
         act('reset-size', lambda: self.window.reset_size())
         act('next-screen', lambda: self.window.next_monitor())
         act('copy', self.copy_transcript)
         act('save', self.save_transcript, ['<Control>s'])
-        act('clear', self.clear_transcript)
+        act('clear', self.listening.clear_transcript)
         act('about', self.about)
         act('quit', self.quitting.request_quit, ['<Control>q'])
-
-    def on_source(self, action, value):
-        if self.closing or self.quitting.quit_requested:
-            return
-        self.cancel_recognition_retry(reset=True)
-        action.set_state(value)
-        self.settings.set('source', value.get_string())
-        if self.ready:
-            self.start_capture()
-        elif self.worker and not self.closing:
-            # replaces the load error until the model loads or fails again
-            self.window.show_failure('model', 'Retrying the speech model…')
-            self.worker.restart()
-
-    def restart_listening(self):
-        """Choose the same sound source again, which starts capture again, or loads the speech
-        model again if it failed: More options' Restart, after a problem or a change of devices."""
-        source = self.lookup_action('source')
-        source.activate(source.get_state())
 
     def on_position(self, action, value):
         if value.get_string() not in POSITIONS:
@@ -239,8 +211,8 @@ class NowCaption(Adw.Application):
     def set_words(self, fixes):
         """Use and save a new word list ([(heard, write)]). Returns an error message, or ''."""
         self.word_list = [(heard, write) for heard, write in fixes if write.strip()]
-        if self.worker:
-            self.worker.set_words(words.WordFixes(self.word_list))
+        if self.listening.worker:
+            self.listening.worker.set_words(words.WordFixes(self.word_list))
         try:
             words.save_words(self.word_list)
         except OSError as e:
@@ -248,31 +220,7 @@ class NowCaption(Adw.Application):
             return f'Could not save the word list: {e.strerror or e}'
         return ''
 
-    # --- pause and show/hide ----------------------------------------------------------------
-
-    def set_paused(self, paused):
-        """Pause captions: capture stops, so nothing is heard or kept, and the words already
-        heard become a finished line. Resuming listens again from the chosen source."""
-        if paused == self.paused or self.closing or self.quitting.quit_requested:
-            return
-        self.paused = paused
-        self.lookup_action('pause').set_state(GLib.Variant('b', paused))
-        if paused:
-            self.cancel_recognition_retry(reset=True)
-            if self.retry_id:
-                GLib.source_remove(self.retry_id)
-                self.retry_id = None
-            self.source_gen += 1  # audio still on its way from the old capture is dropped
-            if self.worker:
-                self.worker.set_source(self.source_gen)  # the words being spoken become a line
-            self.capture.stop()
-            if self.window:
-                self.window.clear_failure('capture')
-                self.window.show_failure('paused', 'Captions paused. Nothing is being listened to.')
-        else:
-            if self.window:
-                self.window.clear_failure('paused')
-            self.start_capture()
+    # --- show/hide --------------------------------------------------------------------------
 
     def toggle_captions(self):
         """Hide the captions, or show them again (they keep captioning while hidden, so the
@@ -305,7 +253,7 @@ class NowCaption(Adw.Application):
         if shortcut == 'show-hide':
             self.toggle_captions()
         elif shortcut == 'pause':
-            self.set_paused(not self.paused)
+            self.listening.set_paused(not self.listening.paused)
 
     def on_shortcuts_changed(self):
         if self.options:
@@ -337,8 +285,8 @@ class NowCaption(Adw.Application):
         keep = not action.get_state().get_boolean()
         action.set_state(GLib.Variant('b', keep))
         self.settings.set('history', keep)
-        if self.worker:
-            self.worker.set_history(self.history_path if keep else None)
+        if self.listening.worker:
+            self.listening.worker.set_history(self.history_path if keep else None)
         if self.transcript:
             self.transcript.show_title()
 
@@ -384,9 +332,9 @@ class NowCaption(Adw.Application):
                 path.unlink()
             except OSError as e:
                 LOG.warning('Could not delete the transcript %s: %s', path, e)
-        self.clear_transcript()
-        if self.worker and self.settings.get('history'):
-            self.worker.set_history(self.history_path)  # what is said next starts a new file
+        self.listening.clear_transcript()
+        if self.listening.worker and self.settings.get('history'):
+            self.listening.worker.set_history(self.history_path)  # what is said next starts a new file
         if self.transcript:
             self.transcript.reload()
 
@@ -459,14 +407,8 @@ class NowCaption(Adw.Application):
                 self.set_accels_for_action(action, keys)
         self.window.present()
         self.window.show_status('Loading speech model…')
-        # models load on the worker thread, so the window stays responsive meanwhile
-        self.worker = engine.RecognitionWorker(lambda kind, value: GLib.idle_add(self.on_worker, kind, value))
         self.prune_history()
-        if self.settings.get('history'):
-            self.worker.set_history(self.history_path)
-        if self.word_list:
-            self.worker.set_words(words.WordFixes(self.word_list))
-        self.worker.start()
+        self.listening.start(self.history_path if self.settings.get('history') else None, self.word_list)
         self.portals()
         GLib.timeout_add_seconds(60, self.release_memory)
         shot = os.environ.get('NOWCAPTION_SCREENSHOT')  # "file.png" or "file.png:seconds"
@@ -489,136 +431,17 @@ class NowCaption(Adw.Application):
         self.panel_float.stop()
         if self.shortcuts:
             self.shortcuts.stop()
-        self.cancel_recognition_retry()
-        if self.retry_id:
-            GLib.source_remove(self.retry_id)
-            self.retry_id = None
-        self.capture.stop()
-        if self.worker:
-            self.worker.stop()
+        self.listening.stop()
+
+    @property
+    def worker(self):
+        """The recognition worker, once started (the transcript window asks it for snapshots)."""
+        return self.listening.worker
 
     def threads_finished(self, timeout):
-        """After the main loop, wait for the recognition worker and the capture to leave native
-        code (never from the window's shutdown: a stalled model must not freeze it). Python 3.12
-        and 3.13 end a daemon thread that is still in native code when the interpreter exits
-        with pthread_exit, and sherpa-onnx's C++ code then aborts the process."""
-        if self.worker and self.worker.is_alive():
-            self.worker.join(timeout)
-        return self.capture.wait_stopped(timeout) and not (self.worker and self.worker.is_alive())
-
-    def cancel_recognition_retry(self, reset=False):
-        self.recognition_retry_token += 1
-        if self.recognition_retry_id:
-            GLib.source_remove(self.recognition_retry_id)
-            self.recognition_retry_id = None
-        if reset:
-            self.recognition_failures = 0
-
-    def retry_recognition(self, token, source_gen):
-        if token != self.recognition_retry_token:
-            return False
-        self.recognition_retry_id = None
-        self.recognition_retry_token += 1
-        if self.worker and not self.closing and source_gen == self.source_gen:
-            self.worker.restart(recover_only=True, source_gen=source_gen)
-        return False
-
-    # --- recognition worker events ----------------------------------------------------------
-
-    def on_worker(self, kind, value):
-        if self.closing:
-            return False
-        if kind == 'ready':
-            self.ready = True
-            self.window.clear_failure('model')
-            self.start_capture()
-        elif kind == 'caption':
-            gen, text = value
-            if gen == self.ui_gen:  # ignore captions from before the last Clear
-                self.window.show_text(text)
-                if self.transcript:
-                    self.transcript.changed()
-        elif kind == 'recognition-ok':
-            if value == self.source_gen:
-                self.cancel_recognition_retry(reset=True)
-                self.window.clear_failure('recognition')
-        elif kind == 'snapshot':
-            fn, text = value
-            fn(text)
-        elif kind == 'snapshot-error':
-            fn, message = value
-            if fn:
-                fn(message)
-            else:
-                self.window.show_status(f'Could not prepare the transcript: {message}', seconds=8)
-        elif kind == 'warning':
-            self.window.show_status(value, seconds=6)
-        elif kind == 'overload':
-            self.window.show_status(f'Falling behind: skipped {value:.1f} s of audio', seconds=4)
-        elif kind == 'load-error':
-            self.ready = False
-            self.window.show_failure('model', f'{value} To try again, open More options and press Restart.')
-        elif kind == 'error':
-            source_gen, stream_gen, message = value
-            if (source_gen != self.source_gen or
-                    stream_gen != getattr(self.worker, 'stream_gen', stream_gen) or
-                    not getattr(self.worker, 'broken', True)):
-                return False  # an obsolete source/stream cannot spend the current retry budget
-            self.cancel_recognition_retry()
-            self.recognition_failures += 1
-            if self.recognition_failures <= 3:
-                delay = 2 ** self.recognition_failures
-                self.window.show_failure('recognition', f'{message}. Restarting in {delay} s…')
-                self.recognition_retry_id = GLib.timeout_add_seconds(
-                    delay, self.retry_recognition, self.recognition_retry_token, self.source_gen)
-            else:
-                self.window.show_failure('recognition',
-                                         f'{message}. To try again, open More options and press Restart.')
-        return False
-
-    # --- capture ----------------------------------------------------------------------------
-
-    def start_capture(self):
-        if not self.ready or self.closing or self.paused:
-            return
-        self.cancel_recognition_retry()
-        if self.retry_id:
-            GLib.source_remove(self.retry_id)
-            self.retry_id = None
-        mic = self.settings.get('source') == 'mic'
-        self.source_gen += 1
-        self.worker.set_source(self.source_gen)
-        # NOWCAPTION_SOURCE names any PulseAudio/PipeWire source, overriding the menu choice
-        device = os.environ.get('NOWCAPTION_SOURCE') or (audio.MICROPHONE if mic else audio.DESKTOP)
-        try:
-            self.capture.start(device, self.source_gen)
-        except Exception as e:
-            return self.capture_ended(self.source_gen, str(e))
-        if not self.window.text:
-            self.window.show_status('Listening to the microphone…' if mic else 'Listening to desktop audio…')
-
-    def capture_started(self, gen):
-        if gen == self.source_gen and self.capture_failures:
-            self.capture_failures = 0
-            self.window.clear_failure('capture')
-            self.window.show_status('Audio is back.', seconds=3)
-        return False
-
-    def capture_ended(self, gen, reason):
-        """Capture stopped on its own (device gone, sound server restarted…): retry with backoff."""
-        if gen != self.source_gen or self.closing:
-            return False
-        delay = min(30, 2 ** self.capture_failures)
-        self.capture_failures += 1
-        LOG.warning('Audio capture stopped (%s); retrying in %d s', reason, delay)
-        self.window.show_failure('capture', f'Audio capture stopped ({reason}). Retrying in {delay} s…')
-        self.retry_id = GLib.timeout_add_seconds(delay, self.retry_capture)
-        return False
-
-    def retry_capture(self):
-        self.retry_id = None
-        self.start_capture()
-        return False
+        """After the main loop: whether the worker and the capture left native code in time (see
+        Listening.threads_finished)."""
+        return self.listening.threads_finished(timeout)
 
     # --- transcript -------------------------------------------------------------------------
 
@@ -627,24 +450,14 @@ class NowCaption(Adw.Application):
             text = self.full_transcript(text)
             self.window.get_clipboard().set(text)
             self.window.show_status('Transcript copied.' if text else 'Nothing to copy yet.', seconds=3)
-        if self.worker:
+        if self.listening.worker:
             try:
-                self.worker.snapshot(copy)
+                self.listening.worker.snapshot(copy)
             except Exception as e:
                 self.window.show_status(f'Could not copy the transcript: {e}', seconds=8)
 
-    def clear_transcript(self):
-        if self.worker and not self.closing and not self.quitting.quit_requested:
-            self.cancel_recognition_retry(reset=True)
-            self.ui_gen += 1  # captions already on their way from before the clear are dropped
-            self.worker.clear(self.ui_gen)
-            self.window.show_text('')
-            # Discard pre-Clear audio buffered in GStreamer as well as in recognition.
-            if self.ready:
-                self.start_capture()
-
     def save_transcript(self):
-        if not self.worker or self.closing or self.quitting.quit_requested:
+        if not self.listening.worker or self.closing or self.quitting.quit_requested:
             return
         dialog = Gtk.FileDialog(title='Save transcript', initial_name=GLib.DateTime.new_now_local().format(
             'Captions %Y-%m-%d %H.%M.txt'))
@@ -665,8 +478,9 @@ class NowCaption(Adw.Application):
                 self.quitting.finish_save(False)
 
             try:
-                self.worker.snapshot(lambda text: self.write_transcript(f, self.full_transcript(text), tracked=True),
-                                     on_error=failed_snapshot)
+                self.listening.worker.snapshot(
+                    lambda text: self.write_transcript(f, self.full_transcript(text), tracked=True),
+                    on_error=failed_snapshot)
             except Exception as e:
                 failed_snapshot(e)
 

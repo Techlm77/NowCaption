@@ -375,12 +375,12 @@ class TranscriptWindowTests(unittest.TestCase):
     def test_delete_history_removes_every_kept_session(self):
         from types import SimpleNamespace as NS
         cleared, sent = [], []
-        self.app.worker = NS(clear=cleared.append, set_history=sent.append, snapshot=lambda fn, on_error=None: None)
+        self.app.listening.worker = NS(clear=cleared.append, set_history=sent.append, snapshot=lambda fn, on_error=None: None)
         self.app.window = NS(show_text=lambda text: None)
         self.app.transcript = self.window
-        self.app.ready = self.app.closing = self.app.quitting.quit_requested = False
-        for name in ('worker', 'window', 'transcript'):
-            self.addCleanup(setattr, self.app, name, None)
+        self.app.listening.ready = self.app.closing = self.app.quitting.quit_requested = False
+        for owner, name in ((self.app.listening, 'worker'), (self.app, 'window'), (self.app, 'transcript')):
+            self.addCleanup(setattr, owner, name, None)
         self.app.delete_history()
         self.assertEqual(nc.engine.history_files(), [])
         self.assertEqual(len(cleared), 1)

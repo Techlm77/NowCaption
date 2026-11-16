@@ -94,26 +94,26 @@ class StatusTests(unittest.TestCase):
         self.addCleanup(holder.tearDown)
         self.window, self.timers = holder.window, holder.timers
         self.app = app_with_fakes()
-        self.app.ready = True
+        self.app.listening.ready = True
         self.app.window = self.window
-        self.app.worker = NS(broken=True, set_source=lambda gen: None)
+        self.app.listening.worker = NS(broken=True, set_source=lambda gen: None)
         self.window.show_text('Already displayed speech')
 
     def test_buffered_captions_and_retry_start_do_not_clear_capture_failure(self):
-        self.app.capture_ended(0, 'device disappeared')
+        self.app.listening.capture_ended(0, 'device disappeared')
         message = self.window.status
-        self.app.on_worker('caption', (0, 'Already displayed speech plus buffered words'))
+        self.app.listening.on_worker('caption', (0, 'Already displayed speech plus buffered words'))
         self.assertEqual(self.window.status, message)
-        self.app.start_capture()
+        self.app.listening.start_capture()
         self.assertEqual(self.window.status, message)
-        self.app.capture_started(self.app.source_gen - 1)
+        self.app.listening.capture_started(self.app.listening.source_gen - 1)
         self.assertIn('capture', self.window.failures)
-        self.app.capture_started(self.app.source_gen)
+        self.app.listening.capture_started(self.app.listening.source_gen)
         self.assertNotIn('capture', self.window.failures)
         self.assertEqual(self.window.status, 'Audio is back.')
 
     def test_a_temporary_notification_restores_an_unresolved_failure(self):
-        self.app.capture_ended(0, 'device disappeared')
+        self.app.listening.capture_ended(0, 'device disappeared')
         message = self.window.status
         self.window.show_status('Transcript copied.', seconds=3)
         self.window.show_text('More buffered speech')
@@ -122,34 +122,34 @@ class StatusTests(unittest.TestCase):
         self.assertTrue(self.window.status_sticky)
 
     def test_recognition_success_cannot_clear_an_unrelated_capture_failure(self):
-        self.app.capture_ended(0, 'device disappeared')
-        self.app.on_worker('error', (self.app.source_gen, 0, 'inference failed'))
-        self.app.on_worker('caption', (0, 'Replayed old words'))
+        self.app.listening.capture_ended(0, 'device disappeared')
+        self.app.listening.on_worker('error', (self.app.listening.source_gen, 0, 'inference failed'))
+        self.app.listening.on_worker('caption', (0, 'Replayed old words'))
         self.assertIn('inference failed', self.window.status)
-        self.app.on_worker('recognition-ok', 0)
+        self.app.listening.on_worker('recognition-ok', 0)
         self.assertNotIn('recognition', self.window.failures)
         self.assertIn('device disappeared', self.window.status)
         self.assertIn('capture', self.window.failures)
 
     def test_retrying_the_model_replaces_its_load_error_until_it_loads(self):
         restarts = []
-        self.app.ready = False
-        self.app.worker = NS(restart=lambda: restarts.append(True), set_source=lambda gen: None)
-        self.app.on_worker('load-error', 'Could not load the speech model: missing file.')
-        self.app.on_source(NS(set_state=lambda value: None), NS(get_string=lambda: 'mic'))
+        self.app.listening.ready = False
+        self.app.listening.worker = NS(restart=lambda: restarts.append(True), set_source=lambda gen: None)
+        self.app.listening.on_worker('load-error', 'Could not load the speech model: missing file.')
+        self.app.listening.on_source(NS(set_state=lambda value: None), NS(get_string=lambda: 'mic'))
         self.assertEqual(restarts, [True])
         self.assertEqual(self.window.status, 'Retrying the speech model…')
         self.window.show_status('Transcript copied.', seconds=3)
         self.timers.fire(self.window.status_timer)
         self.assertEqual(self.window.status, 'Retrying the speech model…')
-        self.app.on_worker('ready', None)
+        self.app.listening.on_worker('ready', None)
         self.assertNotIn('model', self.window.failures)
         self.assertEqual(self.window.status, '')
 
     def test_stale_recognition_success_does_not_clear_the_current_failure(self):
-        self.app.source_gen = 2
-        self.app.on_worker('error', (self.app.source_gen, 0, 'current inference failed'))
-        self.app.on_worker('recognition-ok', 1)
+        self.app.listening.source_gen = 2
+        self.app.listening.on_worker('error', (self.app.listening.source_gen, 0, 'current inference failed'))
+        self.app.listening.on_worker('recognition-ok', 1)
         self.assertIn('recognition', self.window.failures)
         self.assertIn('current inference failed', self.window.status)
 
@@ -165,13 +165,13 @@ class SaveTests(unittest.TestCase):
         worker.start()
         self.addCleanup(lambda: (worker.stop(), worker.join(3)))
         events.wait('ready')
-        app.worker = worker
+        app.listening.worker = worker
         file = holder.delayed_file()
         with patch.object(worker.captioner, 'transcript', side_effect=RuntimeError('export failed')):
             holder.accept_destination(file)
             app.quitting.request_quit()
             self.assertEqual(app.quitting.pending_saves, 1)
-            app.on_worker('snapshot-error', events.wait('snapshot-error'))
+            app.listening.on_worker('snapshot-error', events.wait('snapshot-error'))
         self.assertEqual(app.quitting.pending_saves, 0)
         self.assertEqual(app.holds, 0)
         self.assertFalse(app.quitting.quit_requested)

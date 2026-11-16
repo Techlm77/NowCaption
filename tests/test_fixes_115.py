@@ -169,12 +169,12 @@ class RecoveryGenerationTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.app = app_with_fakes()
-        self.app.ready = True
+        self.app.listening.ready = True
 
     def start_worker(self, rec):
         events = Events()
         worker = engine.RecognitionWorker(events, load=lambda: (rec, None))
-        self.app.worker = worker
+        self.app.listening.worker = worker
         worker.start()
         self.addCleanup(lambda: (worker.stop(), worker.join(3)))
         events.wait('ready')
@@ -186,13 +186,13 @@ class RecoveryGenerationTests(unittest.TestCase):
         worker, events = self.start_worker(rec)
         worker.feed(0, SPEECH)
         old = events.wait('error')
-        self.app.on_source(NS(set_state=lambda value: None), NS(get_string=lambda: 'mic'))
-        worker.feed(self.app.source_gen, SPEECH)
+        self.app.listening.on_source(NS(set_state=lambda value: None), NS(get_string=lambda: 'mic'))
+        worker.feed(self.app.listening.source_gen, SPEECH)
         current = events.wait('error')
-        self.app.on_worker('error', old)
-        self.assertEqual(self.app.recognition_failures, 0)
-        self.app.on_worker('error', current)
-        self.assertEqual(self.app.recognition_failures, 1)
+        self.app.listening.on_worker('error', old)
+        self.assertEqual(self.app.listening.recognition_failures, 0)
+        self.app.listening.on_worker('error', current)
+        self.assertEqual(self.app.listening.recognition_failures, 1)
         self.assertEqual(self.timers.delays, [2])
 
     def test_switching_sources_during_a_decode_does_not_relabel_its_error(self):
@@ -216,15 +216,15 @@ class RecoveryGenerationTests(unittest.TestCase):
         self.addCleanup(release.set)
         worker.feed(0, SPEECH)
         self.assertTrue(entered.wait(2))
-        self.app.on_source(NS(set_state=lambda value: None), NS(get_string=lambda: 'mic'))
-        worker.feed(self.app.source_gen, SPEECH)
+        self.app.listening.on_source(NS(set_state=lambda value: None), NS(get_string=lambda: 'mic'))
+        worker.feed(self.app.listening.source_gen, SPEECH)
         release.set()
         old, current = events.wait('error'), events.wait('error')
         self.assertEqual(old[0], 0)
-        self.assertEqual(current[0], self.app.source_gen)
-        self.app.on_worker('error', old)
-        self.app.on_worker('error', current)
-        self.assertEqual(self.app.recognition_failures, 1)
+        self.assertEqual(current[0], self.app.listening.source_gen)
+        self.app.listening.on_worker('error', old)
+        self.app.listening.on_worker('error', current)
+        self.assertEqual(self.app.listening.recognition_failures, 1)
 
     def test_old_stream_error_is_ignored_after_a_retry_on_the_same_source(self):
         rec = FakeRecognizer()
@@ -236,19 +236,19 @@ class RecoveryGenerationTests(unittest.TestCase):
         worker.feed(0, SPEECH)
         current = events.wait('error')
         self.assertNotEqual(old[1], current[1])
-        self.app.on_worker('error', old)
-        self.app.on_worker('error', current)
+        self.app.listening.on_worker('error', old)
+        self.app.listening.on_worker('error', current)
         self.assertEqual(self.timers.delays, [2])
 
     def test_obsolete_error_cannot_cancel_a_current_retry_timer(self):
-        self.app.source_gen = 2
-        self.app.worker = NS(broken=True, stream_gen=4)
-        self.app.on_worker('error', (2, 4, 'current failure'))
-        timer = self.app.recognition_retry_id
-        self.app.on_worker('error', (1, 3, 'old failure'))
-        self.assertEqual(self.app.recognition_retry_id, timer)
+        self.app.listening.source_gen = 2
+        self.app.listening.worker = NS(broken=True, stream_gen=4)
+        self.app.listening.on_worker('error', (2, 4, 'current failure'))
+        timer = self.app.listening.recognition_retry_id
+        self.app.listening.on_worker('error', (1, 3, 'old failure'))
+        self.assertEqual(self.app.listening.recognition_retry_id, timer)
         self.assertIn(timer, self.timers.pending)
-        self.assertEqual(self.app.recognition_failures, 1)
+        self.assertEqual(self.app.listening.recognition_failures, 1)
 
 
 class OrderedSaveTests(unittest.TestCase):
@@ -329,13 +329,13 @@ class OrderedSaveTests(unittest.TestCase):
 
     def test_accepted_snapshot_requests_keep_their_order_and_holds(self):
         callbacks = []
-        self.app.worker = NS(snapshot=lambda callback, on_error=None: callbacks.append(callback))
+        self.app.listening.worker = NS(snapshot=lambda callback, on_error=None: callbacks.append(callback))
         uri = 'file:///captions.txt'
         self.holder.accept_destination(self.file(uri))
         self.holder.accept_destination(self.file(uri))
         self.assertEqual(self.app.quitting.pending_saves, 2)
         for callback, text in zip(callbacks, ('earlier', 'newer')):
-            self.app.on_worker('snapshot', (callback, text))
+            self.app.listening.on_worker('snapshot', (callback, text))
         self.assertEqual(len(self.operations), 1)
         self.complete(0)
         self.complete(1)
