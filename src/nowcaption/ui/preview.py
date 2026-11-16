@@ -17,7 +17,8 @@ class Preview(Gtk.Box):
     adding words like speech, so each way for new words to arrive can be seen before choosing it."""
 
     WIDTH, ROWS, MAX_SIZE, EVERY_MS = 420, 2, 26, 380  # text width (px), rows, largest text (px), a word every
-    SAMPLE = ('So we took the long road back past the old sawmill, and it was getting dark. The radio '
+    # written as the sentence it is, to read as speech; split into words once, as the module loads
+    SAMPLE = ('So we took the long road back past the old sawmill, and it was getting dark. The radio '  # noqa: SIM905
               'kept cutting out, then we saw headlights behind us, way too close.').split()
 
     def __init__(self, app):

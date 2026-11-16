@@ -1,6 +1,7 @@
 """Wrapping the caption passage into rows that keep their breaks, so words do not hop between
 rows as the passage grows or is punctuated anew. Pango layouts only: no widgets."""
 import bisect
+from itertools import pairwise
 
 import gi
 
@@ -78,7 +79,7 @@ class Rows:
         self.wrap.set_text(text, -1)
         firsts = [bisect.bisect_left(starts, line.start_index) for line in self.wrap.get_lines_readonly()]
         bounds = sorted(set(firsts + [b - a]))
-        return [(a + s, a + e) for s, e in zip(bounds, bounds[1:]) if s < e]
+        return [(a + s, a + e) for s, e in pairwise(bounds) if s < e]
 
     def fits(self, row):
         self.fit.set_text(' '.join(row), -1)

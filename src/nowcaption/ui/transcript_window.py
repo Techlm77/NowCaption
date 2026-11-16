@@ -283,9 +283,11 @@ class TranscriptWindow(Adw.Window):
 
     def confirm_delete(self):
         span = engine.history_span(self.app.history_days())
-        kept = f'everything NowCaption has kept from the last {span}' if span else 'every transcript NowCaption has kept'
+        kept = (f'everything NowCaption has kept from the last {span}' if span
+                else 'every transcript NowCaption has kept')
         dialog = Adw.AlertDialog(heading='Delete all transcripts?',
-                                 body=f'This deletes {kept}, including this session, and clears the captions on screen.')
+                                 body=f'This deletes {kept}, including this session, and clears the captions '
+                                      'on screen.')
         dialog.add_response('cancel', 'Cancel')
         dialog.add_response('delete', 'Delete')
         dialog.set_response_appearance('delete', Adw.ResponseAppearance.DESTRUCTIVE)

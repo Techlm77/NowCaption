@@ -80,7 +80,8 @@ class OptionsWindow(Adw.Window):
         history = Adw.PreferencesGroup(title='Keep transcripts for',
                                        description='Finished sessions stay in the transcript this long. A shorter '
                                                    'time deletes the older ones when you press Apply.')
-        self.choices(history, 'options.history-days', ((str(days), title, None) for days, title in self.HISTORY.items()))
+        self.choices(history, 'options.history-days',
+                     ((str(days), title, None) for days, title in self.HISTORY.items()))
         page.add(history)
         page.add(self.start_group())
         self.apply_button = Gtk.Button(label='Apply', css_classes=['suggested-action'],

@@ -167,7 +167,9 @@ class CaptionText(Gtk.Widget):
         that row is gone (the rows wrapped differently, or the passage changed)."""
         if not self.lines or not lines or self.status:
             return 0
-        line = lambda row: ' '.join(bare(w) for w in row.split())
+
+        def line(row):
+            return ' '.join(bare(w) for w in row.split())
         top = line(self.lines[max(0, len(self.lines) - self.rows)])
         rest = max(0, len(lines) - self.rows)  # the top row once the passage is at rest
         for moved in range(min(rest, self.rows) + 1):
