@@ -134,10 +134,10 @@ The rules are in `pyproject.toml` under `[tool.ruff]`, each ignored rule with it
 runs Ruff 0.17.4 (`pip install ruff==0.17.4`; other versions may differ slightly):
 
 ```sh
-ruff check src benchmark tools
+ruff check src benchmark tools tests
 ```
 
-`tests/` joins that list after its own cleanup. There is no formatter: don't
+There is no formatter: don't
 reformat code you are not otherwise changing. When a finding is a false positive, add
 `# noqa: <code>` with a comment saying why, rather than rewriting working code to please it.
 
