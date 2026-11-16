@@ -21,8 +21,9 @@ try:
     import cairo
     import numpy as np
     from nowcaption import app as nc
-    from nowcaption import (caption_text, caption_window, options_window, plasma, settings, style,
+    from nowcaption import (caption_text, caption_window, options_window, settings, style,
                             transcript_window)
+    from nowcaption.desktop import plasma
     from gi.repository import Gdk, Pango
     if not nc.Gtk.init_check() or Gdk.Display.get_default() is None:
         raise RuntimeError('No GTK display available; run with xvfb-run')

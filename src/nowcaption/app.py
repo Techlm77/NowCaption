@@ -10,10 +10,11 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
-from . import __version__, audio, engine, portal, words  # noqa: E402
+from . import __version__, audio, engine, words  # noqa: E402
 from .caption_window import CaptionWindow  # noqa: E402
 from .options_window import OptionsWindow  # noqa: E402
-from .plasma import FULLSCREEN_PATH, FULLSCREEN_XML, FullscreenWatch, PanelFloat  # noqa: E402
+from .desktop import (FULLSCREEN_PATH, FULLSCREEN_XML, Autostart, FullscreenWatch, GlobalShortcuts,  # noqa: E402
+                      PanelFloat, in_flatpak, portal_for)
 from .settings import APP_ID, Settings  # noqa: E402
 from .style import COLOURS, FADE_OUT_MS, POSITIONS, SIZES, STEPPERS, WORD_EFFECTS, WORD_SPEEDS  # noqa: E402
 from .transcript_window import TranscriptWindow, session_heading  # noqa: E402
@@ -294,11 +295,11 @@ class NowCaption(Adw.Application):
 
     def portals(self):
         """Shortcut keys and starting at login, through the desktop's portals."""
-        p = portal.portal_for(self)
+        p = portal_for(self)
         if not p:
             return
-        self.shortcuts = portal.GlobalShortcuts(p, self.on_shortcut, self.on_shortcuts_changed)
-        self.autostart = portal.Autostart(p, APP_ID)
+        self.shortcuts = GlobalShortcuts(p, self.on_shortcut, self.on_shortcuts_changed)
+        self.autostart = Autostart(p, APP_ID)
         if self.settings.get('shortcuts'):
             self.shortcuts.start(bind=True)
 
@@ -320,7 +321,7 @@ class NowCaption(Adw.Application):
         self.on_shortcuts_changed()
 
     def starts_at_login(self):
-        if self.autostart and not portal.in_flatpak():
+        if self.autostart and not in_flatpak():
             return self.autostart.path().exists()
         return self.settings.get('autostart')
 

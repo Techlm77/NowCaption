@@ -11,8 +11,8 @@ import shutil
 import subprocess
 import unittest
 
-from nowcaption import plasma
-from nowcaption.plasma import GLib
+from nowcaption.desktop import plasma
+from nowcaption.desktop.plasma import GLib
 
 
 class FakeSettings:

@@ -19,7 +19,8 @@ try:
     os.environ['XDG_CONFIG_HOME'] = tempfile.mkdtemp()  # never touch the user's settings
     os.environ['XDG_DATA_HOME'] = tempfile.mkdtemp()  # nor their transcript history
     from nowcaption import app as nc
-    from nowcaption import caption_window, plasma, settings, style
+    from nowcaption import caption_window, settings, style
+    from nowcaption.desktop import plasma
     import logging
     logging.getLogger('nowcaption').setLevel(logging.CRITICAL)
 except (ImportError, ValueError) as e:

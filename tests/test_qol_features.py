@@ -29,11 +29,12 @@ try:
     gi.require_version('Gtk', '4.0')
     gi.require_version('Adw', '1')
     from nowcaption import app as nc
-    from nowcaption import caption_window, options_window, portal
+    from nowcaption import caption_window, options_window
+    from nowcaption.desktop import autostart, portal
 except (ImportError, ValueError) as e:
     if os.environ.get('NOWCAPTION_REQUIRE_GUI_TESTS') == '1':
         raise
-    nc = caption_window = options_window = portal = None
+    nc = caption_window = options_window = autostart = portal = None
     SKIP = f'PyGObject with GTK 4 and libadwaita is not available: {e}'
 
 NVIDIA = [('in video', 'Nvidia'), ('and video', 'Nvidia')]
@@ -135,18 +136,18 @@ class HistoryDaysTests(unittest.TestCase):
                          ['1 day', '7 days', '30 days', '90 days', None])
 
 
-@unittest.skipIf(portal is None, globals().get('SKIP', ''))
+@unittest.skipIf(autostart is None, globals().get('SKIP', ''))
 class AutostartTests(unittest.TestCase):
     def test_exec_quotes_paths_with_spaces(self):
-        self.assertEqual(portal.desktop_exec(['/home/me/My Apps/NowCaption.AppImage']),
+        self.assertEqual(autostart.desktop_exec(['/home/me/My Apps/NowCaption.AppImage']),
                          '"/home/me/My Apps/NowCaption.AppImage"')
-        self.assertEqual(portal.desktop_exec(['nowcaption']), 'nowcaption')
-        self.assertEqual(portal.desktop_exec(['a$b']), '"a\\$b"')
+        self.assertEqual(autostart.desktop_exec(['nowcaption']), 'nowcaption')
+        self.assertEqual(autostart.desktop_exec(['a$b']), '"a\\$b"')
 
     def test_outside_the_flatpak_a_file_is_written_and_removed(self):
         with patch.dict(os.environ, XDG_CONFIG_HOME=tempfile.mkdtemp(), APPIMAGE='/opt/Now Caption.AppImage'), \
-                patch.object(portal, 'in_flatpak', lambda: False):
-            auto = portal.Autostart(None, 'io.github.Techlm77.NowCaption')
+                patch.object(autostart, 'in_flatpak', lambda: False):
+            auto = autostart.Autostart(None, 'io.github.Techlm77.NowCaption')
             results = []
             auto.set(True, lambda on, message: results.append((on, message)))
             text = auto.path().read_text()
