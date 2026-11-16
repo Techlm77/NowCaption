@@ -213,7 +213,7 @@ class DockFixTests(unittest.TestCase):
         w.set_covered(True)
         self.assertIsNone(w.edge)
         self.position('floating')
-        self.assertFalse(w.covered)
+        self.assertFalse(w.docking.covered)
         self.position('top')
         self.assertEqual(w.edge, 'top')
         self.assertEqual((self.shell.zone, self.shell.layer), ('auto', FakeLayerShell.Layer.TOP))

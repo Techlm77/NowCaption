@@ -980,8 +980,8 @@ class DockTests(unittest.TestCase):
             nc.GLib.MainContext.default().iteration(False)
 
     def finish_moves(self):
-        while self.window.moves:
-            moves, self.window.moves = self.window.moves, []
+        while self.window.docking.moves:
+            moves, self.window.docking.moves = self.window.docking.moves, []
             for animation in moves:
                 animation.skip()
 
@@ -992,8 +992,8 @@ class DockTests(unittest.TestCase):
         full = w.box.measure(nc.Gtk.Orientation.VERTICAL, -1)[1]  # the strip's whole height
         self.position('bottom')
         self.assertEqual(w.edge, 'top', 'moved before sliding away')
-        self.assertEqual(len(w.moves), 1)
-        w.moves[0].skip()  # slid into the top edge: now anchored at the bottom, slid away
+        self.assertEqual(len(w.docking.moves), 1)
+        w.docking.moves[0].skip()  # slid into the top edge: now anchored at the bottom, slid away
         self.assertEqual(w.edge, 'bottom')
         self.assertEqual(self.shell.anchors, {'top': False, 'bottom': True, 'left': True, 'right': True})
         self.assertEqual(w.drawer.shown, 0)
@@ -1010,12 +1010,12 @@ class DockTests(unittest.TestCase):
         full = w.box.measure(nc.Gtk.Orientation.VERTICAL, -1)[1]  # the strip's whole height
         w.drawer.show_part('top', 40)
         self.assertEqual(w.drawer.hidden(), full - 40)
-        self.assertEqual(w.docked_part(1920, full), (0, 0, 1920, 40))
+        self.assertEqual(w.docking.docked_part(1920, full), (0, 0, 1920, 40))
         self.position('bottom')
         w.drawer.show_part('bottom', 40)
-        self.assertEqual(w.docked_part(1920, full), (0, full - 40, 1920, 40))
+        self.assertEqual(w.docking.docked_part(1920, full), (0, full - 40, 1920, 40))
         w.drawer.show_part(None, None)
-        self.assertEqual(w.docked_part(1920, full), (0, 0, 1920, full))
+        self.assertEqual(w.docking.docked_part(1920, full), (0, 0, 1920, full))
 
     def test_a_new_position_during_a_move_ends_there(self):
         w = self.window
