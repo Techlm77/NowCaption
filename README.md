@@ -129,7 +129,12 @@ Floating captions keep their bottom edge in place when you change the text size.
 sandboxed apps such as Flatpaks, as part of their security design, so it isn't a bug in
 NowCaption. Its captions are an ordinary floating window, and the menu has no **Position**.
 A way around it inside the sandbox was looked for, but every route hit the same wall. The
-AppImage isn't sandboxed, and docks there out of the box.
+AppImage isn't sandboxed, and docks there out of the box. If you'd rather keep the Flatpak,
+you can let it talk to the desktop directly, as the AppImage does, which also lets it see
+the screen and type into other windows: run
+`flatpak override --user --nosocket=wayland --filesystem=xdg-run/$WAYLAND_DISPLAY io.github.Techlm77.NowCaption`,
+then log out and back in. `flatpak override --user --reset io.github.Techlm77.NowCaption`
+undoes it, along with any other override you made for NowCaption, such as the KWin one below.
 
 **KWin permission.** On KDE Plasma, the Flatpak may talk to KWin, so docked captions can
 float over fullscreen apps. That lets it load a KWin script: NowCaption loads a small one
