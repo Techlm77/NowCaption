@@ -106,6 +106,7 @@ class OptionsWindow(Adw.Window):
         self.show_shortcuts()
 
     def on_close(self, window):
+        """Closing: take the sample's font off the display; the window closes as usual."""
         Gtk.StyleContext.remove_provider_for_display(Gdk.Display.get_default(), self.sample_css)
         return False
 
@@ -143,11 +144,13 @@ class OptionsWindow(Adw.Window):
         return group
 
     def on_font_picked(self, button, pspec):
+        """A family picked in the font button is chosen, unless it was set from here."""
         desc = button.get_font_desc()
         if not self.quiet and desc and desc.get_family():
             self.chosen.lookup_action('font').activate(GLib.Variant('s', desc.get_family()))
 
     def on_font_reset(self, button):
+        """Show the desktop's font in the button, and choose it (no family)."""
         self.quiet = True
         self.font_button.set_font_desc(self.desktop_font())
         self.quiet = False
@@ -224,6 +227,7 @@ class OptionsWindow(Adw.Window):
             self.fix_rows.append(row)
 
     def on_remove_fix(self, button, fix):
+        """A fix's Remove button: remove that fix."""
         self.remove_fix(fix)
 
     # --- start at login and keyboard shortcuts ----------------------------------------------
@@ -260,6 +264,7 @@ class OptionsWindow(Adw.Window):
         return os.environ.get('APPIMAGE') or 'nowcaption'
 
     def on_login(self, row, pspec):
+        """The login switch: ask the desktop to start NowCaption at login, or not (unless set from here)."""
         if self.quiet:
             return
         row.set_sensitive(False)  # until the desktop answers
@@ -275,10 +280,12 @@ class OptionsWindow(Adw.Window):
         self.login_row.set_subtitle(message or 'Captions are ready straight away')
 
     def on_keys(self, row, pspec):
+        """The shortcuts switch: turn the keyboard shortcuts on or off (unless set from here)."""
         if not self.quiet:
             self.app.set_shortcuts(row.get_active())
 
     def on_change_keys(self, button):
+        """Change…: open the desktop's own settings for NowCaption's keys."""
         if self.app.shortcuts:
             self.app.shortcuts.configure()
 
@@ -301,6 +308,7 @@ class OptionsWindow(Adw.Window):
         self.change_row.set_visible(bool(on and keys and keys.available and keys.can_configure))
 
     def on_choice(self, action, value):
+        """A choice made here: show it, until Apply uses it for the captions."""
         action.set_state(value)
         self.show_choices()
 

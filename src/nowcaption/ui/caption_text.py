@@ -42,6 +42,7 @@ class StyledLabel(Gtk.Label):
         self.styled = styled
 
     def do_css_changed(self, change):
+        """GTK has applied new CSS to the label: call styled()."""
         Gtk.Label.do_css_changed(self, change)
         self.styled()
 
@@ -73,6 +74,7 @@ class CaptionText(Gtk.Widget):
         self.watching = None  # while shown: the Gtk.Settings followed for animations, and the handler
 
     def do_dispose(self):
+        """Stop animating and following the desktop's animation setting, and let the label go."""
         self.stop()
         self.watch(False)
         if self.label.get_parent() is self:
@@ -80,11 +82,13 @@ class CaptionText(Gtk.Widget):
         Gtk.Widget.do_dispose(self)
 
     def do_map(self):
+        """Shown: follow the desktop's animation setting, and start whatever moves."""
         Gtk.Widget.do_map(self)
         self.watch(True)
         self.on_animations()
 
     def do_unmap(self):
+        """Hidden: stop the frame updates, the breathing timer and following the animation setting."""
         self.stop()
         self.watch(False)
         Gtk.Widget.do_unmap(self)
@@ -109,12 +113,16 @@ class CaptionText(Gtk.Widget):
         self.start()
 
     def do_measure(self, orientation, for_size):
+        """Exactly the rows tall (flexible: at least one row). No minimum width; the label's natural
+        width is this widget's natural width."""
         if orientation == Gtk.Orientation.VERTICAL:
             height = self.rows * self.row_height
             return self.row_height if self.flexible else height, height, -1, -1
         return 0, self.label.measure(orientation, -1)[1], -1, -1
 
     def do_size_allocate(self, width, height, baseline):
+        """The label gets at least the size it needs, moved up by self.offset while the rows glide;
+        this widget clips it."""
         width = max(width, self.label.measure(Gtk.Orientation.HORIZONTAL, -1)[0])
         height = max(height, self.label.measure(Gtk.Orientation.VERTICAL, width)[0])
         up = Gsk.Transform().translate(Graphene.Point().init(0, -self.offset)) if self.offset else None
@@ -304,6 +312,7 @@ class CaptionText(Gtk.Widget):
         return pieces
 
     def do_snapshot(self, snapshot):
+        """Draw the label, then the arriving words' pieces over it, clipped to this widget."""
         Gtk.Widget.do_snapshot(self, snapshot)  # the label
         width, height = self.get_width(), self.get_height()
         for pieces, p in self.drawing:  # over the label, moved up with it while the rows glide
@@ -342,6 +351,7 @@ class CaptionText(Gtk.Widget):
         return GLib.SOURCE_CONTINUE
 
     def on_tick(self, widget, clock):
+        """Each frame while anything moves: update, until everything is at rest."""
         if self.update(clock.get_frame_time()):
             return GLib.SOURCE_CONTINUE
         self.tick = 0
