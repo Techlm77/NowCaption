@@ -102,16 +102,6 @@ class NowCaption(Adw.Application):
             self.shortcuts.stop()
         self.listening.stop()
 
-    def quit(self):
-        """Every quit fades the caption box out first (see Quitting.quit), including PyGObject's
-        Ctrl+C fallback, which calls app.quit()."""
-        return self.quitting.quit()
-
-    def threads_finished(self, timeout):
-        """After the main loop: whether the worker and the capture left native code in time (see
-        Listening.threads_finished)."""
-        return self.listening.threads_finished(timeout)
-
     def do_dbus_register(self, connection, object_path):
         """Also take the KWin script's word on fullscreen apps (see FULLSCREEN_PATH)."""
         Adw.Application.do_dbus_register(self, connection, object_path)
@@ -231,6 +221,10 @@ class NowCaption(Adw.Application):
         self.autostart.set(on, answered)
 
     # --- what the windows ask of the app ----------------------------------------------------
+    # Short forwarders to the collaborators in control/: the interface the windows (ui) use, and
+    # main() and PyGObject's Ctrl+C (threads_finished, quit), so none of them needs to know how the
+    # work is split up. Only set_words, which keeps the app's word list, has work of its own; keep
+    # the rest this short.
 
     @property
     def worker(self):
@@ -260,6 +254,16 @@ class NowCaption(Adw.Application):
 
     def save_transcript(self):
         self.saving.save_transcript()
+
+    def quit(self):
+        """Every quit fades the caption box out first (see Quitting.quit), including PyGObject's
+        Ctrl+C fallback, which calls app.quit()."""
+        return self.quitting.quit()
+
+    def threads_finished(self, timeout):
+        """After the main loop: whether the worker and the capture left native code in time (see
+        Listening.threads_finished)."""
+        return self.listening.threads_finished(timeout)
 
     def set_words(self, fixes):
         """Use and save a new word list ([(heard, write)]). Returns an error message, or ''."""
