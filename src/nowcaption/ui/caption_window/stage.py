@@ -28,6 +28,7 @@ class Stage(Gtk.Widget):
         child.set_parent(self)
 
     def do_dispose(self):
+        """Unparent the box, so it goes with the stage."""
         if self.child.get_parent() is self:
             self.child.unparent()
         Gtk.Widget.do_dispose(self)
@@ -38,6 +39,8 @@ class Stage(Gtk.Widget):
         self.queue_allocate()
 
     def do_measure(self, orientation, for_size):
+        """Floating: the box's set width (not its natural one) and height, plus its place at x, y.
+        Filling the window: the box's size."""
         minimum, natural, _, _ = self.child.measure(orientation, -1)
         if orientation == Gtk.Orientation.HORIZONTAL and not self.fill:
             natural = minimum  # the box's set width (a normal window takes its natural size)
@@ -45,6 +48,7 @@ class Stage(Gtk.Widget):
         return minimum + at, natural + at, -1, -1
 
     def do_size_allocate(self, width, height, baseline):
+        """Filling, the box fills the window; floating, it sits at x, y at its set width."""
         w_min = self.child.measure(Gtk.Orientation.HORIZONTAL, -1)[0]
         if self.fill:
             w = max(width, w_min)
@@ -69,6 +73,7 @@ class Drawer(Gtk.Widget):
         child.set_parent(self)
 
     def do_dispose(self):
+        """Unparent the box, so it goes with the drawer."""
         if self.child.get_parent() is self:
             self.child.unparent()
         Gtk.Widget.do_dispose(self)
@@ -91,10 +96,12 @@ class Drawer(Gtk.Widget):
         return 0 if self.shown is None or not self.edge else max(0, self.full() - self.shown)
 
     def do_measure(self, orientation, for_size):
+        """The box's whole size, however much of it is shown."""
         minimum, natural, _, _ = self.child.measure(orientation, for_size)
         return minimum, natural, -1, -1
 
     def do_size_allocate(self, width, height, baseline):
+        """Give the box at least its size, slid into its edge by however much is hidden (this widget clips it)."""
         w = max(width, self.child.measure(Gtk.Orientation.HORIZONTAL, -1)[0])
         h = max(height, self.child.measure(Gtk.Orientation.VERTICAL, w)[0])
         away = self.hidden()

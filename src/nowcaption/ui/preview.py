@@ -39,10 +39,12 @@ class Preview(Gtk.Box):
         self.fit()
 
     def do_map(self):
+        """Shown: the sample starts playing."""
         Gtk.Box.do_map(self)
         self.play(True)
 
     def do_unmap(self):
+        """Hidden: the sample stops."""
         self.play(False)
         Gtk.Box.do_unmap(self)
 

@@ -12,7 +12,7 @@ from . import engine
 from .style import COLOURS, MIN_WIDTH, POSITIONS, ROWS, SIZES, WORD_EFFECTS, WORD_SPEEDS
 
 APP_ID = 'io.github.Techlm77.NowCaption'
-LOG = logging.getLogger('nowcaption')
+LOG = logging.getLogger(__name__)
 DEFAULTS = {'source': 'desktop', 'size': 30, 'opacity': 0.78, 'x': -1, 'y': -1, 'monitor': '',
             'width': -1, 'rows': ROWS, 'colour': 'white', 'history': True,
             'position': 'floating', 'dock_rows': ROWS, 'dock_width': -1,
