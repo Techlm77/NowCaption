@@ -9,6 +9,8 @@ NowCaption is a GTK 4 / libadwaita app in Python. To run it from a checkout, see
 src/nowcaption/
   __init__.py  __main__.py  launch.py  app.py      # app.py = the Adw.Application, wiring only
   settings.py  style.py  words.py                  # plain data/config, no GTK imports at module level
+  control/     # what the app does, one collaborator per job: Listening, History, Saving, Quitting,
+               # Appearance, the actions and menu (actions.py) and launch options (commands.py)
   engine/      # speech pipeline + transcript storage. No GTK/Adw (GStreamer only in capture.py)
   ui/          # every GTK widget and window
   desktop/     # desktop integration: XDG portals, autostart, KDE Plasma/KWin
@@ -16,11 +18,20 @@ src/nowcaption/
 
 Dependencies go one way, with no cycles:
 
-- `app` uses `ui`, `desktop`, `engine` and `settings`;
-- `ui` uses `engine`, `desktop`, `settings` and `style`;
+- `app` uses `control`, `ui`, `desktop`, `engine`, `settings` and `words`: it makes the
+  collaborators and the windows and wires them together;
+- `control` uses `engine`, `words` and `style`. Each collaborator holds the app and reaches the
+  windows, the settings and the other collaborators through it;
+- `ui` uses `engine`, `desktop`, `settings` and `style`, never `control`: the windows ask the app,
+  whose short forwarders (`history_days`, `save_transcript`…) pass the call on;
+- `desktop` uses nothing else in NowCaption;
 - `engine` uses `words` only;
 - `settings` uses `style` and `engine` (the history constants);
-- nothing imports `app`.
+- only `launch` imports `app`, once gtk4-layer-shell is loaded.
+
+Imports under `if TYPE_CHECKING:` never run, so they may name a type against these directions:
+`control` names `NowCaption` that way, and `desktop` names `Settings`. The windows leave the app
+unannotated (their tests pass fakes).
 
 A package's `__init__.py` states its public API (explicit imports and `__all__`), so other
 code can write `engine.RecognitionWorker`. It stays short, with no logic in it.
