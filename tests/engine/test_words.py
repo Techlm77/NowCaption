@@ -23,7 +23,7 @@ class WordFixTests(unittest.TestCase):
 
     def test_spelling_keeps_punctuation_and_possessives(self):
         fixes = words.WordFixes([('', 'NVIDIA'), ('', 'KDE Plasma')])
-        out = fixes.spelled('I like nvidia. "Nvidia\'s" drivers, kde plasma!'.split())
+        out = fixes.spelled('I like nvidia. "Nvidia\'s" drivers, kde plasma!'.split())  # noqa: SIM905 - reads as text
         self.assertEqual(out, ['I', 'like', 'NVIDIA.', '"NVIDIA\'s"', 'drivers,', 'KDE', 'Plasma!'])
 
     def test_a_fix_never_repeats_words_that_are_already_right(self):

@@ -11,6 +11,7 @@ import signal
 import tempfile
 import time
 import unittest
+from pathlib import Path
 from types import SimpleNamespace as NS
 from unittest.mock import patch
 
@@ -51,7 +52,7 @@ class FakeWindow:
         pass
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class AppTests(unittest.TestCase):
     def make(self):
         a = nc.NowCaption()
@@ -115,10 +116,10 @@ class AppTests(unittest.TestCase):
                 ctx.iteration(False)
                 time.sleep(0.01)
             self.assertIn('saved', a.window.statuses[-1])
-            self.assertEqual(open(path).read(), 'hello\n')
+            self.assertEqual(Path(path).read_text(), 'hello\n')
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class MenuTests(unittest.TestCase):
     def labels(self, model):
         for i in range(model.get_n_items()):
@@ -209,7 +210,7 @@ class MenuTests(unittest.TestCase):
         self.assertEqual(sent, [None, a.history.history_path])
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class MainTests(unittest.TestCase):
     """main() leaves without finalizing Python while a thread is still in native code: Python
     3.12 and 3.13 would end it with pthread_exit, and sherpa-onnx's C++ code then aborts."""
@@ -272,7 +273,7 @@ class RestartListeningTests(unittest.TestCase):
         self.assertEqual(a.listening.capture.starts, [1])
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class HistoryAndSignalTests(unittest.TestCase):
     def setUp(self):
         self.data = tempfile.mkdtemp()  # history_dir() follows it: never the user's history
@@ -300,7 +301,7 @@ class HistoryAndSignalTests(unittest.TestCase):
         self.assertTrue(recent.exists())
 
     def test_copy_and_save_leave_out_sessions_past_seven_days_before_they_are_deleted(self):
-        old, recent = self.session(7 * 86400 + 60, 'Last week.'), self.session(2 * 86400, 'This week.')
+        old, _recent = self.session(7 * 86400 + 60, 'Last week.'), self.session(2 * 86400, 'This week.')
         self.assertEqual([text for _, text in self.app.earlier_sessions()], ['[10:00:00] This week.'])
         self.assertNotIn('Last week', self.app.history.full_transcript('[12:00:00] Now.'))
         self.assertTrue(old.exists(), 'only skipped here; prune_history deletes it')

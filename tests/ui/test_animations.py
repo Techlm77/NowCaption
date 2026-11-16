@@ -22,7 +22,7 @@ if nc:  # GTK and a display are there
     from nowcaption.ui import caption_text, caption_window
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class AnimationTests(unittest.TestCase):
     """With the desktop's animations on, on a window that is shown. Frames come too slowly on
     a headless display to wait for them, so the caption rows are shown as of a chosen time,
@@ -237,7 +237,7 @@ class AnimationTests(unittest.TestCase):
         self.at(style.PIXEL_MS * 0.4)
         self.assertEqual(self.alphas(), [('back', 1)])
         self.at(style.PIXEL_MS * 0.9)
-        [(word, alpha)] = self.alphas()
+        [(_word, alpha)] = self.alphas()
         self.assertTrue(1 < alpha < 65535)
         self.assertEqual(len(w.caption.drawing), 1)
 
@@ -409,7 +409,7 @@ class EffectFixTests(unittest.TestCase):
         self.at(1000)
         w.show_text('so we took the long road back')
         self.at(60)
-        before, p = self.flying('back')
+        before, _p = self.flying('back')
         blending = Gdk.RGBA()
         blending.parse('#ffff80')  # part of the way to yellow
         with patch.object(w.label, 'get_color', return_value=blending):

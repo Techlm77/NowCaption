@@ -168,7 +168,7 @@ class RunningInstanceTests(unittest.TestCase):
         self.assertEqual(run.returncode, 0, err)
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class AppTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -267,7 +267,8 @@ class AppTests(unittest.TestCase):
         OW = options_window.OptionsWindow
         with patch.object(portal, 'in_flatpak', lambda: True):
             self.assertEqual(OW.launch_command(), 'flatpak run io.github.Techlm77.NowCaption')
-        with patch.object(portal, 'in_flatpak', lambda: False), patch.dict(os.environ, APPIMAGE='/opt/NowCaption.AppImage'):
+        with patch.object(portal, 'in_flatpak', lambda: False), \
+                patch.dict(os.environ, APPIMAGE='/opt/NowCaption.AppImage'):
             self.assertEqual(OW.launch_command(), '/opt/NowCaption.AppImage')
         with patch.object(portal, 'in_flatpak', lambda: False), patch.dict(os.environ, clear=False) as env:
             env.pop('APPIMAGE', None)

@@ -52,7 +52,8 @@ class QuitTests(unittest.TestCase):
 
     def test_window_shutdown_still_never_waits(self):
         a = app_with_fakes()
-        a.listening.worker = NS(stop=lambda: None, join=lambda *a, **kw: self.fail('the window thread joined the worker'))
+        a.listening.worker = NS(stop=lambda: None,
+                                join=lambda *a, **kw: self.fail('the window thread joined the worker'))
         a.listening.capture.wait_stopped = lambda timeout: self.fail('the window thread waited for the capture')
         a.on_shutdown(None)
 

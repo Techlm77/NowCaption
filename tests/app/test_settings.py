@@ -14,7 +14,7 @@ if nc:  # GTK is there
     from nowcaption import settings
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class SettingsTests(unittest.TestCase):
     def setUp(self):
         self.settings = settings.Settings()

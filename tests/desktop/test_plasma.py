@@ -134,11 +134,13 @@ class PanelsScriptTests(unittest.TestCase):
             'function panels() {\n'
             '  return state.map(function (s) {\n'
             '    const p = {id: s.id, location: s.location, screen: s.screen};\n'
-            '    if (!PLASMA5) Object.defineProperty(p, "floating", {get: () => s.floating, set: v => { s.floating = v; }});\n'
+            '    if (!PLASMA5) Object.defineProperty(p, "floating", '
+            '{get: () => s.floating, set: v => { s.floating = v; }});\n'
             '    return p;\n'
             '  });\n'
             '}\n'
-            + ('' if plasma5 else f'function screenForConnector(c) {{ const s = {json.dumps(self.SCREENS)}; return c in s ? s[c] : -1; }}\n')
+            + ('' if plasma5 else 'function screenForConnector(c) '
+               f'{{ const s = {json.dumps(self.SCREENS)}; return c in s ? s[c] : -1; }}\n')
             + script
             + '\nconsole.log(JSON.stringify({printed: printed, state: state}));\n')
         out = subprocess.run(['node', '-e', harness], capture_output=True, text=True, check=True).stdout

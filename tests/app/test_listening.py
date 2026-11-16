@@ -162,7 +162,8 @@ class RecoveryTests(unittest.TestCase):
 
     def test_queued_error_is_ignored_after_source_recovery_has_already_succeeded(self):
         self.app.listening.worker = NS(broken=False)
-        self.app.listening.on_worker('error', (self.app.listening.source_gen, 0, 'an error from before the source change'))
+        self.app.listening.on_worker('error', (self.app.listening.source_gen, 0,
+                                               'an error from before the source change'))
         self.assertEqual(self.app.listening.recognition_failures, 0)
         self.assertEqual(self.timers.pending, {})
 

@@ -19,7 +19,7 @@ if nc:  # GTK and a display are there
     from nowcaption.ui import caption_text, caption_window
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class WindowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

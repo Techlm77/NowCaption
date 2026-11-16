@@ -20,7 +20,7 @@ if nc:  # GTK and a display are there
     from nowcaption.ui import caption_window
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class DockTests(unittest.TestCase):
     """Floating or docked along an edge, where the compositor keeps that strip free of windows."""
 
@@ -196,7 +196,7 @@ class DockTests(unittest.TestCase):
 
         def menu_at(x, y):
             w.menu.point_menu(x, y)
-            ok, rect = w.menu.popover.get_pointing_to()
+            _, rect = w.menu.popover.get_pointing_to()
             return w.menu.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
 
         self.position('bottom')
@@ -222,9 +222,9 @@ class DockTests(unittest.TestCase):
         w.menu.popover.popup()
         self.position('top')
         self.assertTrue(w.menu.popover.get_visible())
-        ok, moved = w.menu.popover.get_pointing_to()
+        _, moved = w.menu.popover.get_pointing_to()
         w.menu.point_menu(w.x + w.box_width // 2, w.y + w.box_height() // 2)  # where the menu belongs now
-        ok, expected = w.menu.popover.get_pointing_to()
+        _, expected = w.menu.popover.get_pointing_to()
         self.assertEqual((moved.x, moved.y, moved.width, moved.height),
                          (expected.x, expected.y, expected.width, expected.height))
         self.assertEqual(w.menu.popover.get_position(), nc.Gtk.PositionType.BOTTOM)  # down, away from the top edge

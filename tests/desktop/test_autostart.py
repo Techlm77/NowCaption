@@ -16,7 +16,7 @@ else:
     autostart = None
 
 
-@unittest.skipIf(autostart is None, globals().get('SKIP', ''))
+@unittest.skipIf(autostart is None, SKIP)
 class AutostartTests(unittest.TestCase):
     def test_exec_quotes_paths_with_spaces(self):
         self.assertEqual(autostart.desktop_exec(['/home/me/My Apps/NowCaption.AppImage']),

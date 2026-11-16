@@ -26,7 +26,8 @@ class TranscriptStoreTests(unittest.TestCase):
         store = engine.TranscriptStore(self.folder)
         store.append(TS, 'Hello there.')
         store.append(TS + 61, 'Café, naïve — 字幕.')
-        self.assertEqual(store.lines(), [engine.stamp(TS) + 'Hello there.', engine.stamp(TS + 61) + 'Café, naïve — 字幕.'])
+        self.assertEqual(store.lines(), [engine.stamp(TS) + 'Hello there.',
+                                         engine.stamp(TS + 61) + 'Café, naïve — 字幕.'])
         self.assertEqual(store.count, 2)
         self.assertIsNone(store.memory)
         info = os.fstat(store.file.fileno())

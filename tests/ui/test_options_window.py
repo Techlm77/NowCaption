@@ -17,7 +17,7 @@ if nc:  # GTK and a display are there
     from nowcaption.ui import options_window
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class OptionsWindowTests(unittest.TestCase):
     def setUp(self):
         self.app = shared_app()

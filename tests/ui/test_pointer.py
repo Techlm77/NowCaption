@@ -63,7 +63,7 @@ class LongPressTests(unittest.TestCase):
             time.sleep(0.01)
 
     def menu(self):
-        ok, rect = self.window.menu.popover.get_pointing_to()
+        _, rect = self.window.menu.popover.get_pointing_to()
         return self.window.menu.popover.get_position(), (rect.x, rect.y, rect.width, rect.height)
 
     def test_the_long_press_is_for_touch_and_apart_from_the_drag(self):

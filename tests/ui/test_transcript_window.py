@@ -27,7 +27,7 @@ def settle():
             context.iteration(False)
 
 
-@unittest.skipIf(nc is None, globals().get('SKIP', ''))
+@unittest.skipIf(nc is None, SKIP)
 class TranscriptWindowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -90,7 +90,8 @@ class TranscriptWindowTests(unittest.TestCase):
     def test_delete_history_removes_every_kept_session(self):
         from types import SimpleNamespace as NS
         cleared, sent = [], []
-        self.app.listening.worker = NS(clear=cleared.append, set_history=sent.append, snapshot=lambda fn, on_error=None: None)
+        self.app.listening.worker = NS(clear=cleared.append, set_history=sent.append,
+                                       snapshot=lambda fn, on_error=None: None)
         self.app.window = NS(show_text=lambda text: None)
         self.app.transcript = self.window
         self.app.listening.ready = self.app.closing = self.app.quitting.quit_requested = False

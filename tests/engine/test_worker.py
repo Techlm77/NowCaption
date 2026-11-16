@@ -376,7 +376,7 @@ class WorkerCommandTests(unittest.TestCase):
         self.assert_healthy(worker, events)
 
     def test_snapshot_of_a_stopped_worker_is_rejected_instead_of_lost(self):
-        worker, events = self.start_worker()
+        worker, _events = self.start_worker()
         self.stop_worker(worker)
         with self.assertRaisesRegex(RuntimeError, 'not running'):
             worker.snapshot(None)

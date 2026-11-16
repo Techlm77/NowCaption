@@ -99,7 +99,8 @@ class QuitTests(unittest.TestCase):
     def test_the_words_still_being_spoken_reach_the_history_at_quit(self):
         path = Path(tempfile.mkdtemp()) / 'session.txt'
         events = Events()
-        worker = engine.RecognitionWorker(events, load=lambda: (StrippedRecognizer(['hello', ' there', ' friend']), FakePunct()))
+        worker = engine.RecognitionWorker(events, load=lambda: (StrippedRecognizer(['hello', ' there', ' friend']),
+                                                                FakePunct()))
         worker.set_history(path)  # sent while the models load, as the app does
         worker.start()
         events.wait('ready')

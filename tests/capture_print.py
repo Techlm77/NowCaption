@@ -1,10 +1,11 @@
 """Caption a PulseAudio source for N seconds and print the transcript (used by test_flatpak.sh)."""
-import queue
 import json
+import queue
 import sys
 import time
 
 from nowcaption import engine
+
 
 def emit(kind, **fields):
     print(json.dumps(dict(kind=kind, **fields)), flush=True)

@@ -149,9 +149,9 @@ class LaunchTests(unittest.TestCase):
         env = {'WAYLAND_DISPLAY': 'wayland-0', 'LD_PRELOAD': 'libhost.so'}
         with mock.patch.dict(os.environ, env, clear=True), \
                 mock.patch('ctypes.util.find_library', return_value='/lib/libgtk4-layer-shell.so.0'), \
-                mock.patch('os.execve', side_effect=SystemExit) as execve:
-            with self.assertRaises(SystemExit):
-                launch.preload_layer_shell()
+                mock.patch('os.execve', side_effect=SystemExit) as execve, \
+                self.assertRaises(SystemExit):
+            launch.preload_layer_shell()
         restarted = execve.call_args[0][2]
         self.assertEqual(restarted['LD_PRELOAD'], '/lib/libgtk4-layer-shell.so.0 libhost.so')
         self.assertEqual(restarted['NOWCAPTION_HOST_LD_PRELOAD'], 'libhost.so')

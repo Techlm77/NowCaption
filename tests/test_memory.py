@@ -9,7 +9,10 @@ Since 1.1.3 growth is a few KB per audio minute, until the recognizer's text res
 20,000 characters (about 25 minutes of speech); since 1.1.4 the transcript itself is in
 a temporary file. It takes about 10 s per audio minute.
 """
-import ctypes, sys, time, wave
+import ctypes
+import sys
+import time
+import wave
 from pathlib import Path
 
 from nowcaption import engine
@@ -38,7 +41,8 @@ def main():
     rec, punct = engine.load_models()
     cap = engine.Captioner(rec, punct)
     pause = bytes(int(engine.RATE * 1.5) * 2)
-    loop = b''.join(wave.open(str(f)).readframes(10**9) + pause for f in sorted(HERE.glob('*.wav')))
+    loop = b''.join(wave.open(str(f)).readframes(10**9) + pause  # noqa: SIM115 - each file read once, whole
+                    for f in sorted(HERE.glob('*.wav')))
     blocks = [loop[i:i + BLOCK] for i in range(0, len(loop) - BLOCK + 1, BLOCK)]
     per_minute = int(60 / 0.04)
     t0 = time.monotonic()

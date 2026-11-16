@@ -49,7 +49,8 @@ class ReleaseWorkflowTests(unittest.TestCase):
             jobs, steps = self.steps(workflow)
             check = next(s for s in steps if s.get('name') == 'Check the tag matches the version')
             build = jobs['build']['steps']
-            first_build = next(i for i, s in enumerate(build) if 'build' in (s.get('run', '') + s.get('name', '')).lower())
+            first_build = next(i for i, s in enumerate(build)
+                               if 'build' in (s.get('run', '') + s.get('name', '')).lower())
             self.assertLess(build.index(check), first_build, workflow)
             for tag, ok in (('v' + version, True), ('v0.0.1', False), (version, False)):
                 result, _ = self.run_step(check['run'], {name: tag})

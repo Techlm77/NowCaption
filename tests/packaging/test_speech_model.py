@@ -25,7 +25,8 @@ RELEASE = 'https://github.com/Techlm77/NowCaption/releases/download/'
 
 def manifest_model():
     """(release tag, archive name, sha256) of the speech model archive in the Flatpak manifest."""
-    m = re.search(r'url: ' + re.escape(RELEASE) + r'(models-v\d+)/(\S+)\n\s+sha256: ([0-9a-f]{64})', MANIFEST.read_text())
+    m = re.search(r'url: ' + re.escape(RELEASE) + r'(models-v\d+)/(\S+)\n\s+sha256: ([0-9a-f]{64})',
+                  MANIFEST.read_text())
     return m.groups()
 
 
@@ -59,7 +60,8 @@ class ModelV4Tests(unittest.TestCase):
             if path.suffix in ('.png', '.svg', '.ico') or not path.is_file():
                 continue
             text = path.read_text(errors='replace')
-            self.assertEqual(set(re.findall(r'fastconformer-en-80ms-cc-by-v\d+', text)) - {V4[len('nowcaption-'):]}, set(), name)
+            self.assertEqual(set(re.findall(r'fastconformer-en-80ms-cc-by-v\d+', text)) - {V4[len('nowcaption-'):]},
+                             set(), name)
             self.assertEqual(set(re.findall(r'releases/download/(models-v[\d.]+)/', text)) - {'models-v4'}, set(), name)
 
     def test_licenses_name_v4_its_release_card_and_teacher(self):
